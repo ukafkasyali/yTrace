@@ -117,12 +117,17 @@ describe('service contracts', () => {
     const run = {
       runId: 'run-1', status: 'AWAITING_APPROVAL', brief: 'Find robot collision time-series data.',
       requirements: [], candidates: [], profiles: [], evidence: [], assessments: [], errors: [], reportMarkdown: '# Report',
+      executionMode: 'CACHED', manifest: null,
     };
     const fetch = vi.fn()
       .mockResolvedValueOnce(Response.json(run))
       .mockResolvedValueOnce(Response.json({ ...run, status: 'APPROVED' }))
       .mockResolvedValueOnce(new Response('# Report', { headers: { 'Content-Type': 'text/markdown' } }))
-      .mockResolvedValueOnce(Response.json({ runId: 'run-1', candidateId: 'candidate-1' }));
+      .mockResolvedValueOnce(Response.json({
+        runId: 'run-1', candidateId: 'candidate-1', name: 'Robot telemetry', canonicalUrl: 'https://zenodo.org/records/1',
+        licenseId: 'cc-by-4.0', labels: ['collision'], fileExtensions: ['.mat'], evidenceIds: ['ev-1'],
+        limitations: [], approvedAt: '2026-09-12T12:00:00Z',
+      }));
     vi.stubGlobal('fetch', fetch);
     const service = createServices('/api');
     expect((await service.getSourcingRun('run/1')).status).toBe('AWAITING_APPROVAL');
@@ -137,5 +142,13 @@ describe('service contracts', () => {
   it('rejects malformed sourcing status responses', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ runId: 'run-1', status: 'DONE' })));
     await expect(createServices('/api').getSourcingRun('run-1')).rejects.toBeInstanceOf(ProtocolError);
+  });
+
+  it('rejects unsafe source URLs in sourcing artifacts', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+      runId: 'run-1', candidateId: 'candidate-1', name: 'Unsafe', canonicalUrl: 'javascript:alert(1)',
+      licenseId: 'unknown', labels: [], fileExtensions: [], evidenceIds: [], limitations: [], approvedAt: 'now',
+    })));
+    await expect(createServices('/api').getSourcingManifest('run-1')).rejects.toBeInstanceOf(ProtocolError);
   });
 });

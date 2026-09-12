@@ -132,14 +132,59 @@ const statuses = new Set<SourcingStatus>([
   'AWAITING_APPROVAL', 'APPROVED', 'REJECTED', 'NEEDS_INPUT', 'FAILED',
 ]);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isNativeSourceUrl(value: unknown) {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && ['github.com', 'zenodo.org', 'huggingface.co'].includes(url.hostname);
+  }
+  catch { return false; }
+}
+
+export function isRunAccepted(value: unknown): value is RunAccepted {
+  return isRecord(value) && typeof value.runId === 'string'
+    && statuses.has(value.status as SourcingStatus) && typeof value.statusUrl === 'string';
+}
+
+export function isSourcingManifest(value: unknown): value is SourcingManifest {
+  return isRecord(value) && typeof value.runId === 'string' && typeof value.candidateId === 'string'
+    && typeof value.name === 'string' && isNativeSourceUrl(value.canonicalUrl)
+    && typeof value.licenseId === 'string' && Array.isArray(value.labels)
+    && Array.isArray(value.fileExtensions) && Array.isArray(value.evidenceIds)
+    && Array.isArray(value.limitations) && typeof value.approvedAt === 'string';
+}
+
 export function isSourcingRun(value: unknown): value is SourcingRun {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const run = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
+  const run = value;
   return typeof run.runId === 'string' && statuses.has(run.status as SourcingStatus)
+    && ['LIVE', 'CACHED', 'PARTIAL'].includes(run.executionMode as string)
     && typeof run.brief === 'string' && Array.isArray(run.requirements)
+    && run.requirements.every(item => isRecord(item) && typeof item.id === 'string' && typeof item.label === 'string'
+      && ['MUST', 'SHOULD'].includes(item.priority as string)
+      && ['VERIFIED', 'MISSING', 'CONFLICTING', 'UNVERIFIED'].includes(item.status as string)
+      && Array.isArray(item.evidenceIds))
     && Array.isArray(run.candidates) && Array.isArray(run.profiles)
+    && run.candidates.every(item => isRecord(item) && typeof item.id === 'string'
+      && typeof item.name === 'string' && isNativeSourceUrl(item.canonicalUrl))
+    && run.profiles.every(item => isRecord(item) && typeof item.candidateId === 'string'
+      && isNativeSourceUrl(item.canonicalUrl) && Array.isArray(item.labels))
     && Array.isArray(run.evidence) && Array.isArray(run.assessments)
-    && Array.isArray(run.errors) && typeof run.reportMarkdown === 'string';
+    && run.evidence.every(item => isRecord(item) && typeof item.id === 'string' && isNativeSourceUrl(item.sourceUrl))
+    && run.assessments.every(item => isRecord(item) && typeof item.candidateId === 'string'
+      && typeof item.totalScore === 'number' && Array.isArray(item.gates)
+      && item.gates.every(gate => isRecord(gate) && typeof gate.gate === 'string'
+        && typeof gate.passed === 'boolean' && typeof gate.reason === 'string' && Array.isArray(gate.evidenceIds))
+      && ['RECOMMEND', 'SHORTLIST', 'REJECT'].includes(item.tier as string)
+      && ['HIGH', 'MEDIUM', 'LOW'].includes(item.evidenceConfidence as string)
+      && ['HIGH', 'MEDIUM', 'LOW'].includes(item.recommendationConfidence as string)
+      && Array.isArray(item.conflicts) && Array.isArray(item.missingRequirementIds))
+    && Array.isArray(run.errors) && typeof run.reportMarkdown === 'string'
+    && (run.manifest === null || isSourcingManifest(run.manifest));
 }
 
 export const sourcingIsActive = (status: SourcingStatus) =>

@@ -1,4 +1,4 @@
-import { isSourcingRun, type CreateSourcingRun, type RunAccepted, type SourcingManifest } from './sourcing';
+import { isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun } from './sourcing';
 export * from './sourcing';
 
 export type WindowRef = {
@@ -216,9 +216,13 @@ export function createServices(baseUrl?: string) {
     searchDatasets: (query: string) => request<DatasetSearchResult[]>(`/datasets/search?${new URLSearchParams({ query })}`),
     startImport: (sourceUrl: string) => request<{ ingestionId: string }>('/ingestions', { method: 'POST', body: JSON.stringify({ sourceUrl }) }),
     getImport: (id: string) => request<ImportJob>(`/ingestions/${encodeURIComponent(id)}`),
-    startSourcingRun: (input: CreateSourcingRun, idempotencyKey: string) => request<RunAccepted>('/sourcing-runs', {
-      method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(input),
-    }),
+    startSourcingRun: async (input: CreateSourcingRun, idempotencyKey: string) => {
+      const accepted = await request<unknown>('/sourcing-runs', {
+        method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(input),
+      });
+      if (!isRunAccepted(accepted)) throw new ProtocolError('The sourcing response does not match the accepted-run contract.');
+      return accepted;
+    },
     getSourcingRun: async (runId: string) => {
       const run = await request<unknown>(`/sourcing-runs/${encodeURIComponent(runId)}`);
       if (!isSourcingRun(run)) throw new ProtocolError('The sourcing response does not match the run contract.');
@@ -232,7 +236,11 @@ export function createServices(baseUrl?: string) {
       return run;
     },
     getSourcingReport: (runId: string) => requestText(`/sourcing-runs/${encodeURIComponent(runId)}/report`),
-    getSourcingManifest: (runId: string) => request<SourcingManifest>(`/sourcing-runs/${encodeURIComponent(runId)}/manifest`),
+    getSourcingManifest: async (runId: string) => {
+      const manifest = await request<unknown>(`/sourcing-runs/${encodeURIComponent(runId)}/manifest`);
+      if (!isSourcingManifest(manifest)) throw new ProtocolError('The sourcing response does not match the manifest contract.');
+      return manifest;
+    },
     startQuery: async (query: QueryRequest, signal?: AbortSignal) => {
       validateInterval(query.window.startSec, query.window.endSec); validateChannels(query.window.channelIds);
       if (!Number.isFinite(query.playheadSec) || query.window.endSec > query.playheadSec) {

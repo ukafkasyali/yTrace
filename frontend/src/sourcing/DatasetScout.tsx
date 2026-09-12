@@ -16,6 +16,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
   const [report, setReport] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [sourceReady, setSourceReady] = useState(false);
   const intent = useRef<Intent | null>(null);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
   async function start() {
     const normalized = brief.trim();
     if (normalized.length < 20) { setError('Describe the dataset need in at least 20 characters.'); return; }
-    setBusy('start'); setError(''); setRun(null); setReport('');
+    setBusy('start'); setError(''); setRun(null); setReport(''); setSourceReady(false);
     try {
       if (!intent.current || intent.current.brief !== normalized) intent.current = { brief: normalized, key: crypto.randomUUID() };
       const accepted = await services.startSourcingRun({ brief: normalized }, intent.current.key);
@@ -70,9 +71,10 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
     <div className="section-heading"><div><p className="eyebrow">Agentic sourcing</p><h2 id="scout-title">Evidence-complete dataset scout</h2><p>Search bounded hypotheses, verify native sources, and review a deterministic recommendation before ingestion.</p></div><SearchCheck size={20} aria-hidden="true" /></div>
     {!services.connected && <p className="status-note">Configure the team API to run or resume dataset research.</p>}
     <label htmlFor="sourcing-brief">Research brief</label>
-    <textarea id="sourcing-brief" rows={3} value={brief} onChange={event => { setBrief(event.target.value); intent.current = null; }} disabled={!services.connected || busy === 'start'} />
-    <div className="scout-actions"><button className="btn btn-primary" type="button" disabled={!services.connected || busy === 'start'} onClick={() => void start()}><SearchCheck size={15} aria-hidden="true" />{busy === 'start' ? 'Starting…' : 'Start evidence review'}</button><form onSubmit={event => { event.preventDefault(); setError(''); setReport(''); setRun(null); setRunId(resumeId.trim()); setPollRevision(value => value + 1); }}><label htmlFor="sourcing-run-id">Resume run</label><input id="sourcing-run-id" value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Run ID" disabled={!services.connected} /><button className="btn" disabled={!services.connected || !resumeId.trim()}>Load</button></form></div>
+    <textarea id="sourcing-brief" rows={3} value={brief} onChange={event => { setBrief(event.target.value); intent.current = null; }} disabled={!services.connected || Boolean(busy)} />
+    <div className="scout-actions"><button className="btn btn-primary" type="button" disabled={!services.connected || Boolean(busy)} onClick={() => void start()}><SearchCheck size={15} aria-hidden="true" />{busy === 'start' ? 'Starting…' : 'Start evidence review'}</button><form onSubmit={event => { event.preventDefault(); setError(''); setReport(''); setRun(null); setSourceReady(false); setRunId(resumeId.trim()); setPollRevision(value => value + 1); }}><label htmlFor="sourcing-run-id">Resume run</label><input id="sourcing-run-id" value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Run ID" disabled={!services.connected || Boolean(busy)} /><button className="btn" disabled={!services.connected || !resumeId.trim() || Boolean(busy)}>Load</button></form></div>
     {error && <p className="error-message" role="alert">{error}</p>}
-    {run ? <ScoutReview run={run} report={report} busy={busy} onReview={decision => void review(decision)} onLoadReport={() => void loadReport()} onUseSource={onUseSource} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
+    {run ? <ScoutReview run={run} report={report} busy={busy} onReview={decision => void review(decision)} onLoadReport={() => void loadReport()} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
+    {sourceReady && <p className="status-note" role="status">Source URL added to the ingestion form below. Review it before starting ingestion.</p>}
   </section>;
 }
