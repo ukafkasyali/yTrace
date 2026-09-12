@@ -152,10 +152,24 @@ def health_snapshot(
     validation_rows = [event for event in events if event.get("event") == "validation_check"]
     generation_rows = [event for event in events if event.get("event") == "generation_eval"]
     zero_rows = [event for event in events if event.get("event") == "zero_signal_eval"]
+    probe_rows = [event for event in events if event.get("event") == "training_probe_eval"]
+    probe_loss_rows = [event for event in events if event.get("event") == "training_probe_loss_eval"]
+    probe_zero_rows = [event for event in events if event.get("event") == "training_probe_zero_signal_eval"]
+    probe_ablation_rows = [
+        event for event in events if event.get("event") == "training_probe_signal_ablation"
+    ]
+    validation_ablation_rows = [
+        event for event in events if event.get("event") == "validation_signal_ablation"
+    ]
     latest_train = train_rows[-1] if train_rows else {}
     latest_validation = validation_rows[-1] if validation_rows else {}
     latest_generation = generation_rows[-1] if generation_rows else {}
     latest_zero = zero_rows[-1] if zero_rows else {}
+    latest_probe = probe_rows[-1] if probe_rows else {}
+    latest_probe_loss = probe_loss_rows[-1] if probe_loss_rows else latest_probe
+    latest_probe_zero = probe_zero_rows[-1] if probe_zero_rows else {}
+    latest_probe_ablation = probe_ablation_rows[-1] if probe_ablation_rows else {}
+    latest_validation_ablation = validation_ablation_rows[-1] if validation_ablation_rows else {}
     zero_class_counts = {}
     if latest_zero:
         zero_path = run_dir / (
@@ -186,10 +200,20 @@ def health_snapshot(
         None,
     )
 
-    gaps = {}
-    for key in ("contact_accuracy", "semantics_accuracy", "strongest_joint_accuracy", "onset_coverage"):
-        if key in latest_generation and key in latest_zero:
-            gaps[key] = float(latest_generation[key]) - float(latest_zero[key])
+    gaps = {
+        key.removeprefix("delta/"): value
+        for key, value in latest_validation_ablation.items()
+        if key.startswith("delta/")
+    }
+    if not gaps:
+        for key in (
+            "contact_accuracy",
+            "semantics_accuracy",
+            "strongest_joint_accuracy",
+            "onset_coverage",
+        ):
+            if key in latest_generation and key in latest_zero:
+                gaps[key] = float(latest_generation[key]) - float(latest_zero[key])
     onset = onset_diagnostics(run_dir, latest_generation)
     alerts = []
     if not audit["split_integrity_ok"]:
@@ -208,6 +232,43 @@ def health_snapshot(
         alerts.append("RED: real signals do not materially beat zeroed signals")
     if latest_zero and set(zero_class_counts) != {"free", "accidental", "intentional"}:
         alerts.append("RED: zero-signal canary does not cover all three event classes")
+    if latest_probe_loss:
+        probe_step = int(latest_probe_loss.get("step", 0))
+        loss_fraction = float(latest_probe_loss.get("loss_fraction_of_initial", math.inf))
+        answer_fit = float(latest_probe.get("answer_exact_match", 0.0))
+        schema_fit = float(latest_probe.get("schema_exact_match", 0.0))
+        if probe_step >= 100 and loss_fraction <= 0.35 and answer_fit < 0.5:
+            alerts.append(
+                "RED: teacher-forced training-probe loss collapsed but decoded exact-answer fit is below 50%"
+            )
+        if probe_step >= 100 and schema_fit < 0.9:
+            alerts.append("YELLOW: fewer than 90% of fixed training-probe answers have the exact schema")
+        if int(latest_probe.get("epoch", 0)) >= 1 and answer_fit < 0.8:
+            alerts.append("YELLOW: exact training prompts are not at least 80% fitted after one epoch")
+        relative_signal_loss_gap = float(latest_probe_loss.get("relative_signal_loss_gap", 0.0))
+        relevant_deltas = [
+            float(value)
+            for key, value in latest_probe_ablation.items()
+            if key
+            in {
+                "delta/answer_exact_match",
+                "delta/contact_accuracy",
+                "delta/semantics_accuracy",
+                "delta/strongest_joint_accuracy",
+                "delta/onset_coverage",
+            }
+        ]
+        if probe_step >= 200 and relative_signal_loss_gap < 0.05 and max(relevant_deltas, default=0.0) < 0.1:
+            alerts.append("RED: fixed training-probe outputs show no measurable dependence on the signal")
+        matched_loss = float(latest_probe_loss.get("matched_validation_loss", math.nan))
+        probe_loss = float(latest_probe_loss.get("loss", math.nan))
+        if (
+            probe_step >= 200
+            and math.isfinite(matched_loss)
+            and math.isfinite(probe_loss)
+            and matched_loss > probe_loss * 1.5
+        ):
+            alerts.append("YELLOW: matched-prompt validation loss is over 50% above training-probe loss")
     loss_overfit = False
     if best_validation is not None and latest_validation:
         loss_overfit = float(latest_validation["loss"]) > best_validation * 1.1
@@ -242,6 +303,11 @@ def health_snapshot(
         },
         "latest_generation": latest_generation,
         "latest_zero_signal": latest_zero,
+        "latest_training_probe": latest_probe,
+        "latest_training_probe_loss": latest_probe_loss,
+        "latest_training_probe_zero_signal": latest_probe_zero,
+        "latest_training_probe_ablation": latest_probe_ablation,
+        "latest_validation_ablation": latest_validation_ablation,
         "zero_signal_class_counts": zero_class_counts,
         "real_minus_zero_gaps": gaps,
         "onset_diagnostics": onset,

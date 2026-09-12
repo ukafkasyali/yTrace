@@ -31,9 +31,23 @@ def prepare(config: Path = Path("configs/data.yaml")) -> None:
 def baseline(
     prepared_root: Path = Path("data/prepared/v1"),
     output_root: Path = Path("artifacts/baseline/v1"),
+    limit: int = 512,
+    selection_seed: int = 20260912,
+    wandb_project: str | None = None,
 ) -> None:
     """Fit and evaluate the transparent signal baseline."""
-    typer.echo(json.dumps(run_baseline(prepared_root, output_root), indent=2))
+    typer.echo(
+        json.dumps(
+            run_baseline(
+                prepared_root,
+                output_root,
+                limit=limit,
+                selection_seed=selection_seed,
+                wandb_project=wandb_project,
+            ),
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

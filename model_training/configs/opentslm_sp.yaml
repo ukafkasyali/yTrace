@@ -26,12 +26,23 @@ validation:
   loss_subset: 128
   generation_subset: 48
   zero_signal_subset: 12
+  examples_table_rows: 12
 observability:
   tensorboard: true
   jsonl: true
   log_every_steps: 10
   sample_generations_every_steps: 250
   gpu_metrics_every_seconds: 10
+  training_probe:
+    enabled: true
+    every_steps: 100
+    generation_every_steps: 250
+    loss_subset: 64
+    generation_subset: 48
+    zero_signal_subset: 12
+    matched_validation_subset: 64
+    dataset_table_rows: 48
+    examples_table_rows: 48
   wandb:
     enabled: true
     project: robot-observability

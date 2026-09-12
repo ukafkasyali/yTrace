@@ -34,7 +34,8 @@ uv pip install -e '.[train,dev,timenet]'
 
 robot-observe download --output data/raw
 robot-observe prepare --config configs/data.yaml
-robot-observe baseline --prepared-root data/prepared/v1 --output-root artifacts/baseline/v1
+robot-observe baseline --prepared-root data/prepared/v1 \
+  --output-root artifacts/baseline/signal-features-512 --limit 512
 
 python scripts/build_timef.py --registry artifacts/timef-registry --cache data/raw
 python -m robot_observability.train_opentslm \
@@ -45,4 +46,21 @@ python -m robot_observability.train_opentslm \
 
 Every expensive operation is resumable or refuses to overwrite prior artifacts. Training emits an
 atomic `status.json`, append-only `metrics.jsonl`, TensorBoard events, generated validation samples,
-W&B prediction tables, real-versus-zero-signal canaries, and `best_model.pt`/`last_model.pt` adapters.
+W&B prediction tables with seven-channel signal previews, real-versus-zero-signal canaries, and
+`best_model.pt`/`last_model.pt` adapters. Every run also keeps a fixed, class-balanced probe from the
+actual training subset. Its teacher-forced loss, decoded task metrics, exact-answer fit, matched-prompt
+validation gap, and zero-signal response are tracked separately so a rapid token-loss drop cannot be
+mistaken for task learning.
+
+Run the capacity/fit check before another expensive run:
+
+```bash
+python -m robot_observability.train_opentslm \
+  --prepared-root data/prepared/v1 \
+  --run-name llama-har-sp-fit-probe \
+  --smoke --max-steps 320
+python scripts/report_fit_probe.py --run-dir runs/llama-har-sp-fit-probe
+```
+
+Use `--strict` on the reporter only when it should block the next launch. Its thresholds are diagnostic
+defaults, not benchmark acceptance criteria.
