@@ -27,7 +27,8 @@ channel's actual requirements before sending any private artifact.
 | Training configuration | [`opentslm_sp.yaml`](../../model_training/configs/opentslm_sp.yaml) | Attach exact run-resolved copy and its SHA-256 |
 | Input contract | seven canonical joints, 1,024 contiguous 1 kHz samples, `[start,end)` = 1.024 s | Include channel order, units and rejection behavior |
 | Normalization | training-only robust normalization for canary-v4 | Attach the exact normalization artifact and SHA-256; do not use query statistics |
-| Prompt/output contract | `rationale_then_answer`, deterministic signal pseudolabel source | Attach exact prompt/template revision and schema |
+| Archived canary-v4 output contract | `answer_then_evidence`: `Answer: {JSON}` followed by `Evidence:` | Verified from archived canary-v4 predictions; attach the exact prompt/template revision and schema |
+| Current candidate training config | `rationale_then_answer`, deterministic signal pseudolabel source | Candidate configuration only; do not represent it as the released canary-v4 contract without matching artifact evidence |
 | Adapter/LoRA | Training configuration declares LoRA rank 16, alpha 32 and dropout 0.0; the live artifact's enabled state and target modules are not established by the public release record | **Missing: state enabled/disabled; if enabled provide target modules and adapter digest** |
 | Rollback owner | Not recorded | **Missing: name the release owner responsible for retaining the prior config and performing a failed-release rollback** |
 | License/access terms | Base-model access may be gated | Confirm redistribution and recipient access before transfer |
