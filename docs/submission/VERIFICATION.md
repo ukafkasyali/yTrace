@@ -13,6 +13,7 @@ Base: main `126a8c6`. Entire enabled for the worktree; Codex hooks installed and
 | Data ingestion, `pytest data_ingestion/tests -q` | 50 passed, including TimeNet tests and missing-clock regression |
 | Inference, `python3 -m unittest discover -s inference -p 'test_*.py' -v` | 22 passed, with localhost server permission |
 | Frontend, `npm test` | 37 passed, including investigation provenance, half-open marker boundaries, reduced-resolution labeling and frozen replay horizon |
+| Combined tree with dataset-scout PR #3 | Clean merge simulation; 54 frontend tests passed and production build passed |
 | Frontend, `npm run build` | Passed; existing optional 3D chunk remains over Vite's 500 kB advisory threshold |
 | Ruff, new comparison module/tests | Passed |
 | Clean environment dependency compatibility | `pip check` passed |
@@ -27,7 +28,7 @@ The clean environment also exposed a pre-existing macOS test-path comparison (`/
 
 ## Integration boundary
 
-PR #3 was the only open PR and GitHub reported it mergeable against main. Its scout, service contracts and data workspace are preserved as separate work. The current task does not claim its test results as freshly rerun. Training-branch artifacts are scored from their original saved predictions; training processes and model deployment were not modified.
+PR #3 was the only open PR and GitHub reported it mergeable against main. Its scout, service contracts and data workspace are preserved as separate work. The combined frontend was freshly tested (54 tests and production build); the scout backend was not rerun. Training-branch artifacts are scored from their original saved predictions; training processes and model deployment were not modified. The training branch already conflicts with main in `train_opentslm.py`; this was reproduced against unmodified main. The comparison README section was placed to avoid introducing an additional conflict. The active training branch was not merged or rewritten.
 
 ## Remaining evidence gaps
 

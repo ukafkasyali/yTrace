@@ -8,6 +8,22 @@ The design is intentionally extensible: raw-source readers produce canonical win
 the TimeNet connector, model adapters, baselines, prompts, and UI payload consume that common
 contract. A new robot dataset should add a reader and mapping rather than fork the training loop.
 
+## Audited submission comparison
+
+The completed feature, OpenTSLM, Qwen plot and zero-signal predictions are archived in
+[`docs/submission/evaluation`](../docs/submission/evaluation/report/comparison.md). Recompute the
+matched 512-window comparison without heavy dependencies using:
+
+```bash
+PYTHONPATH=src python3 -m robot_observability.comparison \
+  --source ../docs/submission/evaluation/source --output /tmp/trace-comparison
+```
+
+The report validates example/target/split identity and distinguishes positive-contact F1 from
+answer availability, complete-summary usability and recording-group uncertainty. The feature
+baseline is stronger on classification; no OpenTSLM superiority is claimed.
+
+
 ## Locked decisions
 
 - Full raw collision and intentional-contact corpora, not the leakage-prone quick-start CSVs.
@@ -48,18 +64,3 @@ python -m robot_observability.train_opentslm \
 Every expensive operation is resumable or refuses to overwrite prior artifacts. Training emits an
 atomic `status.json`, append-only `metrics.jsonl`, TensorBoard events, generated validation samples,
 W&B prediction tables, real-versus-zero-signal canaries, and `best_model.pt`/`last_model.pt` adapters.
-
-## Audited submission comparison
-
-The completed feature, OpenTSLM, Qwen plot and zero-signal predictions are archived in
-[`docs/submission/evaluation`](../docs/submission/evaluation/report/comparison.md). Recompute the
-matched 512-window comparison without heavy dependencies using:
-
-```bash
-PYTHONPATH=src python3 -m robot_observability.comparison \
-  --source ../docs/submission/evaluation/source --output /tmp/trace-comparison
-```
-
-The report validates example/target/split identity and distinguishes positive-contact F1 from
-answer availability, complete-summary usability and recording-group uncertainty. The feature
-baseline is stronger on classification; no OpenTSLM superiority is claimed.
