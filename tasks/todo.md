@@ -10,9 +10,9 @@ licence semantics before any source is marked ready.
 
 - [ ] Versioned JSON schemas and golden fixtures cover all boundary objects.
 - [x] Old sourcing manifests remain readable but report incomplete acquisition metadata.
-- [ ] Dataset and code licences are separate; unresolved mismatch blocks READY.
+- [x] Dataset and code licences are separate; unresolved mismatch blocks READY.
   - [x] Producer contract separates `datasetLicenseId` from `codeLicenseId`.
-  - [ ] Ingestion readiness blocks unresolved dataset-file rights.
+  - [x] Ingestion readiness blocks unresolved dataset-file rights.
 
 **Verification:**
 
@@ -110,16 +110,16 @@ gets or creates the source's single persisted ingestion job.
 
 **Acceptance criteria:**
 
-- [ ] Missing, stale, incomplete, unauthorized, or browser-substituted manifest data fails before
+- [x] Missing, stale, incomplete, unauthorized, or browser-substituted manifest data fails before
   acquisition.
-- [ ] A unique approvedSourceId constraint prevents a second logical ingestion even with another
+- [x] A unique approvedSourceId constraint prevents a second logical ingestion even with another
   idempotency key.
-- [ ] Repeated matching requests return the existing job; conflicting asset selection returns 409.
+- [x] Repeated matching requests return the existing job; conflicting asset selection returns 409.
 
 **Verification:**
 
-- [ ] Parser passes shared golden fixtures without importing data_sourcing.
-- [ ] API tests cover success, duplicate in-flight request, payload conflict, and resolver failure.
+- [x] Parser passes shared golden fixtures without importing data_sourcing.
+- [x] API tests cover success, duplicate in-flight request, payload conflict, and resolver failure.
 
 **Dependencies:** Tasks 1 and 4
 

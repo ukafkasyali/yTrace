@@ -45,7 +45,7 @@ The data-source workspace also consumes the evidence-complete dataset scout. In
 local development Vite routes `/api/sourcing-runs` to `127.0.0.1:8001` before its
 broader inference proxy. The UI polls the durable run, preserves `NEEDS_INPUT`,
 shows hard gates and both confidence measures, and requires a human decision.
-An approved manifest only fills the existing ingestion source URL; ingestion
+An approved manifest is retained in the approved-source library. Ingestion
 remains a separate explicit action.
 
 ## Shared data contract
@@ -106,7 +106,7 @@ The routes below are requested by the implemented service client with `/api` as 
 | `listModels()` | `GET /api/models` | model IDs, labels, availability and capabilities |
 | `startQuery(request)` | `POST /api/queries` | `{ queryId, streamUrl }` |
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
-| `startImport(sourceUrl)` | `POST /api/ingestions` | `{ ingestionId }` |
+| `startImport(approvedSourceId, assetIds?)` | `POST /api/ingestions` | persisted ingestion job |
 | `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion progress and validation report |
 | `startSourcingRun(input, idempotencyKey)` | `POST /api/sourcing-runs` | durable run ID and initial status |
 | `getSourcingRun(runId)` | `GET /api/sourcing-runs/:id` | requirements, evidence, gates and ranking |
@@ -154,7 +154,7 @@ Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP err
 
 ## Ingestion visibility and security
 
-Ingestion states: `queued → inspecting → mapping → validating → importing → ready`, with `needs_input`, `failed` and `cancelled` branches. `POST /ingestions` receives `{ sourceUrl }` and returns `{ ingestionId }`. Poll responses include `{ ingestionId, state, sourceUrl }` plus optional `sourceRevision`, `datasetId`, `datasetIds`, `progress`, `steps: { label, completed }[]`, `mappings: { source, channelId?, unit? }[]`, `warnings` and `message`. Only provide percentage progress when the backend can measure it. The UI polls jobs and displays reported states; it does not implement ingestion-job cancellation or interactive mapping edits yet.
+Ingestion states: `queued → inspecting → mapping → validating → importing → ready`, with `needs_input`, `failed` and `cancelled` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. Poll responses include `{ ingestionId, approvedSourceId, state, sourceUrl, sourceRevision, assetIds, manifestSha256 }` plus optional `datasetId`, `datasetIds`, `progress`, `steps: { label, completed }[]`, `mappings: { source, channelId?, unit? }[]`, `warnings` and `message`. Only provide percentage progress when the backend can measure it. The UI polls jobs and displays reported states; it does not implement ingestion-job cancellation or interactive mapping edits yet.
 
 An ingestion agent proposes mappings; deterministic validators check them. Unknown units or ambiguous channels produce `needs_input`, not invented metadata. Retrieval results identify their source documents separately from signal evidence. Server-side URL fetching must reject private/local network targets and enforce size/type limits.
 

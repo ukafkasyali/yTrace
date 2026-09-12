@@ -51,6 +51,21 @@ job, including after restart; another asset selection returns a conflict rather 
 second ready dataset. This persistence layer does not download content, execute source code, or
 mark a dataset ready.
 
+Run the local ingestion API separately from the scout:
+
+```bash
+export INGESTION_SOURCING_API_URL=http://127.0.0.1:8001
+export INGESTION_DATA_DIR=var/ingestion
+dataset-ingestion-api
+```
+
+`POST /api/ingestions` accepts `{"approvedSourceId":"..."}` and an optional non-empty
+`assetIds` list. The service resolves and hashes the approved manifest itself; it never accepts a
+browser-supplied source or download URL. `GET /api/ingestions/{ingestionId}` returns the persisted
+job. Until the acquisition worker is added, valid licensed jobs remain `queued`; a missing
+dataset-file license creates the one job in `needs_input` rather than substituting a repository code
+license.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and
