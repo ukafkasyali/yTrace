@@ -83,8 +83,8 @@ Candidates without that evidence fail the domain gate and receive low suitabilit
 
 Reviewer-facing assessments use three levels: low, medium and high suitability. Each level is
 accompanied by deterministic strength, limitation and blocker explanations with evidence IDs where
-available. Evidence confidence remains separate. Numeric weighted scores are retained only as a
-backward-compatible internal ranking detail and are not shown in the UI or report.
+available. Evidence confidence remains separate. Candidate assessment, ranking, recommendation,
+persistence and API output contain no numeric fitness score.
 
 Search results begin as discovery leads. Each GitHub, Zenodo, or Hugging Face URL keeps a separate
 identity, and native links are followed for at most two hops within the run limits. A source is

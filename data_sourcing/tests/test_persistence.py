@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from uuid import uuid4
@@ -20,7 +21,7 @@ def test_approval_resumes_from_sqlite_after_service_restart(tmp_path: Path) -> N
     first.execute_run(run_id)
     paused = first.artifacts.read_run(run_id)
     assert paused.status is RunStatus.AWAITING_APPROVAL
-    candidate_id = paused.recommended_candidate_id
+    candidate_id = paused.assessments[0].candidate_id
     first.close()
 
     second = SourcingService(settings)
@@ -32,6 +33,46 @@ def test_approval_resumes_from_sqlite_after_service_restart(tmp_path: Path) -> N
     assert completed.status is RunStatus.APPROVED
     assert second.artifacts.read_manifest(run_id).candidate_id == candidate_id
     second.close()
+
+
+def test_saved_numeric_assessment_is_migrated_to_categorical_contract(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "persisted")
+    service = SourcingService(settings)
+    run_id, _ = service.create_run(CreateSourcingRun(brief=BRIEF), "legacy-score")
+    service.execute_run(run_id)
+    run_path = settings.runs_dir / run_id / "run.json"
+    payload = json.loads(run_path.read_text(encoding="utf-8"))
+    legacy_assessment = payload["assessments"][0]
+    legacy_assessment.pop("suitabilityLevel")
+    legacy_assessment.pop("suitabilityFactors")
+    legacy_assessment.pop("metPreferredRequirementIds")
+    legacy_assessment.pop("unmetPreferredRequirementIds")
+    legacy_assessment.pop("authoritativeSourceKind")
+    legacy_assessment["score"] = {
+        "taskFit": 35,
+        "trainingReadiness": 20,
+        "acquisitionIntegrity": 15,
+        "provenanceDocumentation": 10,
+        "integrationReadiness": 10,
+        "licenseClarity": 5,
+        "evidenceConsistency": 3,
+    }
+    legacy_assessment["totalScore"] = 98
+    legacy_assessment["tier"] = "RECOMMEND"
+    run_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    migrated = service.artifacts.read_run(run_id)
+    assessment = migrated.assessments[0]
+    serialized = assessment.model_dump(by_alias=True)
+
+    assert assessment.suitability_level.value == "MEDIUM"
+    assert assessment.suitability_factors
+    assert "score" not in serialized
+    assert "totalScore" not in serialized
+    assert "tier" not in serialized
+    service.close()
 
 
 def test_concurrent_idempotency_claims_share_one_run(tmp_path: Path) -> None:

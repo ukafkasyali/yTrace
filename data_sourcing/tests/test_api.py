@@ -30,7 +30,10 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         assert assessment["suitabilityLevel"] in {"LOW", "MEDIUM", "HIGH"}
         assert assessment["suitabilityFactors"]
         assert all(item["explanation"] for item in assessment["suitabilityFactors"])
-        candidate_id = run.json()["recommendedCandidateId"]
+        assert "score" not in assessment
+        assert "totalScore" not in assessment
+        assert "tier" not in assessment
+        candidate_id = assessment["candidateId"]
 
         wrong_approval = client.post(
             f"/api/sourcing-runs/{run_id}/approvals",
@@ -259,9 +262,8 @@ def test_refinement_response_persists_an_explicit_decision_delta(tmp_path: Path)
             json={"brief": BRIEF},
         )
         run_id = created.json()["runId"]
-        candidate_id = client.get(
-            f"/api/sourcing-runs/{run_id}"
-        ).json()["recommendedCandidateId"]
+        run = client.get(f"/api/sourcing-runs/{run_id}").json()
+        candidate_id = run["assessments"][0]["candidateId"]
 
         refinement = client.post(
             f"/api/sourcing-runs/{run_id}/approvals",

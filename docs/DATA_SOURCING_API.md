@@ -104,11 +104,16 @@ in a separate audit section. Older persisted payloads that predate these fields 
 
 Each assessment exposes reviewer-facing `suitabilityLevel` as `LOW`, `MEDIUM`, or `HIGH` and
 `suitabilityFactors` as typed `STRENGTH`, `LIMITATION`, or `BLOCKER` explanations. Factors include
-the relevant evidence IDs when evidence exists. A failed mandatory gate always produces `LOW`;
-otherwise the existing deterministic weighted assessment maps to `MEDIUM` or `HIGH`. Evidence
-confidence remains separate: it describes the completeness and consistency of support, not dataset
-fitness. `totalScore`, `score`, and `tier` remain temporarily available for older clients and
-deterministic tie-breaking, but new reviewer interfaces should not display them.
+the relevant evidence IDs when evidence exists. A failed mandatory or integrity gate produces
+`LOW`. A candidate is `MEDIUM` when all mandatory gates pass but preferred evidence, confidence, or
+consistency is limited. `HIGH` requires all mandatory and preferred requirements plus high,
+conflict-free evidence confidence. Evidence confidence remains separate: it describes the quality
+of support, not dataset fitness. Assessments expose no numeric fitness score or numeric tier.
+
+Within a suitability level, candidates are ordered by preferred-requirement coverage, evidence
+confidence, authoritative native-source precedence (`ZENODO`, `HUGGING_FACE`, `GITHUB`), and stable
+candidate ID. Persisted assessments from the earlier numeric contract are reclassified when read
+and are written back through the categorical wire contract.
 
 When the brief explicitly names equipment or an application domain, requirements include a
 mandatory `DOMAIN` category. Verified profiles expose the native-source-supported terms in

@@ -21,7 +21,6 @@ from data_sourcing.models import (
     ApprovalDecision,
     ApprovalRequest,
     CandidateAssessment,
-    CandidateTier,
     CreateSourcingRun,
     DatasetCandidate,
     DatasetProfile,
@@ -39,6 +38,7 @@ from data_sourcing.models import (
     SourceRole,
     SourcingConstraints,
     SourcingManifest,
+    SuitabilityLevel,
     VerificationStatus,
 )
 from data_sourcing.planning import (
@@ -535,7 +535,7 @@ class DatasetScoutGraph:
                 item
                 for item in ranked
                 if item.candidate_id not in excluded_candidate_ids
-                and item.tier is CandidateTier.RECOMMEND
+                and item.suitability_level is SuitabilityLevel.HIGH
             ),
             None,
         )
@@ -556,8 +556,7 @@ class DatasetScoutGraph:
             )
             new_candidate_ids = pending["new_candidate_ids"]
             if (
-                pending["rejected_candidate_id"]
-                == pending["previous_recommended_candidate_id"]
+                pending["rejected_candidate_id"] is not None
                 and recommended_candidate_id is None
             ):
                 outcome_status = RefinementOutcomeStatus.RECOMMENDATION_WITHHELD
@@ -649,11 +648,7 @@ class DatasetScoutGraph:
             lines.append("- No native source was verified as directly publishing a dataset.")
         for assessment in artifact_assessments:
             conflict = ", ".join(assessment.conflicts) or "none"
-            suitability = assessment.suitability_level.value if assessment.suitability_level else {
-                CandidateTier.RECOMMEND: "HIGH",
-                CandidateTier.SHORTLIST: "MEDIUM",
-                CandidateTier.REJECT: "LOW",
-            }[assessment.tier]
+            suitability = assessment.suitability_level.value
             review_status = (
                 "; excluded by reviewer"
                 if assessment.candidate_id in excluded_candidate_ids

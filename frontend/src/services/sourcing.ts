@@ -101,28 +101,19 @@ export type SuitabilityFactor = {
 export type CandidateAssessment = {
   candidateId: string;
   gates: { gate: string; passed: boolean; reason: string; evidenceIds: string[] }[];
-  score: {
-    taskFit: number;
-    trainingReadiness: number;
-    acquisitionIntegrity: number;
-    provenanceDocumentation: number;
-    integrationReadiness: number;
-    licenseClarity: number;
-    evidenceConsistency: number;
-  };
-  totalScore: number;
-  tier: 'RECOMMEND' | 'SHORTLIST' | 'REJECT';
-  suitabilityLevel?: SuitabilityLevel | null;
-  suitabilityFactors?: SuitabilityFactor[];
+  suitabilityLevel: SuitabilityLevel;
+  suitabilityFactors: SuitabilityFactor[];
   evidenceConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
   recommendationConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
   missingRequirementIds: string[];
+  metPreferredRequirementIds: string[];
+  unmetPreferredRequirementIds: string[];
+  authoritativeSourceKind: 'ZENODO' | 'GITHUB' | 'HUGGING_FACE' | null;
   conflicts: string[];
 };
 
 export function candidateSuitabilityLevel(candidate: CandidateAssessment): SuitabilityLevel {
-  if (candidate.suitabilityLevel) return candidate.suitabilityLevel;
-  return ({ RECOMMEND: 'HIGH', SHORTLIST: 'MEDIUM', REJECT: 'LOW' } as const)[candidate.tier];
+  return candidate.suitabilityLevel;
 }
 
 export function candidateSuitabilityLabel(candidate: CandidateAssessment) {
@@ -131,13 +122,7 @@ export function candidateSuitabilityLabel(candidate: CandidateAssessment) {
 }
 
 export function candidateSuitabilityFactors(candidate: CandidateAssessment): SuitabilityFactor[] {
-  if (candidate.suitabilityFactors?.length) return candidate.suitabilityFactors;
-  return candidate.gates.map(gate => ({
-    kind: gate.passed ? 'STRENGTH' : 'BLOCKER',
-    label: gate.gate.replaceAll('_', ' '),
-    explanation: gate.reason,
-    evidenceIds: gate.evidenceIds,
-  }));
+  return candidate.suitabilityFactors;
 }
 
 export type SourcingManifest = {
@@ -206,8 +191,7 @@ export function candidateIsEligibleForApproval(
   excludedCandidateIds: ReadonlySet<string>,
 ) {
   return !excludedCandidateIds.has(candidate.candidateId)
-    && candidate.totalScore >= 65
-    && candidate.tier !== 'REJECT'
+    && candidate.suitabilityLevel !== 'LOW'
     && candidate.missingRequirementIds.length === 0
     && candidate.gates.every(gate => gate.passed);
 }
@@ -216,8 +200,10 @@ export function compareCandidateAssessments(
   left: CandidateAssessment,
   right: CandidateAssessment,
 ) {
-  const identityMismatch = (candidate: CandidateAssessment) =>
-    candidate.gates.some(gate => gate.gate === 'dataset_identity' && !gate.passed);
+  const identityMismatch = (candidate: CandidateAssessment) => {
+    const gate = candidate.gates.find(item => item.gate === 'dataset_identity');
+    return gate === undefined || !gate.passed;
+  };
   const identityDifference = Number(identityMismatch(left)) - Number(identityMismatch(right));
   if (identityDifference !== 0) return identityDifference;
   const domainMismatch = (candidate: CandidateAssessment) =>
@@ -225,9 +211,14 @@ export function compareCandidateAssessments(
   const domainDifference = Number(domainMismatch(left)) - Number(domainMismatch(right));
   if (domainDifference !== 0) return domainDifference;
   const levelRank = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
+  const confidenceRank = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
+  const sourceRank = { ZENODO: 0, HUGGING_FACE: 1, GITHUB: 2 } as const;
   return levelRank[candidateSuitabilityLevel(left)]
     - levelRank[candidateSuitabilityLevel(right)]
-    || right.totalScore - left.totalScore
+    || left.unmetPreferredRequirementIds.length - right.unmetPreferredRequirementIds.length
+    || confidenceRank[left.evidenceConfidence] - confidenceRank[right.evidenceConfidence]
+    || (left.authoritativeSourceKind === null ? 3 : sourceRank[left.authoritativeSourceKind])
+      - (right.authoritativeSourceKind === null ? 3 : sourceRank[right.authoritativeSourceKind])
     || left.candidateId.localeCompare(right.candidateId);
 }
 
@@ -313,25 +304,24 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
     && Array.isArray(run.evidence) && Array.isArray(run.assessments)
     && run.evidence.every(item => isRecord(item) && typeof item.id === 'string' && isNativeSourceUrl(item.sourceUrl))
     && run.assessments.every(item => isRecord(item) && typeof item.candidateId === 'string'
-      && typeof item.totalScore === 'number' && Array.isArray(item.gates)
+      && Array.isArray(item.gates)
       && item.gates.every(gate => isRecord(gate) && typeof gate.gate === 'string'
         && typeof gate.passed === 'boolean' && typeof gate.reason === 'string' && Array.isArray(gate.evidenceIds))
-      && ['RECOMMEND', 'SHORTLIST', 'REJECT'].includes(item.tier as string)
-      && (item.suitabilityLevel === undefined || item.suitabilityLevel === null
-        || ['HIGH', 'MEDIUM', 'LOW'].includes(item.suitabilityLevel as string))
-      && (item.suitabilityLevel === undefined || item.suitabilityLevel === null
-        || item.suitabilityLevel === ({ RECOMMEND: 'HIGH', SHORTLIST: 'MEDIUM', REJECT: 'LOW' } as const)[item.tier as 'RECOMMEND' | 'SHORTLIST' | 'REJECT'])
-      && (item.suitabilityFactors === undefined || (Array.isArray(item.suitabilityFactors)
+      && ['HIGH', 'MEDIUM', 'LOW'].includes(item.suitabilityLevel as string)
+      && (Array.isArray(item.suitabilityFactors)
         && item.suitabilityFactors.every(factor => isRecord(factor)
           && ['STRENGTH', 'LIMITATION', 'BLOCKER'].includes(factor.kind as string)
           && typeof factor.label === 'string' && typeof factor.explanation === 'string'
           && Array.isArray(factor.evidenceIds)
-          && factor.evidenceIds.every(id => typeof id === 'string'))))
-      && (item.suitabilityLevel === undefined || item.suitabilityLevel === null
-        || (Array.isArray(item.suitabilityFactors) && item.suitabilityFactors.length > 0))
+          && factor.evidenceIds.every(id => typeof id === 'string'))
+        && item.suitabilityFactors.length > 0)
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.evidenceConfidence as string)
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.recommendationConfidence as string)
-      && Array.isArray(item.conflicts) && Array.isArray(item.missingRequirementIds))
+      && Array.isArray(item.conflicts) && Array.isArray(item.missingRequirementIds)
+      && Array.isArray(item.metPreferredRequirementIds)
+      && Array.isArray(item.unmetPreferredRequirementIds)
+      && (item.authoritativeSourceKind === null
+        || ['ZENODO', 'GITHUB', 'HUGGING_FACE'].includes(item.authoritativeSourceKind as string)))
     && (run.approvedCandidateId === null || typeof run.approvedCandidateId === 'string')
     && Array.isArray(run.excludedCandidateIds) && run.excludedCandidateIds.length <= 2
     && run.excludedCandidateIds.every(item => typeof item === 'string')

@@ -51,9 +51,10 @@ function runFixture(): SourcingRun {
         { gate: 'dataset_identity', passed: true, reason: 'Primary source is a verified dataset artifact', evidenceIds: [] },
         { gate: 'license', passed: true, reason: 'Explicit allowed licence found', evidenceIds: ['ev_license'] },
       ],
-      score: { taskFit: 35, trainingReadiness: 20, acquisitionIntegrity: 15, provenanceDocumentation: 10, integrationReadiness: 10, licenseClarity: 5, evidenceConsistency: 5 },
-      totalScore: 100, tier: 'RECOMMEND', evidenceConfidence: 'HIGH',
+      evidenceConfidence: 'HIGH',
       recommendationConfidence: 'HIGH', missingRequirementIds: [], conflicts: [],
+      metPreferredRequirementIds: [], unmetPreferredRequirementIds: [],
+      authoritativeSourceKind: 'ZENODO',
       suitabilityLevel: 'HIGH', suitabilityFactors: [{
         kind: 'STRENGTH', label: 'Mandatory requirements',
         explanation: 'All mandatory requirements are supported by native evidence.',
@@ -104,12 +105,11 @@ describe('decision evidence', () => {
       isDatasetArtifact: false, datasetIdentityReason: 'Primary source is a guide',
     });
     run.assessments.push({
-      ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa', tier: 'REJECT', totalScore: 75,
+      ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa',
       suitabilityLevel: 'LOW', suitabilityFactors: [{
         kind: 'BLOCKER', label: 'Dataset identity', explanation: 'Primary source is a guide',
         evidenceIds: [],
       }],
-      score: { ...run.assessments[0].score, taskFit: 10, evidenceConsistency: 0 },
       gates: [{
         gate: 'dataset_identity', passed: false, reason: 'Primary source is a guide',
         evidenceIds: [],
@@ -126,10 +126,8 @@ describe('decision evidence', () => {
     expect(markup).toContain('Primary source is a guide');
   });
 
-  it('explains legacy assessments using their hard gates', () => {
+  it('explains categorical assessments using their explicit factors', () => {
     const run = runFixture();
-    delete run.assessments[0].suitabilityLevel;
-    delete run.assessments[0].suitabilityFactors;
 
     const markup = renderToStaticMarkup(<ScoutReview
       run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
@@ -166,8 +164,6 @@ describe('decision evidence', () => {
     run.assessments.push({
       ...run.assessments[0],
       candidateId: 'ds_aaaaaaaaaaaa',
-      totalScore: 95,
-      score: { ...run.assessments[0].score, evidenceConsistency: 0 },
     });
 
     const markup = renderToStaticMarkup(<ScoutReview
@@ -241,8 +237,6 @@ describe('decision evidence', () => {
     const run = runFixture();
     run.assessments[0] = {
       ...run.assessments[0],
-      tier: 'REJECT',
-      totalScore: 60,
       suitabilityLevel: 'LOW',
       suitabilityFactors: [{
         kind: 'BLOCKER', label: 'Explicit licence', explanation: 'No licence evidence',
@@ -266,7 +260,6 @@ describe('decision evidence', () => {
     run.feedbackAllowed = true;
     run.recommendedCandidateId = null;
     run.requirements[0].status = 'MISSING';
-    run.assessments[0].tier = 'REJECT';
     run.assessments[0].suitabilityLevel = 'LOW';
     run.assessments[0].suitabilityFactors = [{
       kind: 'BLOCKER', label: 'Explicit licence',
@@ -284,7 +277,7 @@ describe('decision evidence', () => {
     expect(markup).not.toContain('Dataset to approve');
   });
 
-  it('ranks a domain match before a higher-scoring unrelated candidate', () => {
+  it('ranks a domain match before an unrelated candidate in the same level', () => {
     const run = runFixture();
     run.brief = 'Find CNC machines where the head makes accidental contact.';
     run.recommendedCandidateId = null;
@@ -295,12 +288,10 @@ describe('decision evidence', () => {
     });
     run.assessments[0] = {
       ...run.assessments[0],
-      tier: 'REJECT', totalScore: 83,
       suitabilityLevel: 'LOW', suitabilityFactors: [{
         kind: 'BLOCKER', label: 'Equipment or application domain',
         explanation: 'Native sources do not match the requested domain', evidenceIds: [],
       }],
-      score: { ...run.assessments[0].score, taskFit: 18 },
       gates: [{ gate: 'domain', passed: false, reason: 'Native sources do not match the requested domain', evidenceIds: [] }],
       missingRequirementIds: ['req_domain'],
     };
@@ -309,9 +300,8 @@ describe('decision evidence', () => {
       canonicalUrl: 'https://github.com/boschresearch/CNC_Machining', sourceKind: 'GITHUB',
     });
     run.assessments.push({
-      ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa', totalScore: 54,
-      score: { taskFit: 18, trainingReadiness: 8, acquisitionIntegrity: 15, provenanceDocumentation: 10, integrationReadiness: 0, licenseClarity: 0, evidenceConsistency: 3 },
-      tier: 'REJECT', suitabilityLevel: 'LOW', suitabilityFactors: [{
+      ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa',
+      authoritativeSourceKind: 'GITHUB', suitabilityLevel: 'LOW', suitabilityFactors: [{
         kind: 'BLOCKER', label: 'Task labels',
         explanation: 'Mandatory requirement is unsupported by native evidence.', evidenceIds: [],
       }, {

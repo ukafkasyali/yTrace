@@ -4,7 +4,6 @@ from collections import defaultdict
 
 from data_sourcing.models import (
     CandidateAssessment,
-    CandidateTier,
     ConfidenceLevel,
     DatasetProfile,
     EvidenceRecord,
@@ -12,18 +11,12 @@ from data_sourcing.models import (
     RequirementCategory,
     RequirementPriority,
     ResearchRequirement,
-    ScoreBreakdown,
+    SourceKind,
     SuitabilityFactor,
     SuitabilityFactorKind,
     SuitabilityLevel,
     VerificationStatus,
 )
-
-_LEVEL_BY_TIER = {
-    CandidateTier.RECOMMEND: SuitabilityLevel.HIGH,
-    CandidateTier.SHORTLIST: SuitabilityLevel.MEDIUM,
-    CandidateTier.REJECT: SuitabilityLevel.LOW,
-}
 
 _GATE_LABELS = {
     "dataset_identity": "Dataset identity",
@@ -127,19 +120,17 @@ def _suitability_factors(
     *,
     profile: DatasetProfile,
     required: list[ResearchRequirement],
-    fit_requirements: list[ResearchRequirement],
+    preferred: list[ResearchRequirement],
     evidence: list[EvidenceRecord],
-    task_ratio: float,
     gates: list[GateResult],
     missing: list[str],
+    met_preferred: list[str],
+    unmet_preferred: list[str],
+    evidence_confidence: ConfidenceLevel,
     conflicts: list[str],
-    label_evidence: list[str],
-    schema_evidence: list[str],
-    file_evidence: list[str],
-    size_evidence: list[str],
 ) -> list[SuitabilityFactor]:
     factors: list[SuitabilityFactor] = []
-    requirements_by_id = {item.id: item for item in required}
+    requirements_by_id = {item.id: item for item in [*required, *preferred]}
 
     def requirement_evidence_ids(requirement: ResearchRequirement) -> list[str]:
         claim = requirement_claim_key(requirement)
@@ -183,70 +174,27 @@ def _suitability_factors(
             )
         )
 
-    if fit_requirements:
+    for requirement_id in met_preferred:
+        requirement = requirements_by_id[requirement_id]
         factors.append(
             SuitabilityFactor(
-                kind=(
-                    SuitabilityFactorKind.STRENGTH
-                    if task_ratio == 1
-                    else SuitabilityFactorKind.LIMITATION
-                ),
-                label="Task and domain fit",
-                explanation=(
-                    "Native evidence matches every requested task and domain condition."
-                    if task_ratio == 1
-                    else "Native evidence does not cover every requested task and domain condition."
-                ),
-                evidence_ids=[
-                    evidence_id
-                    for requirement in fit_requirements
-                    for evidence_id in requirement_evidence_ids(requirement)
-                ],
+                kind=SuitabilityFactorKind.STRENGTH,
+                label=requirement.label,
+                explanation="Preferred requirement is supported by native evidence.",
+                evidence_ids=requirement_evidence_ids(requirement),
             )
         )
 
-    training_ready = bool(
-        profile.labels and label_evidence and profile.schema_documented and schema_evidence
-    )
-    factors.append(
-        SuitabilityFactor(
-            kind=(
-                SuitabilityFactorKind.STRENGTH
-                if training_ready
-                else SuitabilityFactorKind.LIMITATION
-            ),
-            label="Training readiness",
-            explanation=(
-                "Labels and schema documentation support direct model preparation."
-                if training_ready
-                else "Labels or schema documentation are incomplete for direct model preparation."
-            ),
-            evidence_ids=[*label_evidence, *schema_evidence],
+    for requirement_id in unmet_preferred:
+        requirement = requirements_by_id[requirement_id]
+        factors.append(
+            SuitabilityFactor(
+                kind=SuitabilityFactorKind.LIMITATION,
+                label=requirement.label,
+                explanation="Preferred requirement is unsupported by native evidence.",
+                evidence_ids=[],
+            )
         )
-    )
-
-    acquisition_ready = bool(
-        profile.has_time_series_files
-        and file_evidence
-        and profile.acquisition_feasible
-        and size_evidence
-    )
-    factors.append(
-        SuitabilityFactor(
-            kind=(
-                SuitabilityFactorKind.STRENGTH
-                if acquisition_ready
-                else SuitabilityFactorKind.LIMITATION
-            ),
-            label="Acquisition readiness",
-            explanation=(
-                "Usable files are available within the configured acquisition bound."
-                if acquisition_ready
-                else "Usable files or bounded acquisition could not be fully established."
-            ),
-            evidence_ids=[*file_evidence, *size_evidence],
-        )
-    )
 
     if conflicts:
         factors.append(
@@ -254,6 +202,15 @@ def _suitability_factors(
                 kind=SuitabilityFactorKind.LIMITATION,
                 label="Evidence consistency",
                 explanation=f"Conflicting native claims remain: {', '.join(conflicts)}.",
+                evidence_ids=[],
+            )
+        )
+    elif evidence_confidence is not ConfidenceLevel.HIGH:
+        factors.append(
+            SuitabilityFactor(
+                kind=SuitabilityFactorKind.LIMITATION,
+                label="Evidence confidence",
+                explanation="Native evidence is incomplete or insufficiently authoritative.",
                 evidence_ids=[],
             )
         )
@@ -267,16 +224,16 @@ def assess_candidate(
 ) -> CandidateAssessment:
     conflicts = detect_conflicts(evidence, profile.candidate_id)
     required = [item for item in requirements if item.priority is RequirementPriority.MUST]
+    preferred = [
+        item for item in requirements if item.priority is RequirementPriority.SHOULD
+    ]
     missing = [
         item.id for item in required if not requirement_is_evidenced(item, profile, evidence)
     ]
-    fit_requirements = [
-        item
-        for item in requirements
-        if item.category in {RequirementCategory.DOMAIN, RequirementCategory.TASK_LABELS}
+    met_preferred = [
+        item.id for item in preferred if requirement_is_evidenced(item, profile, evidence)
     ]
-    fit_met = sum(requirement_is_evidenced(item, profile, evidence) for item in fit_requirements)
-    task_ratio = fit_met / max(1, len(fit_requirements))
+    unmet_preferred = [item.id for item in preferred if item.id not in met_preferred]
     domain_requirements = [
         item for item in required if item.category is RequirementCategory.DOMAIN
     ]
@@ -401,51 +358,7 @@ def assess_candidate(
             )
         )
 
-    extensions = {extension.casefold() for extension in profile.file_extensions}
-    integration = (
-        10
-        if file_evidence and extensions & {".csv", ".json", ".parquet"}
-        else 7
-        if file_evidence
-        and extensions
-        & {
-            ".mat",
-            ".h5",
-            ".hdf5",
-            ".npy",
-            ".npz",
-        }
-        else 4
-        if file_evidence and extensions & {".zip", ".tar", ".gz", ".zst", ".tar.zst"}
-        else 0
-    )
-    score = ScoreBreakdown(
-        task_fit=round(35 * task_ratio) if fit_requirements else 0,
-        training_readiness=(12 if profile.labels and label_evidence else 0)
-        + (8 if profile.schema_documented and schema_evidence else 0),
-        acquisition_integrity=(8 if profile.has_time_series_files and file_evidence else 0)
-        + (7 if profile.acquisition_feasible and size_evidence else 0),
-        provenance_documentation=(
-            10 if profile.source_kinds and profile.revision and revision_evidence else 0
-        ),
-        integration_readiness=integration,
-        license_clarity=5 if profile.license_id and license_evidence else 0,
-        evidence_consistency=(
-            5
-            if any(item.candidate_id == profile.candidate_id for item in evidence) and not conflicts
-            else 3
-            if len(conflicts) == 1
-            else 0
-        ),
-    )
     gates_pass = all(gate.passed for gate in gates) and not missing
-    tier = (
-        CandidateTier.REJECT
-        if not gates_pass or score.total < 65
-        else CandidateTier.RECOMMEND
-        if score.total >= 80
-        else CandidateTier.SHORTLIST
-    )
     met_required = len(required) - len(missing)
     coverage = met_required / max(1, len(required))
     evidence_confidence = (
@@ -455,31 +368,51 @@ def assess_candidate(
         if coverage >= 0.8 and len(conflicts) <= 1
         else ConfidenceLevel.LOW
     )
-    suitability_level = _LEVEL_BY_TIER[tier]
+    suitability_level = (
+        SuitabilityLevel.LOW
+        if not gates_pass
+        else SuitabilityLevel.MEDIUM
+        if unmet_preferred
+        or conflicts
+        or evidence_confidence is not ConfidenceLevel.HIGH
+        else SuitabilityLevel.HIGH
+    )
+    candidate_evidence = [
+        item
+        for item in evidence
+        if item.candidate_id == profile.candidate_id
+        and item.status is VerificationStatus.VERIFIED
+    ]
+    authoritative_source_kind = (
+        max(
+            candidate_evidence,
+            key=lambda item: (item.precedence, item.source_kind.value),
+        ).source_kind
+        if candidate_evidence
+        else None
+    )
     suitability_factors = _suitability_factors(
         profile=profile,
         required=required,
-        fit_requirements=fit_requirements,
+        preferred=preferred,
         evidence=evidence,
-        task_ratio=task_ratio,
         gates=gates,
         missing=missing,
+        met_preferred=met_preferred,
+        unmet_preferred=unmet_preferred,
+        evidence_confidence=evidence_confidence,
         conflicts=conflicts,
-        label_evidence=label_evidence,
-        schema_evidence=schema_evidence,
-        file_evidence=file_evidence,
-        size_evidence=size_evidence,
     )
     return CandidateAssessment(
         candidate_id=profile.candidate_id,
         gates=gates,
-        score=score,
-        total_score=score.total,
-        tier=tier,
         evidence_confidence=evidence_confidence,
         suitability_level=suitability_level,
         suitability_factors=suitability_factors,
         missing_requirement_ids=missing,
+        met_preferred_requirement_ids=met_preferred,
+        unmet_preferred_requirement_ids=unmet_preferred,
+        authoritative_source_kind=authoritative_source_kind,
         conflicts=conflicts,
     )
 
@@ -487,15 +420,18 @@ def assess_candidate(
 def apply_recommendation_confidence(
     assessments: list[CandidateAssessment],
 ) -> list[CandidateAssessment]:
-    ranked = sorted(assessments, key=lambda item: item.total_score, reverse=True)
+    ranked = sorted(assessments, key=candidate_rank_key)
     if not ranked:
         return assessments
-    margin = ranked[0].total_score - (ranked[1].total_score if len(ranked) > 1 else 0)
     top = ranked[0]
-    if top.tier is CandidateTier.RECOMMEND:
+    high_candidates = [
+        item for item in ranked if item.suitability_level is SuitabilityLevel.HIGH
+    ]
+    if top.suitability_level is SuitabilityLevel.HIGH:
         confidence = (
             ConfidenceLevel.HIGH
-            if top.evidence_confidence is ConfidenceLevel.HIGH and margin >= 10
+            if top.evidence_confidence is ConfidenceLevel.HIGH
+            and len(high_candidates) == 1
             else ConfidenceLevel.MEDIUM
         )
         ranked[0] = top.model_copy(update={"recommendation_confidence": confidence})
@@ -505,27 +441,41 @@ def apply_recommendation_confidence(
 
 def candidate_is_approvable(assessment: CandidateAssessment) -> bool:
     return (
-        assessment.total_score >= 65
-        and assessment.tier is not CandidateTier.REJECT
+        assessment.suitability_level in {SuitabilityLevel.MEDIUM, SuitabilityLevel.HIGH}
         and not assessment.missing_requirement_ids
         and all(gate.passed for gate in assessment.gates)
     )
 
 
-def candidate_rank_key(assessment: CandidateAssessment) -> tuple[bool, bool, int, int, str]:
+def candidate_rank_key(
+    assessment: CandidateAssessment,
+) -> tuple[bool, bool, int, int, int, int, str]:
     identity_gate = next(
         (gate for gate in assessment.gates if gate.gate == "dataset_identity"), None
     )
     domain_gate = next((gate for gate in assessment.gates if gate.gate == "domain"), None)
-    tier_rank = {
-        CandidateTier.RECOMMEND: 0,
-        CandidateTier.SHORTLIST: 1,
-        CandidateTier.REJECT: 2,
-    }[assessment.tier]
+    level_rank = {
+        SuitabilityLevel.HIGH: 0,
+        SuitabilityLevel.MEDIUM: 1,
+        SuitabilityLevel.LOW: 2,
+    }[assessment.suitability_level]
+    confidence_rank = {
+        ConfidenceLevel.HIGH: 0,
+        ConfidenceLevel.MEDIUM: 1,
+        ConfidenceLevel.LOW: 2,
+    }[assessment.evidence_confidence]
+    source_rank = {
+        SourceKind.ZENODO: 0,
+        SourceKind.HUGGING_FACE: 1,
+        SourceKind.GITHUB: 2,
+        None: 3,
+    }[assessment.authoritative_source_kind]
     return (
         identity_gate is None or not identity_gate.passed,
         domain_gate is not None and not domain_gate.passed,
-        tier_rank,
-        -assessment.total_score,
+        level_rank,
+        len(assessment.unmet_preferred_requirement_ids),
+        confidence_rank,
+        source_rank,
         assessment.candidate_id,
     )

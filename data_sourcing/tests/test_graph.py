@@ -141,7 +141,8 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
     )
 
     assert paused["status"] == RunStatus.AWAITING_APPROVAL.value
-    assert paused["recommended_candidate_id"]
+    assert paused["recommended_candidate_id"] is None
+    candidate_id = paused["assessments"][0]["candidate_id"]
     snapshot = scout.graph.get_state(config)
     assert snapshot.next == ("approval",)
 
@@ -149,7 +150,7 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
         Command(
             resume={
                 "decision": "APPROVE",
-                "candidateId": paused["recommended_candidate_id"],
+                "candidateId": candidate_id,
             }
         ),
         config,
@@ -157,7 +158,7 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
 
     assert completed["status"] == RunStatus.APPROVED.value
     assert completed["feedback_allowed"] is False
-    assert completed["manifest"]["candidate_id"] == paused["recommended_candidate_id"]
+    assert completed["manifest"]["candidate_id"] == candidate_id
     assert any("batch_count" in item for item in completed["manifest"]["limitations"])
     scout.close()
     connection.close()
@@ -180,12 +181,13 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
         ),
         config,
     )
+    candidate_id = paused["assessments"][0]["candidate_id"]
 
     refined = scout.graph.invoke(
         Command(
             resume={
                 "decision": "REJECT",
-                "candidateId": paused["recommended_candidate_id"],
+                "candidateId": candidate_id,
                 "note": "Prioritize datasets that include free-motion baseline recordings.",
             }
         ),
@@ -209,15 +211,15 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
                 if item["id"] == "hyp_review_refinement_1"
             ),
             "outcome": "RECOMMENDATION_WITHHELD",
-            "rejected_candidate_id": paused["recommended_candidate_id"],
-            "previous_recommended_candidate_id": paused["recommended_candidate_id"],
+            "rejected_candidate_id": candidate_id,
+            "previous_recommended_candidate_id": None,
             "recommended_candidate_id": None,
             "new_candidate_ids": [],
             "new_evidence_ids": [],
         }
     ]
     assert refined["recommended_candidate_id"] is None
-    assert refined["excluded_candidate_ids"] == [paused["recommended_candidate_id"]]
+    assert refined["excluded_candidate_ids"] == [candidate_id]
     assert "excluded by reviewer" in refined["report_markdown"]
     assert scout.graph.get_state(config).next == ("approval",)
 
@@ -405,7 +407,10 @@ def test_cnc_brief_cannot_recommend_an_unrelated_robot_collision_dataset() -> No
     assert "CNC machining" in recommendation["name"]
     assert result["assessments"][0]["candidate_id"] == recommendation["id"]
     assert next(gate for gate in robot["gates"] if gate["gate"] == "domain")["passed"] is False
-    assert robot["tier"] == "REJECT"
+    assert robot["suitability_level"] == "LOW"
+    assert "score" not in robot
+    assert "total_score" not in robot
+    assert "tier" not in robot
     scout.close()
     connection.close()
 

@@ -75,12 +75,6 @@ class HypothesisStatus(StrEnum):
     EXHAUSTED = "EXHAUSTED"
 
 
-class CandidateTier(StrEnum):
-    RECOMMEND = "RECOMMEND"
-    SHORTLIST = "SHORTLIST"
-    REJECT = "REJECT"
-
-
 class ConfidenceLevel(StrEnum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
@@ -258,20 +252,6 @@ class GateResult(WireModel):
     evidence_ids: list[str] = Field(default_factory=list)
 
 
-class ScoreBreakdown(WireModel):
-    task_fit: int = Field(ge=0, le=35)
-    training_readiness: int = Field(ge=0, le=20)
-    acquisition_integrity: int = Field(ge=0, le=15)
-    provenance_documentation: int = Field(ge=0, le=10)
-    integration_readiness: int = Field(ge=0, le=10)
-    license_clarity: int = Field(ge=0, le=5)
-    evidence_consistency: int = Field(ge=0, le=5)
-
-    @property
-    def total(self) -> int:
-        return sum(self.model_dump().values())
-
-
 class SuitabilityFactor(WireModel):
     kind: SuitabilityFactorKind
     label: str = Field(min_length=1, max_length=120)
@@ -282,31 +262,130 @@ class SuitabilityFactor(WireModel):
 class CandidateAssessment(WireModel):
     candidate_id: str
     gates: list[GateResult]
-    score: ScoreBreakdown
-    total_score: int = Field(ge=0, le=100)
-    tier: CandidateTier
     evidence_confidence: ConfidenceLevel
     recommendation_confidence: ConfidenceLevel = ConfidenceLevel.LOW
-    suitability_level: SuitabilityLevel | None = None
-    suitability_factors: list[SuitabilityFactor] = Field(default_factory=list, max_length=20)
+    suitability_level: SuitabilityLevel
+    suitability_factors: list[SuitabilityFactor] = Field(min_length=1, max_length=40)
     missing_requirement_ids: list[str] = Field(default_factory=list)
+    met_preferred_requirement_ids: list[str] = Field(default_factory=list)
+    unmet_preferred_requirement_ids: list[str] = Field(default_factory=list)
+    authoritative_source_kind: SourceKind | None = None
     conflicts: list[str] = Field(default_factory=list)
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_numeric_assessment(cls, value: Any) -> Any:
+        """Accept persisted pre-categorical assessments without exposing old fields."""
+        if not isinstance(value, dict):
+            return value
+        migrated = dict(value)
+        has_numeric_contract = any(
+            key in migrated for key in ("score", "totalScore", "total_score", "tier")
+        )
+        legacy_tier = migrated.get("tier")
+        migrated.pop("score", None)
+        migrated.pop("totalScore", None)
+        migrated.pop("total_score", None)
+        migrated.pop("tier", None)
+
+        level = migrated.get("suitabilityLevel", migrated.get("suitability_level"))
+        gates = migrated.get("gates", [])
+        missing = migrated.get(
+            "missingRequirementIds", migrated.get("missing_requirement_ids", [])
+        )
+        unmet_preferred = migrated.get(
+            "unmetPreferredRequirementIds",
+            migrated.get("unmet_preferred_requirement_ids", []),
+        )
+        conflicts = migrated.get("conflicts", [])
+        confidence = migrated.get(
+            "evidenceConfidence", migrated.get("evidence_confidence", ConfidenceLevel.LOW)
+        )
+
+        def gate_passed(gate: Any) -> bool:
+            if isinstance(gate, GateResult):
+                return gate.passed
+            return bool(gate.get("passed")) if isinstance(gate, dict) else False
+
+        if level is None or has_numeric_contract:
+            gates_pass = bool(gates) and all(gate_passed(gate) for gate in gates)
+            if not gates_pass or missing:
+                level = SuitabilityLevel.LOW
+            elif unmet_preferred or conflicts or confidence not in {
+                ConfidenceLevel.HIGH,
+                ConfidenceLevel.HIGH.value,
+            }:
+                level = SuitabilityLevel.MEDIUM
+            elif has_numeric_contract and legacy_tier != "RECOMMEND":
+                # Old non-recommendations may have lost preferred-requirement context.
+                # Preserve that uncertainty without retaining their numeric policy.
+                level = SuitabilityLevel.MEDIUM
+            else:
+                level = SuitabilityLevel.HIGH
+            migrated.pop("suitabilityLevel", None)
+            migrated["suitability_level"] = level
+
+        factors = migrated.get(
+            "suitabilityFactors", migrated.get("suitability_factors", [])
+        )
+        if not factors:
+            generated: list[dict[str, Any]] = []
+            for gate in gates:
+                gate_data = gate.model_dump() if isinstance(gate, GateResult) else gate
+                if not isinstance(gate_data, dict):
+                    continue
+                if not gate_data.get("passed"):
+                    gate_name = str(gate_data.get("gate", "Requirement"))
+                    generated.append(
+                        {
+                            "kind": SuitabilityFactorKind.BLOCKER,
+                            "label": gate_name.replace("_", " ").title(),
+                            "explanation": gate_data.get("reason", "Required gate failed."),
+                            "evidence_ids": gate_data.get(
+                                "evidenceIds", gate_data.get("evidence_ids", [])
+                            ),
+                        }
+                    )
+            if not generated:
+                generated.append(
+                    {
+                        "kind": (
+                            SuitabilityFactorKind.STRENGTH
+                            if level == SuitabilityLevel.HIGH
+                            else SuitabilityFactorKind.LIMITATION
+                        ),
+                        "label": "Legacy assessment",
+                        "explanation": (
+                            "All recorded mandatory gates passed."
+                            if level == SuitabilityLevel.HIGH
+                            else (
+                                "This saved assessment was reclassified under the "
+                                "categorical policy."
+                            )
+                        ),
+                        "evidence_ids": [],
+                    }
+                )
+            migrated["suitability_factors"] = generated
+        return migrated
+
     @model_validator(mode="after")
-    def total_matches_breakdown(self) -> CandidateAssessment:
-        if self.total_score != self.score.total:
-            raise ValueError("total_score must equal the score breakdown")
-        if any(not gate.passed for gate in self.gates) and self.tier is not CandidateTier.REJECT:
-            raise ValueError("a candidate with a failed hard gate must be rejected")
-        level_by_tier = {
-            CandidateTier.RECOMMEND: SuitabilityLevel.HIGH,
-            CandidateTier.SHORTLIST: SuitabilityLevel.MEDIUM,
-            CandidateTier.REJECT: SuitabilityLevel.LOW,
-        }
-        if self.suitability_level and self.suitability_level is not level_by_tier[self.tier]:
-            raise ValueError("suitability_level must match the deterministic candidate tier")
-        if self.suitability_level and not self.suitability_factors:
-            raise ValueError("classified candidates must include suitability factors")
+    def classification_matches_evidence(self) -> CandidateAssessment:
+        gates_pass = bool(self.gates) and all(gate.passed for gate in self.gates)
+        if not gates_pass or self.missing_requirement_ids:
+            expected = SuitabilityLevel.LOW
+        elif (
+            self.unmet_preferred_requirement_ids
+            or self.conflicts
+            or self.evidence_confidence is not ConfidenceLevel.HIGH
+        ):
+            expected = SuitabilityLevel.MEDIUM
+        else:
+            expected = SuitabilityLevel.HIGH
+        if self.suitability_level is not expected:
+            raise ValueError(
+                f"suitability_level must be {expected.value} for the recorded evidence"
+            )
         return self
 
 
