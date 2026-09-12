@@ -11,11 +11,24 @@ from robot_observability.train_opentslm import (
     optimizer_group_snapshots,
     optimizer_group_stats,
     optimizer_group_update_stats,
+    should_run_generation,
     signal_preview,
     stratified_training_probe_subset,
     training_manifest_rows,
     wandb_manifest_table,
 )
+
+
+@pytest.mark.parametrize("phase", ["epoch", "final"])
+def test_generation_schedule_always_runs_at_checkpoints(phase: str) -> None:
+    assert should_run_generation(phase, 1, 250, generation_at_start=False)
+
+
+def test_generation_schedule_can_skip_expensive_start_decode() -> None:
+    assert not should_run_generation("start", 0, 250, generation_at_start=False)
+    assert should_run_generation("start", 0, 250, generation_at_start=True)
+    assert should_run_generation("step", 250, 250, generation_at_start=False)
+    assert not should_run_generation("step", 251, 250, generation_at_start=True)
 
 
 def test_training_probe_subset_balances_event_and_intent_groups() -> None:

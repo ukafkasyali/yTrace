@@ -556,6 +556,15 @@ def intent_fit_metrics(rows: list[dict[str, object]]) -> dict[str, float | int]:
     return result
 
 
+def should_run_generation(phase: str, step: int, cadence: int, *, generation_at_start: bool) -> bool:
+    """Schedule expensive decoded evaluation consistently for smoke and full runs."""
+    if phase in {"epoch", "final"}:
+        return True
+    if phase == "start":
+        return generation_at_start
+    return phase == "step" and cadence > 0 and step % cadence == 0
+
+
 class ZeroSignalDataset:
     def __init__(self, dataset: Dataset) -> None:
         self.dataset = dataset
@@ -902,6 +911,7 @@ def run(args: argparse.Namespace) -> None:
     patience = 0
     stop_reason = "epochs_complete"
     validation_config = config["validation"]
+    generation_at_start = bool(config["observability"].get("generation_at_start", False))
     validation_every_steps = int(validation_config.get("every_steps", 0))
     initial_train_probe_loss: float | None = None
 
@@ -943,14 +953,11 @@ def run(args: argparse.Namespace) -> None:
             store_runtime_checkpoint(model, run_root / "best_model.pt")
         probe_every_steps = int(probe_config.get("every_steps", 100))
         probe_generation_every = int(probe_config.get("generation_every_steps", 250))
-        should_generate_probe = (
-            (
-                phase == "final"
-                or (phase == "start" and bool(fit_probe_config.get("generation_at_start", False)))
-                or (phase == "step" and step % probe_generation_every == 0)
-            )
-            if args.smoke
-            else phase != "step" or step % probe_generation_every == 0
+        should_generate_probe = should_run_generation(
+            phase,
+            step,
+            probe_generation_every,
+            generation_at_start=generation_at_start,
         )
         should_run_probe_loss = probe_enabled and (
             phase != "step" or step % probe_every_steps == 0 or should_generate_probe
@@ -1086,14 +1093,11 @@ def run(args: argparse.Namespace) -> None:
                     }
                 )
         validation_generation_every = int(config["observability"].get("sample_generations_every_steps", 250))
-        should_generate_validation = (
-            (
-                phase == "final"
-                or (phase == "start" and bool(fit_probe_config.get("generation_at_start", False)))
-                or (phase == "step" and step % validation_generation_every == 0)
-            )
-            if args.smoke
-            else phase != "step" or step % validation_generation_every == 0
+        should_generate_validation = should_run_generation(
+            phase,
+            step,
+            validation_generation_every,
+            generation_at_start=generation_at_start,
         )
         if should_generate_validation:
             generation_metrics, generation_rows = generation_eval(
