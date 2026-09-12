@@ -3,7 +3,7 @@
   "checkpoint_id": "01M2BWQMDFQTG07B7C4A5E71PR",
   "strategy": "manual-commit",
   "branch": "codex/replay-workbench",
-  "checkpoints_count": 4,
+  "checkpoints_count": 6,
   "files_touched": [
     "AGENTS.md",
     "docs/submission/UI_WALKTHROUGH.md",
@@ -26,13 +26,20 @@
       "compact_transcript": "/1/transcript.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "compact_transcript": "/2/transcript.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": ""
     }
   ],
   "token_usage": {
-    "input_tokens": 231577,
+    "input_tokens": 239895,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 2001941,
-    "output_tokens": 2561,
-    "api_call_count": 20
+    "cache_read_tokens": 2395347,
+    "output_tokens": 3093,
+    "api_call_count": 31
   }
 }
