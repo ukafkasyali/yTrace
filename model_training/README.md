@@ -20,6 +20,8 @@ contract. A new robot dataset should add a reader and mapping rather than fork t
 - Strongest-joint pseudo-label is calibrated top-5%-mean disturbance, not contact-location truth.
 - Natural-language evidence plus strict JSON output. Free motion uses `null` onset/joint fields.
 - Primary TSLM: OpenTSLM SoftPrompt + Llama 3.2 1B + HAR warm start.
+- Training checkpoints contain only tensors and primitive flags, so inference can
+  validate them with PyTorch's weights-only loader before release.
 - Baselines: transparent signal features and Qwen3-VL 4B over equivalent seven-panel plots.
 - Retrospective observability only; this is not a causal collision detector or safety controller.
 

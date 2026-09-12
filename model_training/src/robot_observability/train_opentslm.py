@@ -19,6 +19,7 @@ import yaml
 from torch.utils.data import DataLoader, Dataset, Subset
 from torch.utils.tensorboard import SummaryWriter
 
+from robot_observability.checkpoints import store_runtime_checkpoint
 from robot_observability.constants import OPENTSLM_COMMIT, TIMENET_COMMIT
 from robot_observability.metrics import evaluate_rows, parse_answer
 from robot_observability.opentslm_dataset import RobotQADataset
@@ -345,7 +346,7 @@ def run(args: argparse.Namespace) -> None:
             )
         if improved:
             best_validation = validation_loss
-            model.store_to_file(str(run_root / "best_model.pt"))
+            store_runtime_checkpoint(model, run_root / "best_model.pt")
         generation_metrics, generation_rows = generation_eval(
             model,
             generation_dataset,
@@ -490,7 +491,7 @@ def run(args: argparse.Namespace) -> None:
                     best_validation_loss=best_validation,
                 )
 
-        model.store_to_file(str(run_root / "last_model.pt"))
+        store_runtime_checkpoint(model, run_root / "last_model.pt")
         _, improved = validate("epoch", epoch, global_step)
         if improved:
             patience = 0
