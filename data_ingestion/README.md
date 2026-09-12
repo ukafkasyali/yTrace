@@ -96,3 +96,17 @@ export KUKA_PART2_ROOT=/path/to/extracted/contact-batch-or-part-ii-root
 
 The checked-in profile, full-array validation result, and the raw comparison are documented in
 [`docs/KUKA_CONTACT_PART2_INSPECTION.md`](docs/KUKA_CONTACT_PART2_INSPECTION.md).
+
+## Unified KUKA batch builder
+
+Use one command for either extracted batch; `--part` deliberately requires a single part, so Part I
+and Part II remain separate datasets:
+
+```bash
+.venv/bin/python scripts/build_kuka_timef_dataset.py /path/to/collision-batch-01 outputs/timef \
+  --part part1
+.venv/bin/python scripts/build_kuka_timef_dataset.py /path/to/contact-batch-01 outputs/timef \
+  --part part2
+```
+
+The resulting dataset versions are written below the registry as `kuka/collision-part1` and
