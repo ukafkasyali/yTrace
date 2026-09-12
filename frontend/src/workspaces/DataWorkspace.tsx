@@ -57,14 +57,14 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
   }
 
   return <section className="workspace-content" aria-labelledby="data-title">
-    <header className="workspace-heading"><div><span className="eyebrow">Data workspace</span><h1 id="data-title">From source to signal</h1><p>Inspect the loaded recording, discover datasets, and follow ingestion.</p></div><Database size={24} aria-hidden="true" /></header>
+    <header className="workspace-heading"><div><h1 id="data-title">From source to signal</h1><p>Inspect the loaded recording, discover datasets, and follow ingestion.</p></div><Database size={24} aria-hidden="true" /></header>
     {error && <p className="error-message" role="alert">{error}</p>}
     <section className="workspace-section">
       <h2>Loaded recording</h2>
       <p><strong>{data.recording.name}</strong> · {data.recording.id}</p>
-      <p className="status-note">Real KUKA recording · {data.recording.channelCount} torque channels · {data.recording.sampleRateHz.toLocaleString()} Hz source · {data.recording.displaySampleRateHz} Hz overview</p>
+      <p className="status-note">Recorded telemetry · {data.recording.channelCount} torque channels · {data.recording.sampleRateHz.toLocaleString("en-US")} Hz source · {data.recording.displaySampleRateHz} Hz overview</p>
       <p className="status-note">Raw detail: {data.detail.startSeconds.toFixed(3)}–{data.detail.endSeconds.toFixed(3)} s. Outside this interval, the local preview uses display-resolution data.</p>
-      <div className="field-row"><a className="btn" href={data.recording.sourceUrl} target="_blank" rel="noopener noreferrer">Source dataset <ArrowUpRight size={14} aria-hidden="true" /></a><a className="btn" href="https://docs.timenet.ai" target="_blank" rel="noopener noreferrer">TimeNet documentation <ArrowUpRight size={14} aria-hidden="true" /></a></div>
+      <div className="field-row">{data.recording.sourceUrl && <a className="btn" href={data.recording.sourceUrl} target="_blank" rel="noopener noreferrer">Source dataset <ArrowUpRight size={14} aria-hidden="true" /></a>}<a className="btn" href="https://docs.timenet.ai" target="_blank" rel="noopener noreferrer">TimeNet documentation <ArrowUpRight size={14} aria-hidden="true" /></a></div>
       <div className="table-scroll"><table className="data-table"><caption>Loaded channel mapping</caption><thead><tr><th>Channel</th><th>Signal</th><th>Unit</th><th>Source sampling</th></tr></thead><tbody>{data.channels.map(channel => <tr key={channel.id}><td>{channel.id}</td><td>{channel.name}</td><td>{channel.unit}</td><td>{data.recording.sampleRateHz} Hz</td></tr>)}</tbody></table></div>
       <p className="status-note">Publisher markers are annotations, not verified physical collision-onset times. Original archive: {data.recording.archive}.</p>
     </section>

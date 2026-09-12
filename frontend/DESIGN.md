@@ -10,3 +10,7 @@ Operate-mode recording workbench, inspired by the supplied Foxglove screenshot. 
 - Focus rings, named icon buttons, keyboard event selection, explicit failure and disconnected states, reduced-motion support.
 - Signal plots and annotation markers use real source measurements, with 100 Hz overview and 1 kHz detail explicitly distinguished. Local analysis is identified as calculated evidence, never model output. Disconnected ingestion and model controls remain unavailable until an API is configured; no progress is fabricated.
 - Replay reveals measurements and annotation marks up to a shared playback cursor. Interval selection and answer evidence preserve context; querying future intervals is rejected. Dataset exploration replaces unverified 3D pose animation.
+
+## Investigation refinement
+
+Readable plot labels and adaptive 11–14px UI type keep all seven channels visible on desktop. The recording summary uses less vertical space, leaving the conversation and composer room to breathe. Short suggestion labels name numerical operations directly. Answers open at their question context rather than jumping to the bottom. The zoom control explicitly distinguishes an interval selection from a rolling view. Neutral inline notes distinguish disconnected services without turning every explanation into a colored callout. Scrollbars, caret, slider and focus states share the palette.
