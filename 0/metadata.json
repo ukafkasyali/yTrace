@@ -1,0 +1,60 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BTVXVZ8SR4WVCYSPMMGKKQ",
+  "session_id": "01a09636-4732-7010-81b0-79958f5daa26",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:12:38.666524929Z",
+  "branch": "codex/robot-observability-training",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "model_training/configs/opentslm_sp.yaml",
+    "model_training/src/robot_observability/train_opentslm.py",
+    "model_training/tests/test_training_observability.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "3f82202e69c9",
+  "checkpoint_transcript_start": 6384,
+  "transcript_lines_at_start": 6384,
+  "compact_transcript_start": 854,
+  "token_usage": {
+    "input_tokens": 60107,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2921088,
+    "output_tokens": 8437,
+    "api_call_count": 47
+  },
+  "session_metrics": {
+    "turn_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:12:37.910161043Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 17,
+    "total_committed": 0,
+    "total_lines_changed": 17,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 36,
+      "user_lines_removed": 17,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "model_training/configs/opentslm_sp.yaml": 1,
+        "model_training/src/robot_observability/train_opentslm.py": 22,
+        "model_training/tests/test_training_observability.py": 13
+      },
+      "user_removed_per_file": {
+        "model_training/configs/opentslm_sp.yaml": 1,
+        "model_training/src/robot_observability/train_opentslm.py": 16
+      }
+    }
+  ]
+}
