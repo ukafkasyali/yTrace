@@ -40,6 +40,7 @@ class RequirementPriority(StrEnum):
 
 
 class RequirementCategory(StrEnum):
+    DOMAIN = "DOMAIN"
     TASK_LABELS = "TASK_LABELS"
     SAMPLING_RATE = "SAMPLING_RATE"
     MODALITY = "MODALITY"
@@ -159,6 +160,7 @@ class DatasetProfile(WireModel):
     file_count: int | None = Field(default=None, ge=0)
     total_size_bytes: int | None = Field(default=None, ge=0)
     file_extensions: list[str] = Field(default_factory=list)
+    domains: list[str] = Field(default_factory=list)
     labels: list[str] = Field(default_factory=list)
     sample_rate_hz: float | None = Field(default=None, gt=0)
     channel_count: int | None = Field(default=None, ge=1)

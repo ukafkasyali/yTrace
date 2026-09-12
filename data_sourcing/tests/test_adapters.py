@@ -5,6 +5,7 @@ from data_sourcing.adapters import NativeVerifier, TavilySearchAdapter, canonica
 from data_sourcing.adapters.discovery import SourceUnavailable
 from data_sourcing.config import Settings
 from data_sourcing.models import DatasetCandidate, ExecutionMode, SearchResult, SourceKind
+from data_sourcing.relevance import EvidenceRelevanceJudge
 from data_sourcing.scoring import detect_conflicts
 
 
@@ -446,6 +447,43 @@ def test_zenodo_label_aliases_are_normalized_to_task_classes() -> None:
         item.observed_value for item in verified.evidence if item.claim_key == "labels"
     ]
     assert label_evidence == ["collision,contact,free"]
+
+
+def test_native_domain_evidence_distinguishes_cnc_from_robot_data() -> None:
+    payload = {
+        "title": "CNC machining process monitoring",
+        "revision": 1,
+        "metadata": {
+            "description": (
+                "Dataset structure for CNC machining with spindle current and head position "
+                "time-series signals."
+            ),
+            "license": {"id": "cc-by-4.0"},
+        },
+        "files": [{"key": "cnc-signals.csv", "size": 500}],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_555555555555",
+        name="CNC process signals",
+        canonical_url="https://zenodo.org/records/555",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    verified = verifier.verify(candidate)
+    relevance = EvidenceRelevanceJudge(settings()).evaluate(
+        candidate.id, verified.documents, ["cnc", "robot"]
+    )
+
+    assert relevance.matched_terms == ["cnc"]
+    domain_evidence = [
+        item.observed_value for item in relevance.evidence if item.claim_key == "domains"
+    ]
+    assert domain_evidence == ["cnc"]
 
 
 def test_hugging_face_native_adapter_contract() -> None:

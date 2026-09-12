@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 
 from data_sourcing.models import (
+    CandidateAssessment,
     CandidateTier,
     ConfidenceLevel,
     DatasetProfile,
@@ -9,12 +10,14 @@ from data_sourcing.models import (
     RequirementCategory,
     RequirementPriority,
     ResearchRequirement,
+    ScoreBreakdown,
     SourceKind,
     VerificationStatus,
 )
 from data_sourcing.scoring import (
     apply_recommendation_confidence,
     assess_candidate,
+    candidate_rank_key,
     detect_conflicts,
 )
 
@@ -93,6 +96,19 @@ def complete_evidence(candidate_id: str) -> list[EvidenceRecord]:
     ]
 
 
+def domain_evidence(candidate_id: str, domain: str) -> EvidenceRecord:
+    return EvidenceRecord(
+        id=f"ev_{sha256(f'{candidate_id}:domains'.encode()).hexdigest()[:16]}",
+        candidate_id=candidate_id,
+        claim_key="domains",
+        observed_value=domain,
+        source_url="https://zenodo.org/records/21941203",
+        source_kind=SourceKind.ZENODO,
+        status=VerificationStatus.VERIFIED,
+        precedence=100,
+    )
+
+
 def test_complete_candidate_is_recommended() -> None:
     requirements = [
         requirement(RequirementCategory.TASK_LABELS, "collision", "contact", "free"),
@@ -125,6 +141,64 @@ def test_internal_fault_is_not_inferred_from_collision_labels() -> None:
 
     assert assessment.tier is CandidateTier.REJECT
     assert "req_task_labels" in assessment.missing_requirement_ids
+
+
+def test_domain_mismatch_rejects_an_otherwise_complete_candidate() -> None:
+    dataset_profile = profile().model_copy(update={"domains": ["robot"]})
+    records = [
+        *complete_evidence(dataset_profile.candidate_id),
+        domain_evidence(dataset_profile.candidate_id, "robot"),
+    ]
+
+    assessment = assess_candidate(
+        dataset_profile,
+        [
+            requirement(RequirementCategory.DOMAIN, "cnc"),
+            requirement(RequirementCategory.TASK_LABELS, "contact"),
+        ],
+        records,
+    )
+
+    domain_gate = next(gate for gate in assessment.gates if gate.gate == "domain")
+    assert domain_gate.passed is False
+    assert assessment.tier is CandidateTier.REJECT
+
+
+def test_domain_match_ranks_before_a_higher_scoring_domain_mismatch() -> None:
+    dataset_profile = profile().model_copy(update={"domains": ["robot"]})
+    mismatch = assess_candidate(
+        dataset_profile,
+        [requirement(RequirementCategory.DOMAIN, "cnc")],
+        [
+            *complete_evidence(dataset_profile.candidate_id),
+            domain_evidence(dataset_profile.candidate_id, "robot"),
+        ],
+    )
+    domain_gate = next(gate for gate in mismatch.gates if gate.gate == "domain")
+    related_score = ScoreBreakdown(
+        task_fit=35,
+        training_readiness=0,
+        acquisition_integrity=0,
+        provenance_documentation=0,
+        integration_readiness=0,
+        license_clarity=0,
+        evidence_consistency=0,
+    )
+    related = CandidateAssessment(
+        candidate_id="ds_abcdef012345",
+        gates=[
+            gate.model_copy(update={"passed": True}) if gate is domain_gate else gate
+            for gate in mismatch.gates
+        ],
+        score=related_score,
+        total_score=related_score.total,
+        tier=CandidateTier.REJECT,
+        evidence_confidence=ConfidenceLevel.LOW,
+    )
+
+    ranked = sorted([mismatch, related], key=candidate_rank_key)
+
+    assert ranked[0].candidate_id == related.candidate_id
 
 
 def test_conflicting_batch_counts_are_retained() -> None:

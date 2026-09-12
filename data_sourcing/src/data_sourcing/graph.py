@@ -24,6 +24,7 @@ from data_sourcing.models import (
     HypothesisStatus,
     RefinementOutcome,
     RefinementOutcomeStatus,
+    RequirementCategory,
     ResearchRequirement,
     RunStatus,
     SearchHypothesis,
@@ -38,10 +39,12 @@ from data_sourcing.planning import (
     make_gap_hypothesis,
     make_review_hypothesis,
 )
+from data_sourcing.relevance import EvidenceRelevanceJudge
 from data_sourcing.scoring import (
     apply_recommendation_confidence,
     assess_candidate,
     candidate_is_approvable,
+    candidate_rank_key,
     requirement_claim_key,
     requirement_is_evidenced,
 )
@@ -144,6 +147,7 @@ class DatasetScoutGraph:
     ):
         self.settings = settings
         self.planner = RequirementPlanner(settings)
+        self.relevance_judge = EvidenceRelevanceJudge(settings)
         self.search = search or TavilySearchAdapter(settings)
         self.verifier = verifier or NativeVerifier(settings)
         self.graph = self._build().compile(checkpointer=checkpointer)
@@ -290,6 +294,13 @@ class DatasetScoutGraph:
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
         errors = list(state["errors"])
         constraints = SourcingConstraints.model_validate(state["constraints"])
+        requirements = [ResearchRequirement.model_validate(item) for item in state["requirements"]]
+        required_domain_terms = [
+            value
+            for requirement in requirements
+            if requirement.category is RequirementCategory.DOMAIN
+            for value in requirement.expected_values
+        ]
         for candidate in candidates:
             if candidate.id in known_profiles or self._expired(state):
                 continue
@@ -302,8 +313,16 @@ class DatasetScoutGraph:
             except (SourceUnavailable, ValueError, OSError, httpx.HTTPError) as exc:
                 errors.append(f"Candidate {candidate.id} verification failed: {exc}")
                 continue
-            known_profiles[candidate.id] = verified.profile
-            evidence.extend(verified.evidence)
+            relevance = self.relevance_judge.evaluate(
+                candidate.id,
+                verified.documents,
+                required_domain_terms,
+            )
+            known_profiles[candidate.id] = verified.profile.model_copy(
+                update={"domains": relevance.matched_terms}
+            )
+            evidence.extend([*verified.evidence, *relevance.evidence])
+            errors.extend(relevance.warnings)
         deduplicated_evidence = {item.id: item for item in evidence}
         return {
             "status": RunStatus.VERIFYING.value,
@@ -393,7 +412,7 @@ class DatasetScoutGraph:
                 if item.candidate_id in excluded_candidate_ids
             ],
         ]
-        ranked = sorted(assessments, key=lambda item: (-item.total_score, item.candidate_id))
+        ranked = sorted(assessments, key=candidate_rank_key)
         missing_mandatory = [
             item.id
             for item in requirements

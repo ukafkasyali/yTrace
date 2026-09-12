@@ -24,7 +24,7 @@ function runFixture(): SourcingRun {
       candidateId: 'ds_9be731e6fb6b', name: 'Robot joint torque measurements',
       canonicalUrl: 'https://zenodo.org/records/6461868', sourceKinds: ['ZENODO'],
       revision: '6461868.r6', licenseId: 'cc-by-4.0', fileCount: 22, totalSizeBytes: 500,
-      fileExtensions: ['.csv'], labels: ['collision', 'contact', 'free'], sampleRateHz: 1_000,
+      fileExtensions: ['.csv'], domains: ['robot'], labels: ['collision', 'contact', 'free'], sampleRateHz: 1_000,
       channelCount: 7, hasTimeSeriesFiles: true, schemaDocumented: true,
       acquisitionFeasible: true,
     }],
@@ -185,5 +185,42 @@ describe('decision evidence', () => {
 
     expect(markup).toContain('No eligible datasets');
     expect(markup).toContain('Only datasets that pass every mandatory gate can be approved.');
+  });
+
+  it('ranks a domain match before a higher-scoring unrelated candidate', () => {
+    const run = runFixture();
+    run.brief = 'Find CNC machines where the head makes accidental contact.';
+    run.recommendedCandidateId = null;
+    run.requirements.push({
+      id: 'req_domain', label: 'Equipment or application domain',
+      description: 'Native sources match the requested domain.', priority: 'MUST',
+      category: 'DOMAIN', expectedValues: ['cnc'], status: 'VERIFIED', evidenceIds: ['ev_cnc'],
+    });
+    run.assessments[0] = {
+      ...run.assessments[0],
+      tier: 'REJECT', totalScore: 83,
+      score: { ...run.assessments[0].score, taskFit: 18 },
+      gates: [{ gate: 'domain', passed: false, reason: 'Native sources do not match the requested domain', evidenceIds: [] }],
+      missingRequirementIds: ['req_domain'],
+    };
+    run.candidates.push({
+      ...run.candidates[0], id: 'ds_aaaaaaaaaaaa', name: 'CNC machining process monitoring',
+      canonicalUrl: 'https://github.com/boschresearch/CNC_Machining', sourceKind: 'GITHUB',
+    });
+    run.assessments.push({
+      ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa', totalScore: 54,
+      score: { taskFit: 18, trainingReadiness: 8, acquisitionIntegrity: 15, provenanceDocumentation: 10, integrationReadiness: 0, licenseClarity: 0, evidenceConsistency: 3 },
+      tier: 'REJECT', gates: [{ gate: 'domain', passed: true, reason: 'Native sources match the requested domain', evidenceIds: ['ev_cnc'] }],
+      missingRequirementIds: ['req_task_labels', 'req_schema'],
+    });
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup.indexOf('CNC machining process monitoring')).toBeLessThan(
+      markup.indexOf('Robot joint torque measurements'),
+    );
+    expect(markup).toContain('Missing: Equipment or application domain');
   });
 });

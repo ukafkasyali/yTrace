@@ -24,6 +24,24 @@ def test_deterministic_extraction_keeps_internal_fault_distinct() -> None:
     assert draft.minimum_sample_rate_hz == 1_000
 
 
+def test_cnc_brief_creates_an_explicit_domain_requirement() -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    cnc_request = request(
+        "Find a dataset of CNC machines where the head makes accidental contact."
+    )
+
+    draft = deterministic_draft(cnc_request)
+    requirements = planner.requirements(cnc_request)
+
+    assert draft.domain_terms == ["cnc"]
+    assert "cnc" in draft.search_terms
+    domain = next(
+        item for item in requirements if item.category is RequirementCategory.DOMAIN
+    )
+    assert domain.priority.value == "MUST"
+    assert domain.expected_values == ["cnc"]
+
+
 def test_planner_always_adds_hard_gate_requirements() -> None:
     planner = RequirementPlanner(Settings(_env_file=None))
 
@@ -75,9 +93,26 @@ def test_model_cannot_infer_internal_fault_from_collision_brief(monkeypatch) -> 
     assert "internal mechanical fault" not in draft.task_labels
 
 
+def test_model_domain_terms_are_kept_only_when_grounded_in_the_brief(monkeypatch) -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    monkeypatch.setattr(
+        planner,
+        "_model_draft",
+        lambda _: PlanningDraft(domain_terms=["hydraulic press", "wind turbine"]),
+    )
+
+    draft = planner.draft(
+        request("Find datasets from hydraulic presses where the tool head makes contact.")
+    )
+
+    assert "hydraulic press" in draft.domain_terms
+    assert "wind turbine" not in draft.domain_terms
+
+
 def test_model_draft_is_normalized_to_deterministic_bounds() -> None:
     raw = _ModelPlanningDraft(
         task_labels=[f"label-{index}" for index in range(10)],
+        domain_terms=[f"domain-{index}" for index in range(8)],
         minimum_sample_rate_hz=1_000,
         modality_terms=[f"modality-{index}" for index in range(10)],
         search_terms=[f"term-{index}" for index in range(14)],
@@ -86,6 +121,7 @@ def test_model_draft_is_normalized_to_deterministic_bounds() -> None:
     bounded = _bounded_model_draft(raw)
 
     assert bounded.task_labels == [f"label-{index}" for index in range(8)]
+    assert bounded.domain_terms == [f"domain-{index}" for index in range(6)]
     assert bounded.modality_terms == [f"modality-{index}" for index in range(8)]
     assert bounded.search_terms == [f"term-{index}" for index in range(12)]
 

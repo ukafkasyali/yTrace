@@ -57,6 +57,15 @@ candidate and evidence IDs, the recommendation before and after rescoring, and o
 or `NO_CHANGE`. `excludedCandidateIds` records reviewer exclusions separately from deterministic
 assessment results so clients can show the full audit trail without offering excluded choices.
 
+When the brief explicitly names equipment or an application domain, requirements include a
+mandatory `DOMAIN` category. Verified profiles expose the native-source-supported terms in
+`domains`, and the associated evidence uses `claimKey: "domains"`. Domain matching may use the
+configured LLM to recognize semantic equivalents, but a match is accepted only when its returned
+quote exists verbatim in a fetched native source. Unsupported or uncertain domains therefore fail
+the `domain` hard gate instead of receiving task-fit credit. Candidate ranking places supported
+domain matches ahead of higher-scoring domain mismatches; the raw deterministic scores remain
+visible for auditability.
+
 ### `POST /api/sourcing-runs/{runId}/approvals`
 
 Only valid in `AWAITING_APPROVAL`. The reviewer may approve the recommendation or another

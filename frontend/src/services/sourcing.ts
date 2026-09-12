@@ -19,7 +19,7 @@ export type ResearchRequirement = {
   label: string;
   description: string;
   priority: 'MUST' | 'SHOULD';
-  category: 'TASK_LABELS' | 'SAMPLING_RATE' | 'MODALITY' | 'LICENSE' | 'PROVENANCE' | 'SCHEMA' | 'ACQUISITION' | 'OTHER';
+  category: 'DOMAIN' | 'TASK_LABELS' | 'SAMPLING_RATE' | 'MODALITY' | 'LICENSE' | 'PROVENANCE' | 'SCHEMA' | 'ACQUISITION' | 'OTHER';
   expectedValues: string[];
   status: 'VERIFIED' | 'MISSING' | 'CONFLICTING' | 'UNVERIFIED';
   evidenceIds: string[];
@@ -45,6 +45,7 @@ export type DatasetProfile = {
   fileCount: number | null;
   totalSizeBytes: number | null;
   fileExtensions: string[];
+  domains: string[];
   labels: string[];
   sampleRateHz: number | null;
   channelCount: number | null;
@@ -157,6 +158,20 @@ export function candidateIsEligibleForApproval(
     && candidate.gates.every(gate => gate.passed);
 }
 
+export function compareCandidateAssessments(
+  left: CandidateAssessment,
+  right: CandidateAssessment,
+) {
+  const domainMismatch = (candidate: CandidateAssessment) =>
+    candidate.gates.some(gate => gate.gate === 'domain' && !gate.passed);
+  const domainDifference = Number(domainMismatch(left)) - Number(domainMismatch(right));
+  if (domainDifference !== 0) return domainDifference;
+  const tierRank = { RECOMMEND: 0, SHORTLIST: 1, REJECT: 2 } as const;
+  return tierRank[left.tier] - tierRank[right.tier]
+    || right.totalScore - left.totalScore
+    || left.candidateId.localeCompare(right.candidateId);
+}
+
 export type RunAccepted = { runId: string; status: SourcingStatus; statusUrl: string };
 
 const statuses = new Set<SourcingStatus>([
@@ -198,13 +213,15 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
     && typeof run.brief === 'string' && Array.isArray(run.requirements)
     && run.requirements.every(item => isRecord(item) && typeof item.id === 'string' && typeof item.label === 'string'
       && ['MUST', 'SHOULD'].includes(item.priority as string)
+      && ['DOMAIN', 'TASK_LABELS', 'SAMPLING_RATE', 'MODALITY', 'LICENSE', 'PROVENANCE', 'SCHEMA', 'ACQUISITION', 'OTHER'].includes(item.category as string)
       && ['VERIFIED', 'MISSING', 'CONFLICTING', 'UNVERIFIED'].includes(item.status as string)
       && Array.isArray(item.evidenceIds))
     && Array.isArray(run.candidates) && Array.isArray(run.profiles)
     && run.candidates.every(item => isRecord(item) && typeof item.id === 'string'
       && typeof item.name === 'string' && isNativeSourceUrl(item.canonicalUrl))
     && run.profiles.every(item => isRecord(item) && typeof item.candidateId === 'string'
-      && isNativeSourceUrl(item.canonicalUrl) && Array.isArray(item.labels))
+      && isNativeSourceUrl(item.canonicalUrl) && Array.isArray(item.domains)
+      && item.domains.every(domain => typeof domain === 'string') && Array.isArray(item.labels))
     && Array.isArray(run.evidence) && Array.isArray(run.assessments)
     && run.evidence.every(item => isRecord(item) && typeof item.id === 'string' && isNativeSourceUrl(item.sourceUrl))
     && run.assessments.every(item => isRecord(item) && typeof item.candidateId === 'string'

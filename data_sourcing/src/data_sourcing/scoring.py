@@ -58,6 +58,7 @@ def requirement_is_evidenced(
 
 def requirement_claim_key(requirement: ResearchRequirement) -> str | None:
     claim_by_category = {
+        RequirementCategory.DOMAIN: "domains",
         RequirementCategory.TASK_LABELS: "labels",
         RequirementCategory.SAMPLING_RATE: "sample_rate_hz",
         RequirementCategory.MODALITY: "file_extensions",
@@ -71,6 +72,10 @@ def requirement_claim_key(requirement: ResearchRequirement) -> str | None:
 
 def requirement_is_met(requirement: ResearchRequirement, profile: DatasetProfile) -> bool:
     expected = {value.casefold() for value in requirement.expected_values}
+    if requirement.category is RequirementCategory.DOMAIN:
+        return bool(expected) and expected.issubset(
+            {domain.casefold() for domain in profile.domains}
+        )
     if requirement.category is RequirementCategory.TASK_LABELS:
         return bool(expected) and expected.issubset({label.casefold() for label in profile.labels})
     if requirement.category is RequirementCategory.SAMPLING_RATE:
@@ -104,11 +109,25 @@ def assess_candidate(
     missing = [
         item.id for item in required if not requirement_is_evidenced(item, profile, evidence)
     ]
-    task_requirements = [
+    fit_requirements = [
+        item
+        for item in requirements
+        if item.category in {RequirementCategory.DOMAIN, RequirementCategory.TASK_LABELS}
+    ]
+    fit_met = sum(requirement_is_evidenced(item, profile, evidence) for item in fit_requirements)
+    task_ratio = fit_met / max(1, len(fit_requirements))
+    domain_requirements = [
+        item for item in requirements if item.category is RequirementCategory.DOMAIN
+    ]
+    label_requirements = [
         item for item in requirements if item.category is RequirementCategory.TASK_LABELS
     ]
-    task_met = sum(requirement_is_evidenced(item, profile, evidence) for item in task_requirements)
-    task_ratio = task_met / max(1, len(task_requirements))
+    domain_passed = all(
+        requirement_is_evidenced(item, profile, evidence) for item in domain_requirements
+    )
+    labels_passed = all(
+        requirement_is_evidenced(item, profile, evidence) for item in label_requirements
+    )
 
     license_requirements = [
         item for item in required if item.category is RequirementCategory.LICENSE
@@ -119,6 +138,7 @@ def assess_candidate(
     revision_evidence = _evidence_for(evidence, profile.candidate_id, "revision")
     file_evidence = _evidence_for(evidence, profile.candidate_id, "file_extensions")
     label_evidence = _evidence_for(evidence, profile.candidate_id, "labels")
+    domain_evidence = _evidence_for(evidence, profile.candidate_id, "domains")
     schema_evidence = _evidence_for(evidence, profile.candidate_id, "schema")
     size_evidence = _evidence_for(evidence, profile.candidate_id, "total_size_bytes")
     license_evidence = _evidence_for(evidence, profile.candidate_id, "license")
@@ -154,31 +174,48 @@ def assess_candidate(
             ),
             evidence_ids=file_evidence,
         ),
-        GateResult(
-            gate="task_labels",
-            passed=not task_requirements or task_met == len(task_requirements),
-            reason="Required task labels found"
-            if not task_requirements or task_met == len(task_requirements)
-            else "Required task labels are incomplete",
-            evidence_ids=label_evidence,
-        ),
-        GateResult(
-            gate="schema",
-            passed=schema_passed,
-            reason="Schema or channel documentation found"
-            if schema_passed
-            else "Schema or channel documentation missing",
-            evidence_ids=schema_evidence,
-        ),
-        GateResult(
-            gate="acquisition",
-            passed=acquisition_passed,
-            reason="Acquisition is within the configured bound"
-            if acquisition_passed
-            else "Acquisition size is unknown or exceeds the configured bound",
-            evidence_ids=size_evidence,
-        ),
     ]
+    if domain_requirements:
+        gates.append(
+            GateResult(
+                gate="domain",
+                passed=domain_passed,
+                reason=(
+                    "Native sources match the requested domain"
+                    if domain_passed
+                    else "Native sources do not match the requested domain"
+                ),
+                evidence_ids=domain_evidence,
+            )
+        )
+    gates.extend(
+        [
+            GateResult(
+                gate="task_labels",
+                passed=labels_passed,
+                reason="Required task labels found"
+                if labels_passed
+                else "Required task labels are incomplete",
+                evidence_ids=label_evidence,
+            ),
+            GateResult(
+                gate="schema",
+                passed=schema_passed,
+                reason="Schema or channel documentation found"
+                if schema_passed
+                else "Schema or channel documentation missing",
+                evidence_ids=schema_evidence,
+            ),
+            GateResult(
+                gate="acquisition",
+                passed=acquisition_passed,
+                reason="Acquisition is within the configured bound"
+                if acquisition_passed
+                else "Acquisition size is unknown or exceeds the configured bound",
+                evidence_ids=size_evidence,
+            ),
+        ]
+    )
 
     extensions = {extension.casefold() for extension in profile.file_extensions}
     integration = (
@@ -199,7 +236,7 @@ def assess_candidate(
         else 0
     )
     score = ScoreBreakdown(
-        task_fit=round(35 * task_ratio) if task_requirements else 0,
+        task_fit=round(35 * task_ratio) if fit_requirements else 0,
         training_readiness=(12 if profile.labels and label_evidence else 0)
         + (8 if profile.schema_documented and schema_evidence else 0),
         acquisition_integrity=(8 if profile.has_time_series_files and file_evidence else 0)
@@ -271,4 +308,19 @@ def candidate_is_approvable(assessment: CandidateAssessment) -> bool:
         and assessment.tier is not CandidateTier.REJECT
         and not assessment.missing_requirement_ids
         and all(gate.passed for gate in assessment.gates)
+    )
+
+
+def candidate_rank_key(assessment: CandidateAssessment) -> tuple[bool, int, int, str]:
+    domain_gate = next((gate for gate in assessment.gates if gate.gate == "domain"), None)
+    tier_rank = {
+        CandidateTier.RECOMMEND: 0,
+        CandidateTier.SHORTLIST: 1,
+        CandidateTier.REJECT: 2,
+    }[assessment.tier]
+    return (
+        domain_gate is not None and not domain_gate.passed,
+        tier_rank,
+        -assessment.total_score,
+        assessment.candidate_id,
     )

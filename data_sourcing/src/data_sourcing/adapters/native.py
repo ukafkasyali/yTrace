@@ -66,6 +66,7 @@ class VerifiedCandidate(BaseModel):
 
     profile: DatasetProfile
     evidence: list[EvidenceRecord]
+    documents: list[NativeDocument]
 
 
 def _extension(name: str) -> str:
@@ -278,7 +279,7 @@ def build_verified_candidate(
             and total_size <= max_download_bytes
         ),
     )
-    return VerifiedCandidate(profile=profile, evidence=evidence)
+    return VerifiedCandidate(profile=profile, evidence=evidence, documents=documents)
 
 
 class NativeVerifier:

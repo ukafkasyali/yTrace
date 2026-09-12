@@ -55,6 +55,13 @@ from subsequent recommendation and approval choices. If no eligible replacement 
 agent withholds its recommendation instead of selecting the rejected candidate again. Feedback
 guides discovery but does not rewrite hard gates or score weights.
 
+The planner treats an explicitly named equipment or application domain as a mandatory
+requirement. Native verification records matched terms in each profile's `domains` field and
+stores a `domains` evidence record. With an LLM configured, semantic equivalents are accepted
+only when the model returns a verbatim excerpt that can be found in the fetched native source.
+Candidates without that evidence fail the domain gate and rank below candidates from the
+requested domain, regardless of their raw score.
+
 Runtime artifacts are written under `var/runs/<run-id>/`. SQLite checkpoints and idempotency keys
 remain under `var/`. Set `SOURCING_DATA_DIR` to relocate all runtime state.
 

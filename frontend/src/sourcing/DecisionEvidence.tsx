@@ -1,5 +1,5 @@
 import { ArrowUpRight, Check, CircleX } from 'lucide-react';
-import { candidateIsEligibleForApproval } from '../services';
+import { candidateIsEligibleForApproval, compareCandidateAssessments } from '../services';
 import type { EvidenceRecord, RefinementOutcome, SourcingRun } from '../services';
 
 function label(value: string) {
@@ -92,7 +92,7 @@ export default function DecisionEvidence({
   const recommendedAssessment = run.assessments.find(
     item => item.candidateId === run.recommendedCandidateId,
   );
-  const ranked = [...run.assessments].sort((left, right) => right.totalScore - left.totalScore);
+  const ranked = [...run.assessments].sort(compareCandidateAssessments);
   const excludedCandidateIds = new Set(run.excludedCandidateIds);
   const eligibleAlternatives = ranked.filter(item =>
     candidateIsEligibleForApproval(item, excludedCandidateIds));

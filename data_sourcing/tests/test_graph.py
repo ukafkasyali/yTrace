@@ -163,7 +163,8 @@ def test_refinement_prioritizes_new_results_and_records_recommendation_change() 
                 revision="v1",
                 license_id="cc-by-4.0",
                 text=(
-                    "Collision and intentional contact torque time-series at 1 kHz. "
+                    "Industrial robot collision and intentional contact torque time-series at "
+                    "1 kHz. "
                     "Dataset structure documents seven joints and signal columns."
                 ),
                 files=[NativeFile(name="signals.csv", size=100)],
@@ -216,6 +217,90 @@ def test_refinement_prioritizes_new_results_and_records_recommendation_change() 
     assert outcome["recommended_candidate_id"] == "ds_7d0f10684c2e"
     assert outcome["new_candidate_ids"] == ["ds_7d0f10684c2e"]
     assert outcome["new_evidence_ids"]
+    scout.close()
+    connection.close()
+
+
+def test_cnc_brief_cannot_recommend_an_unrelated_robot_collision_dataset() -> None:
+    class MixedDomainSearch:
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            return SearchBatch(
+                results=[
+                    SearchResult(
+                        title="Robot joint torque measurements for accidental contact",
+                        url="https://zenodo.org/records/6461868",
+                        query=query,
+                    ),
+                    SearchResult(
+                        title="CNC machining process monitoring",
+                        url="https://github.com/boschresearch/CNC_Machining",
+                        query=query,
+                    ),
+                ],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class MixedDomainVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            domain_text = (
+                "CNC machining head accidental contact current time-series."
+                if "CNC" in candidate.name
+                else "Industrial robot joint accidental contact torque time-series."
+            )
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url),
+                source_kind=candidate.source_kind,
+                name=candidate.name,
+                revision="v1",
+                license_id="cc-by-4.0",
+                text=f"{domain_text} Dataset structure documents signal columns.",
+                files=[NativeFile(name="signals.csv", size=100)],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=MixedDomainSearch(),
+        verifier=MixedDomainVerifier(),
+    )
+    run_id = str(uuid4())
+
+    result = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief=(
+                    "Find a dataset of CNC machines where the head makes accidental contact."
+                )
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    candidates = {item["id"]: item for item in result["candidates"]}
+    recommendation = candidates[result["recommended_candidate_id"]]
+    robot = next(
+        item
+        for item in result["assessments"]
+        if "Robot joint" in candidates[item["candidate_id"]]["name"]
+    )
+
+    assert "CNC machining" in recommendation["name"]
+    assert result["assessments"][0]["candidate_id"] == recommendation["id"]
+    assert next(gate for gate in robot["gates"] if gate["gate"] == "domain")["passed"] is False
+    assert robot["tier"] == "REJECT"
     scout.close()
     connection.close()
 

@@ -20,6 +20,7 @@ class PlanningDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_labels: list[str] = Field(default_factory=list, max_length=8)
+    domain_terms: list[str] = Field(default_factory=list, max_length=6)
     minimum_sample_rate_hz: float | None = Field(default=None, gt=0)
     modality_terms: list[str] = Field(default_factory=list, max_length=8)
     search_terms: list[str] = Field(default_factory=list, max_length=12)
@@ -31,6 +32,7 @@ class _ModelPlanningDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_labels: list[str] = Field(default_factory=list)
+    domain_terms: list[str] = Field(default_factory=list)
     minimum_sample_rate_hz: float | None = None
     modality_terms: list[str] = Field(default_factory=list)
     search_terms: list[str] = Field(default_factory=list)
@@ -39,6 +41,7 @@ class _ModelPlanningDraft(BaseModel):
 def _bounded_model_draft(draft: _ModelPlanningDraft) -> PlanningDraft:
     return PlanningDraft(
         task_labels=draft.task_labels[:8],
+        domain_terms=_bounded_domains(draft.domain_terms),
         minimum_sample_rate_hz=(
             draft.minimum_sample_rate_hz
             if draft.minimum_sample_rate_hz and draft.minimum_sample_rate_hz > 0
@@ -57,9 +60,24 @@ _LABEL_PATTERNS = {
     "internal mechanical fault": r"\binternal mechanical faults?\b",
 }
 
+_DOMAIN_PATTERNS = {
+    "cnc": r"\b(?:cnc|computer numerical control)\b",
+    "robot": r"\brobots?\b",
+    "wind turbine": r"\bwind turbines?\b",
+    "bearing": r"\bbearings?\b",
+    "gearbox": r"\bgearboxes?\b",
+    "pump": r"\bpumps?\b",
+    "motor": r"\bmotors?\b",
+    "turbofan": r"\bturbofans?\b",
+}
+
 
 def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(value.strip().casefold() for value in values if value.strip()))
+
+
+def _bounded_domains(values: Iterable[str]) -> list[str]:
+    return _unique(value[:120] for value in values)[:6]
 
 
 def _normalize_labels(values: Iterable[str]) -> list[str]:
@@ -84,6 +102,7 @@ def _normalize_labels(values: Iterable[str]) -> list[str]:
 def deterministic_draft(request: CreateSourcingRun) -> PlanningDraft:
     text = " ".join([request.brief, *request.constraints.must_have]).casefold()
     labels = [label for label, pattern in _LABEL_PATTERNS.items() if re.search(pattern, text)]
+    domains = [domain for domain, pattern in _DOMAIN_PATTERNS.items() if re.search(pattern, text)]
     rate_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(k?hz)\b", text)
     sample_rate = None
     if rate_match:
@@ -93,9 +112,10 @@ def deterministic_draft(request: CreateSourcingRun) -> PlanningDraft:
         for term in ("torque", "position", "velocity", "current", "force", "time series")
         if term in text
     ]
-    search_terms = _unique([*labels, *modalities, "robot telemetry dataset"])
+    search_terms = _unique([*domains, *labels, *modalities, "time-series dataset"])
     return PlanningDraft(
         task_labels=labels,
+        domain_terms=domains,
         minimum_sample_rate_hz=sample_rate,
         modality_terms=modalities,
         search_terms=search_terms,
@@ -136,7 +156,9 @@ class RequirementPlanner:
                     "role": "system",
                     "content": (
                         "Extract dataset-search vocabulary only. Do not invent requirements. "
-                        "Treat collision/contact labels as distinct from internal robot faults."
+                        "domain_terms must name equipment or application domains explicitly "
+                        "stated by the user. Treat collision/contact labels as distinct from "
+                        "internal robot faults."
                     ),
                 },
                 {"role": "user", "content": request.model_dump_json(by_alias=True)},
@@ -158,8 +180,17 @@ class RequirementPlanner:
             if label != "internal mechanical fault"
             or "internal mechanical fault" in fallback.task_labels
         ]
+        request_text = " ".join(
+            [request.brief, *request.constraints.must_have]
+        ).casefold()
+        model_domains = [
+            domain
+            for domain in _unique(model_draft.domain_terms)
+            if domain in request_text
+        ]
         return PlanningDraft(
             task_labels=_normalize_labels([*fallback.task_labels, *model_labels])[:8],
+            domain_terms=_bounded_domains([*fallback.domain_terms, *model_domains]),
             minimum_sample_rate_hz=(
                 fallback.minimum_sample_rate_hz or model_draft.minimum_sample_rate_hz
             ),
@@ -202,14 +233,6 @@ class RequirementPlanner:
                 expected_values=draft.modality_terms,
             ),
             ResearchRequirement(
-                id="req_task_labels",
-                label="Task labels",
-                description="Labels needed by the stated task are documented.",
-                priority=RequirementPriority.MUST,
-                category=RequirementCategory.TASK_LABELS,
-                expected_values=draft.task_labels,
-            ),
-            ResearchRequirement(
                 id="req_schema",
                 label="Schema documentation",
                 description="Channels, columns, or file organisation are documented.",
@@ -224,6 +247,27 @@ class RequirementPlanner:
                 category=RequirementCategory.ACQUISITION,
             ),
         ]
+        if draft.domain_terms:
+            requirements.append(
+                ResearchRequirement(
+                    id="req_domain",
+                    label="Equipment or application domain",
+                    description="Native sources explicitly match the domain named in the brief.",
+                    priority=RequirementPriority.MUST,
+                    category=RequirementCategory.DOMAIN,
+                    expected_values=draft.domain_terms,
+                )
+            )
+        requirements.append(
+            ResearchRequirement(
+                id="req_task_labels",
+                label="Task labels",
+                description="Labels needed by the stated task are documented.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.TASK_LABELS,
+                expected_values=draft.task_labels,
+            )
+        )
         if draft.minimum_sample_rate_hz:
             requirements.append(
                 ResearchRequirement(
@@ -241,7 +285,7 @@ class RequirementPlanner:
         return self.hypotheses_from_draft(self.draft(request))
 
     def hypotheses_from_draft(self, draft: PlanningDraft) -> list[SearchHypothesis]:
-        vocabulary = " ".join(draft.search_terms[:8]) or "robot telemetry collision dataset"
+        vocabulary = " ".join(draft.search_terms[:8]) or "machine telemetry dataset"
         return [
             SearchHypothesis(
                 id="hyp_direct_dataset",
@@ -254,9 +298,11 @@ class RequirementPlanner:
                 query=f"{vocabulary} site:zenodo.org OR site:huggingface.co/datasets",
             ),
             SearchHypothesis(
-                id="hyp_robot_signals",
-                rationale="Broaden to adjacent robot signals while retaining the target labels.",
-                query=f"industrial robot joint torque signals {vocabulary}",
+                id="hyp_related_signals",
+                rationale=(
+                    "Broaden to adjacent equipment signals while retaining the target domain."
+                ),
+                query=f"machine sensor signals {vocabulary}",
             ),
         ]
 
