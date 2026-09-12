@@ -1,0 +1,63 @@
+So we're good to merge them or what?
+
+---
+
+Merge ready:
+
+---
+
+Agent 3’s workstream is finished and has a focused draft PR:
+
+  PR #13 — submission pilot and checkpoint handoff (https://github.com/ukafkasyali/ysamet/pull/13)
+
+  It adds:
+
+  - An executable four-participant, counterbalanced engineer pilot with six cases.
+  - Fixed task wording, timing/error capture, blinded scoring, and model-failure handling.
+  - Requirement-to-evidence mapping.
+  - A checkpoint/adapter handoff checklist that explicitly flags the unknown backbone revision and
+    missing rollback owner.
+
+  Branch: codex/submission-pilot
+  Head: 3c13f3a
+  Base: origin/main at 5ea2602
+
+  Checks passed: Entire hooks, diff validation, pilot CSV schema, and referenced-artifact checks.
+
+  The repository work is complete. The remaining actions are coordinator review/merge, running the
+  pilot, and completing the approved checkpoint transfer with the missing provenance fields.
+
+---
+
+Merge ready:
+
+---
+
+Yes—the bounded fix is finished and handed off in draft PR #15
+  (https://github.com/ukafkasyali/ysamet/pull/15).
+
+  It:
+
+  - makes publisher-marker selection navigation-only; model analysis requires Analyze interval;
+  - labels raw model generations as unverified;
+  - flags exports when the receipt does not prove recording, interval, canonical seven channels, 1,024
+    samples, and input hash;
+
+  - adds regression coverage.
+
+  Validation:
+
+  - npm test: 46 passed
+  - npm run build: passed
+  - No inference service, checkpoint, or coordinator checkout was changed.
+
+  The PR is based on fab2e48; the coordinator should integrate it with the newer uncommitted UI changes
+  and perform the final browser check.
+
+---
+
+What are they doing? Like I'm sorry maybe I'm abstracting too much but what are the PRs needed for?
+
+---
+
+Okay, how can we continue?

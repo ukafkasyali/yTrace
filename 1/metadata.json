@@ -1,0 +1,70 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BXPYXB166SESDD0TFJSM12",
+  "session_id": "01a097a5-408d-75d2-9da0-3752faf15507",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:02:24.536495Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 3,
+  "save_step_count": 1,
+  "files_touched": [
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "d47887b6c3e1",
+  "checkpoint_transcript_start": 612,
+  "transcript_lines_at_start": 612,
+  "compact_transcript_start": 77,
+  "token_usage": {
+    "input_tokens": 8590,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 461826,
+    "output_tokens": 1210,
+    "api_call_count": 3
+  },
+  "session_metrics": {
+    "turn_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:02:24.469379Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 52,
+    "human_modified": 7,
+    "human_removed": 0,
+    "total_committed": 52,
+    "total_lines_changed": 59,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1026,
+      "user_lines_removed": 7,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/App.tsx": 10,
+        "frontend/src/assistant/AssistantPanel.tsx": 4,
+        "frontend/src/comparison/ComparisonPanel.tsx": 95,
+        "frontend/src/comparison/compare.test.ts": 57,
+        "frontend/src/comparison/compare.ts": 61,
+        "frontend/src/styles.css": 56
+      },
+      "user_removed_per_file": {
+        "frontend/src/App.tsx": 5,
+        "frontend/src/assistant/AssistantPanel.tsx": 2
+      }
+    }
+  ]
+}
