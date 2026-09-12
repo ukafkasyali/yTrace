@@ -2,16 +2,23 @@
 
 Trace helps a robotics engineer investigate a recorded contact event, inspect synchronized torque measurements and a trained OpenTSLM interpretation, and export the evidence for a teammate. Its immediate business hypothesis is less time spent assembling a correct incident report. That time saving has **not yet been measured**.
 
-## Submission evidence
+## Challenge audit and evidence
 
-| Challenge requirement | Evidence | What it proves |
-|---|---|---|
-| Useful problem and open data | [Dataset card](../../model_training/docs/dataset.md) | Open KUKA accidental-contact, intentional-contact and free-motion recordings; provenance and confounds |
-| TimeNet connector | [Clean verification](timenet/README.md) | Both parts build, load, and match original signal/annotation arrays for two full recordings |
-| TSLM training | [Training configuration](../../model_training/configs/opentslm_sp.yaml), [training code](../../model_training/src/robot_observability/train_opentslm.py), [release procedure](../../inference/README.md) | OpenTSLM SoftPrompt with Llama 3.2 1B and HAR warm start; immutable promoted checkpoint |
-| Held-out baseline comparison | [Audited report](evaluation/report/comparison.md), [machine-readable results](evaluation/report/comparison.json), [source inventory](evaluation/source/inventory.json) | Identical 512 windows, all 67 test recording groups, original responses, strict availability and uncertainty |
-| Working demo with evidence | [Demo script](DEMO.md), [real smoke receipt](demo/smoke-result.json), [browser-exported investigation](demo/investigation-example.json) | Actual deployed model, raw input receipt, measurements, prediction, evidence navigation and export |
-| Business validation | [Pilot protocol](PILOT.md) | Ready-to-run task study; no invented participants, timings, or ROI |
+The challenge asks for a useful problem and open data, a TimeNet connector, TSLM
+training with a held-out baseline, and a working demonstration. It also requests
+code/configuration, a checkpoint or adapter, dataset documentation and a short
+evaluation. The table distinguishes what is in Git, what was verified, what was
+observed in the private deployment, and what still needs evidence.
+
+| Requirement | Repository artifact | Verified / observed evidence | Remaining gap |
+|---|---|---|---|
+| Useful problem and open data | [Dataset card](../../model_training/docs/dataset.md) | Open KUKA accidental-contact, intentional-contact and free-motion recordings, source links and confounds are documented | One robot and class/implement confounding limit generalization |
+| TimeNet connector | [Connector](../../data_ingestion/README.md), [clean verification](timenet/README.md) | Two source parts build, load and match original arrays for one full recording each | This is not a full-corpus rebuild or proof of the historical training input |
+| TSLM training and configuration | [Config](../../model_training/configs/opentslm_sp.yaml), [trainer](../../model_training/src/robot_observability/train_opentslm.py) | OpenTSLM SoftPrompt, Llama 3.2 1B and HAR warm start are recorded | Do not select further changes against the already-inspected test archive |
+| Held-out baseline comparison | [Audited report](evaluation/report/comparison.md), [results](evaluation/report/comparison.json), [source inventory](evaluation/source/inventory.json) | 512 identical windows from 67 held-out recording groups, checksums and uncertainty are reproducible | A new recording group is needed for a future confirmatory claim |
+| Working evidence-linked demo | [Demo script](DEMO.md), [smoke receipt](demo/smoke-result.json), [exported investigation](demo/investigation-example.json) | Private canary-v4 path was smoke-tested; export retains telemetry receipt, measurements and prediction separately | The three fixed examples are not a quality benchmark; raw coverage remains limited |
+| Checkpoint or adapter handoff | [Release procedure](../../inference/README.md), [handoff checklist](CHECKPOINT_HANDOFF.md) | Service reports canary-v4 checkpoint digest `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23` | Approved submission-channel delivery is still required; live backbone revision is `unknown` |
+| Benefit for engineers | [Pilot protocol](PILOT.md), [facilitator runbook](PILOT_RUNBOOK.md) | Protocol, task materials and empty capture sheet are ready | No participants, timings, error rates, testimonials or ROI have been collected |
 
 ## What the evaluation actually says
 

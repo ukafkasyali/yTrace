@@ -1,6 +1,6 @@
 # Pilot: time to a correct investigation report
 
-Status: protocol prepared; no participants recruited, no results collected. This document must not be presented as user-study evidence.
+Status: protocol prepared; no participants recruited, no results collected. This document must not be presented as user-study evidence. The facilitator materials are in [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md); record observations only in `pilot-results.csv` using its documented columns.
 
 ## Decision
 
@@ -16,7 +16,7 @@ Condition A: synchronized charts and ordinary numerical tools, without generated
 
 Each task asks the participant to locate the event, state its class or abstain, identify strongest signal changes, and produce a short evidence-backed report. A reviewer blinded to condition scores against publisher labels for class/onset and separately against deterministic measurements for joint quantities. Do not score a physical root-cause diagnosis: no such ground truth exists.
 
-Record condition, order, case ID, elapsed seconds, completion, class correctness, onset error, measurement correctness, unsupported claims, tool failures and qualitative comments in `pilot-results.csv`. Use anonymous participant IDs and do not put personal information in the repository.
+Record condition, order, case ID, elapsed seconds, completion, class correctness, onset error, measurement correctness, unsupported claims, tool failures and qualitative comments in `pilot-results.csv`. Use anonymous participant IDs and do not put personal information in the repository. The runbook defines the observation start/stop rule, scoring rubric and a six-case manifest before the first participant.
 
 ## Analysis and decision rule
 
