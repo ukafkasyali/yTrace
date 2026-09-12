@@ -180,7 +180,8 @@ peak risk. Browser verification compared the incident above with original record
 samples due to sampling-grid alignment). No resampling or mixed-resolution comparison
 is performed. Same-recording overlap is rejected with a visible explanation.
 
-Validation: 72 frontend tests and production build pass. Desktop and 390 px mobile
+Validation: 74 frontend tests and production build pass after integrating main's
+evidence-boundary and submission-pilot updates. Desktop and 390 px mobile
 browser checks covered reference editing, cross-recording loading, overlap rejection,
 joint overlays and report download, with no horizontal overflow. These checks establish
 working behavior, not measured debugging-time savings. Model training and inference
