@@ -1,0 +1,33 @@
+Great we got it somehow working but there are some issues that needs addressing.
+
+
+
+1. In the retrieval notes there are below logs:&#x20;
+   1. Candidate ds\_5c7c0b1f17e3 verification failed: Native source response exceeded the configured size limit
+   2. Candidate ds\_c8cc12e90089 verification failed: Native source response exceeded the configured size limit
+   3. Candidate ds\_93027c5c4b83 verification failed: Redirect response '301 Moved Permanently' for url '[https://api.github.com/repos/mit-fast/Blackbird-Dataset](https://api.github.com/repos/mit-fast/Blackbird-Dataset)' Redirect location: '[https://api.github.com/repositories/145477026](https://api.github.com/repositories/145477026)' For more information check: [https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/301](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/301)
+   4. Candidate ds\_51e6eca07b94 verification failed: Client error '404 Not Found' for url '[https://api.github.com/repos/MaxBenChrist/robot-failure-dataset/readme](https://api.github.com/repos/MaxBenChrist/robot-failure-dataset/readme)' For more information check: [https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404)
+2. The evidence report is displayed in Markdown and is not really valuable for human to make a decision.
+   1.
+      # Dataset sourcing report — 82e19aab-d94d-4f24-925c-46df124399b9
+      Execution mode: **LIVE**
+      Tavily credits used: **6 / 12**
+      ## Deterministic ranking
+      - `ds_9be731e6fb6b` — 100/100, RECOMMEND; conflicts: none
+      - `ds_4373e90ede19` — 93/100, REJECT; conflicts: none
+      ## Retrieval notes
+      - Candidate ds\_5c7c0b1f17e3 verification failed: Native source response exceeded the configured size limit
+      - Candidate ds\_c8cc12e90089 verification failed: Native source response exceeded the configured size limit
+      - Candidate ds\_93027c5c4b83 verification failed: Redirect response '301 Moved Permanently' for url '[https://api.github.com/repos/mit-fast/Blackbird-Dataset](https://api.github.com/repos/mit-fast/Blackbird-Dataset)'
+        Redirect location: '[https://api.github.com/repositories/145477026](https://api.github.com/repositories/145477026)'
+        For more information check: [https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/301](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/301)
+      - Candidate ds\_51e6eca07b94 verification failed: Client error '404 Not Found' for url '[https://api.github.com/repos/MaxBenChrist/robot-failure-dataset/readme](https://api.github.com/repos/MaxBenChrist/robot-failure-dataset/readme)'
+        For more information check: [https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404)
+
+---
+
+Good. It works better now. But couple things we need to addresss:
+
+
+
+1. When I reject after the run is waiting for approval, nothing happens. The UI just stays the same and I can't iterate on the current run of the data sourcing. In addition to the iteration, the user should be able to also select other models rather than the final recommendation of the agent.
