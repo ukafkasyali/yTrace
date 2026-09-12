@@ -36,7 +36,8 @@ empty values. Parsing validity is an explicit metric; unparseable output is neve
 5. Fit per-joint robust center and scale on subsampled training sessions only.
 6. Generate positive windows with randomized event positions. Generate hard free-motion negatives
    from high-derivative-energy areas between events, outside a 750 ms guard region.
-7. Preserve signed torque; robust-scale and clip only the model view. Retain raw Nm statistics in text.
+7. Preserve signed torque; robust-scale and clip only the model view. Retain raw Nm statistics as
+   metadata for visualization and deterministic baselines, but never expose them in model prompts.
 8. Calibrate per-joint affected thresholds at the 99th percentile of train-only free-motion scores.
 9. Store memory-mapped model arrays, JSONL provenance/targets, split map, normalization, and summary.
 10. Build the equivalent TimeF dataset with signals, metadata, classification, answer, and temporal

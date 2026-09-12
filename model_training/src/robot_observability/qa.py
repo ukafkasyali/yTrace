@@ -95,19 +95,15 @@ def evidence_sentence(metadata: dict[str, object]) -> str:
 
 def target_text(metadata: dict[str, object], intent: Intent) -> str:
     payload = json.dumps(answer_payload(metadata, intent), separators=(",", ":"), sort_keys=True)
-    return f"Evidence: {evidence_sentence(metadata)}\nAnswer: {payload}"
+    return f"Answer: {payload}\nEvidence: {evidence_sentence(metadata)}"
 
 
 def channel_descriptions(metadata: dict[str, object]) -> list[str]:
-    means = list(metadata["raw_mean_nm"])
-    stds = list(metadata["raw_std_nm"])
-    rms = list(metadata["raw_rms_nm"])
-    maxima = list(metadata["raw_max_abs_nm"])
+    del metadata
     return [
         (
-            f"{joint} external torque at 1000 Hz over 1.024 seconds, normalized with train-only robust statistics. "
-            f"Raw units are Nm; window mean={means[index]:.4f}, std={stds[index]:.4f}, "
-            f"RMS={rms[index]:.4f}, max_abs={maxima[index]:.4f}."
+            f"{joint} external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. "
+            "The numeric values are normalized with train-only robust statistics."
         )
-        for index, joint in enumerate(JOINT_NAMES)
+        for joint in JOINT_NAMES
     ]

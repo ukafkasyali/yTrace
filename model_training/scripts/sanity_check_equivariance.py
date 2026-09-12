@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +27,9 @@ def main() -> None:
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--prepared-root", type=Path, default=Path("data/prepared/v1"))
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--samples", type=int, default=8)
+    parser.add_argument("--samples", type=int, default=12)
     parser.add_argument("--shift-ms", type=int, default=64)
+    parser.add_argument("--seed", type=int, default=20260912)
     args = parser.parse_args()
 
     model = OpenTSLMSP(llm_id="meta-llama/Llama-3.2-1B", device="cuda")
@@ -35,13 +37,20 @@ def main() -> None:
     model.load_from_file(str(args.checkpoint))
     model.eval()
     dataset = RobotQADataset(args.prepared_root, "validation", mode="summary")
-    selected = []
-    for index in range(len(dataset)):
-        sample = dataset[index]
-        if sample["metadata"]["contact"]:
-            selected.append(sample)
-        if len(selected) == args.samples:
-            break
+    rng = np.random.default_rng(args.seed)
+    candidate_indices: dict[str, list[int]] = {"accidental": [], "intentional": []}
+    seen_sessions: dict[str, set[str]] = {"accidental": set(), "intentional": set()}
+    for index, metadata in enumerate(dataset.prepared.records):
+        label = str(metadata["event_type"])
+        session = str(metadata["session_id"])
+        if label in candidate_indices and session not in seen_sessions[label]:
+            candidate_indices[label].append(index)
+            seen_sessions[label].add(session)
+    selected_indices = []
+    for class_index, label in enumerate(("accidental", "intentional")):
+        requested = args.samples // 2 + (class_index < args.samples % 2)
+        selected_indices.extend(rng.choice(candidate_indices[label], size=requested, replace=False).tolist())
+    selected = [dataset[index] for index in sorted(selected_indices)]
     rows = []
     for sample in selected:
         base_output, base = generate(model, sample)
@@ -65,6 +74,8 @@ def main() -> None:
 
         row = {
             "record_id": sample["record_id"],
+            "session_id": sample["metadata"]["session_id"],
+            "event_type": sample["metadata"]["event_type"],
             "target_onset_ms": sample["metadata"]["onset_sample"],
             "target_joint": strongest,
             "expected_permuted_joint": expected_permuted_joint,
@@ -75,19 +86,54 @@ def main() -> None:
         }
         rows.append(row)
 
+    base_onset_errors = []
     shift_errors = []
+    shift_errors_base_within_50ms = []
+    base_joint_hits = []
     permutation_hits = []
+    permutation_hits_base_correct = []
+    shift_changes = []
+    permutation_changes = []
     for row in rows:
         base, shifted, permuted = row["base"], row["shifted"], row["permuted"]
         if base and shifted and base.get("onset_ms") is not None and shifted.get("onset_ms") is not None:
-            shift_errors.append(abs((float(shifted["onset_ms"]) - float(base["onset_ms"])) - args.shift_ms))
+            base_error = abs(float(base["onset_ms"]) - float(row["target_onset_ms"]))
+            delta_error = abs((float(shifted["onset_ms"]) - float(base["onset_ms"])) - args.shift_ms)
+            base_onset_errors.append(base_error)
+            shift_errors.append(delta_error)
+            if base_error <= 50:
+                shift_errors_base_within_50ms.append(delta_error)
+            shift_changes.append(shifted.get("onset_ms") != base.get("onset_ms"))
         if permuted:
-            permutation_hits.append(permuted.get("strongest_joint") == row["expected_permuted_joint"])
+            base_correct = bool(base and base.get("strongest_joint") == row["target_joint"])
+            hit = permuted.get("strongest_joint") == row["expected_permuted_joint"]
+            base_joint_hits.append(base_correct)
+            permutation_hits.append(hit)
+            if base_correct:
+                permutation_hits_base_correct.append(hit)
+            permutation_changes.append(
+                bool(base and permuted.get("strongest_joint") != base.get("strongest_joint"))
+            )
     summary = {
         "samples": len(rows),
+        "sessions": len({str(row["session_id"]) for row in rows}),
+        "event_type_counts": dict(Counter(str(row["event_type"]) for row in rows)),
         "shift_ms": args.shift_ms,
+        "base_onset_coverage": len(base_onset_errors) / len(rows) if rows else 0.0,
+        "base_onset_mae_ms": float(np.mean(base_onset_errors)) if base_onset_errors else None,
         "shift_equivariance_mae_ms": float(np.mean(shift_errors)) if shift_errors else None,
+        "shift_equivariance_mae_base_within_50ms": (
+            float(np.mean(shift_errors_base_within_50ms)) if shift_errors_base_within_50ms else None
+        ),
+        "shift_prediction_change_rate": float(np.mean(shift_changes)) if shift_changes else None,
+        "base_strongest_joint_accuracy": float(np.mean(base_joint_hits)) if base_joint_hits else None,
         "channel_permutation_accuracy": float(np.mean(permutation_hits)) if permutation_hits else None,
+        "channel_permutation_accuracy_base_correct": (
+            float(np.mean(permutation_hits_base_correct)) if permutation_hits_base_correct else None
+        ),
+        "channel_prediction_change_rate": (
+            float(np.mean(permutation_changes)) if permutation_changes else None
+        ),
     }
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output / "rows.jsonl").write_text(
