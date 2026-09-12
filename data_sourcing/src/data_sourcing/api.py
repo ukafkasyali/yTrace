@@ -3,20 +3,24 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import BackgroundTasks, FastAPI, Header, Request
+from fastapi import BackgroundTasks, FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from data_sourcing.config import Settings
 from data_sourcing.models import (
     ApprovalRequest,
+    ApprovedSourceDetail,
+    ApprovedSourcePage,
     CreateSourcingRun,
     ErrorDetail,
     ErrorEnvelope,
     RequirementPreviewRequest,
     RequirementsPreview,
     RunAccepted,
+    SourceKind,
     SourcingManifest,
     SourcingRun,
 )
@@ -26,7 +30,7 @@ from data_sourcing.service import (
     RunConflict,
     SourcingService,
 )
-from data_sourcing.storage import ArtifactUnavailable, RunNotFound
+from data_sourcing.storage import ApprovedSourceNotFound, ArtifactUnavailable, RunNotFound
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +84,10 @@ def create_app(
     @app.exception_handler(ArtifactUnavailable)
     async def artifact_unavailable(_: Request, exc: ArtifactUnavailable) -> JSONResponse:
         return _error(409, "ARTIFACT_UNAVAILABLE", str(exc))
+
+    @app.exception_handler(ApprovedSourceNotFound)
+    async def approved_source_not_found(_: Request, exc: ApprovedSourceNotFound) -> JSONResponse:
+        return _error(404, "APPROVED_SOURCE_NOT_FOUND", str(exc))
 
     @app.exception_handler(IdempotencyConflict)
     async def idempotency_conflict(_: Request, exc: IdempotencyConflict) -> JSONResponse:
@@ -141,5 +149,30 @@ def create_app(
     @app.get("/api/sourcing-runs/{run_id}/manifest", response_model=SourcingManifest)
     def get_manifest(run_id: str) -> SourcingManifest:
         return sourcing.artifacts.read_manifest(run_id)
+
+    @app.get("/api/approved-sources", response_model=ApprovedSourcePage)
+    def list_approved_sources(
+        page: Annotated[int, Query(ge=1)] = 1,
+        page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+        source_kind: Annotated[SourceKind | None, Query(alias="sourceKind")] = None,
+        query: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+    ) -> ApprovedSourcePage:
+        return sourcing.approved_sources.list(
+            page=page,
+            page_size=page_size,
+            source_kind=source_kind,
+            query=query,
+        )
+
+    @app.get("/api/approved-sources/{approved_source_id}", response_model=ApprovedSourceDetail)
+    def get_approved_source(approved_source_id: str) -> ApprovedSourceDetail:
+        return sourcing.approved_sources.get(approved_source_id)
+
+    @app.get(
+        "/api/approved-sources/{approved_source_id}/manifest",
+        response_model=SourcingManifest,
+    )
+    def get_approved_source_manifest(approved_source_id: str) -> SourcingManifest:
+        return sourcing.approved_sources.read_manifest(approved_source_id)
 
     return app

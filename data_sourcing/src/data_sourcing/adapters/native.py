@@ -548,6 +548,9 @@ class NativeVerifier:
         ) or ""
         branch = str(metadata.get("default_branch", "main"))
         commit = self._get_json(f"{api}/commits/{branch}", headers)
+        commit_sha = str(commit.get("sha") or "")
+        if not commit_sha:
+            raise SourceUnavailable("GitHub repository did not expose an immutable commit revision")
         try:
             tree = self._get_json(f"{api}/git/trees/{branch}?recursive=1", headers)
         except NativeResponseTooLarge:
@@ -577,7 +580,7 @@ class NativeVerifier:
             source_url=url,
             source_kind=SourceKind.GITHUB,
             name=str(metadata.get("full_name", repo)),
-            revision=str(commit.get("sha", "")),
+            revision=commit_sha,
             license_id=licence.get("spdx_id"),
             text=f"{metadata.get('description') or ''}\n{readme}",
             files=files,
@@ -587,6 +590,9 @@ class NativeVerifier:
     def _zenodo(self, url: str) -> NativeDocument:
         record_id = urlsplit(url).path.rstrip("/").split("/")[-1]
         payload = self._get_json(f"https://zenodo.org/api/records/{record_id}")
+        record_revision = payload.get("revision")
+        if not isinstance(record_revision, int) or record_revision < 1:
+            raise SourceUnavailable("Zenodo record did not expose an immutable revision")
         metadata = payload.get("metadata") or {}
         text = _plain_text(str(metadata.get("description", "")))
         files = []
@@ -613,7 +619,7 @@ class NativeVerifier:
             source_url=url,
             source_kind=SourceKind.ZENODO,
             name=str(payload.get("title") or metadata.get("title") or record_id),
-            revision=f"{record_id}.r{payload.get('revision', 0)}",
+            revision=f"{record_id}.r{record_revision}",
             license_id=licence.get("id"),
             text=text,
             files=files,
@@ -628,6 +634,8 @@ class NativeVerifier:
         siblings = _object_items(payload.get("siblings"))
         files = []
         revision = str(payload.get("sha", ""))
+        if not revision:
+            raise SourceUnavailable("Hugging Face dataset did not expose an immutable revision")
         for item in siblings:
             lfs = item.get("lfs") if isinstance(item.get("lfs"), dict) else {}
             name = str(item.get("rfilename", ""))

@@ -9,7 +9,7 @@ licence semantics before any source is marked ready.
 **Acceptance criteria:**
 
 - [ ] Versioned JSON schemas and golden fixtures cover all boundary objects.
-- [ ] Old sourcing manifests remain readable but report incomplete acquisition metadata.
+- [x] Old sourcing manifests remain readable but report incomplete acquisition metadata.
 - [ ] Dataset and code licences are separate; unresolved mismatch blocks READY.
 
 **Verification:**
@@ -32,15 +32,15 @@ download URL, and available source checksum.
 
 **Acceptance criteria:**
 
-- [ ] Each approved dataset artifact contains at least one exact non-empty data asset.
-- [ ] GitHub assets pin a commit, Zenodo assets pin a record revision, and Hugging Face assets pin a
+- [x] Each acquisition-ready approved dataset artifact contains at least one exact non-empty data asset.
+- [x] GitHub assets pin a commit, Zenodo assets pin a record revision, and Hugging Face assets pin a
   dataset revision.
-- [ ] Asset evidence comes from the candidate's native source, never a discovery lead.
+- [x] Asset evidence comes from the candidate's native source, never a discovery lead.
 
 **Verification:**
 
-- [ ] Provider mock tests cover metadata, missing checksum, mutable/unknown revision, and bad links.
-- [ ] Run the complete sourcing tests and lint.
+- [x] Provider mock tests cover metadata, missing checksum, mutable/unknown revision, and bad links.
+- [x] Run the complete sourcing tests and lint.
 
 **Dependencies:** Task 1
 
@@ -57,14 +57,14 @@ reconciliation repairs catalog entries missing after an interrupted file/databas
 
 **Acceptance criteria:**
 
-- [ ] Same source/revision has one catalog ID and multiple immutable approval events.
-- [ ] New revisions receive new catalog IDs without overwriting old approvals.
-- [ ] Approval creates no download or ingestion side effect.
+- [x] Same source/revision has one catalog ID and multiple immutable approval events.
+- [x] New revisions receive new catalog IDs without overwriting old approvals.
+- [x] Approval creates no download or ingestion side effect.
 
 **Verification:**
 
-- [ ] Tests cover first approval, repeated approval, new revision, restart, and crash reconciliation.
-- [ ] Existing sourcing-run persistence and repeated-approval behavior remain compatible.
+- [x] Tests cover first approval, repeated approval, new revision, restart, and crash reconciliation.
+- [x] Existing sourcing-run persistence and repeated-approval behavior remain compatible.
 
 **Dependencies:** Tasks 1-2
 
@@ -79,13 +79,13 @@ kind and a bounded text query. Ordering is stable and newest approval appears fi
 
 **Acceptance criteria:**
 
-- [ ] GET /approved-sources returns data plus pagination metadata.
-- [ ] Detail returns approval history; manifest returns the exact approved handoff.
-- [ ] Shared error envelope, validation, and tenant scoping rules match existing APIs.
+- [x] GET /approved-sources returns data plus pagination metadata.
+- [x] Detail returns approval history; manifest returns the exact approved handoff.
+- [x] Shared error envelope, validation, and tenant scoping rules match existing APIs.
 
 **Verification:**
 
-- [ ] API tests cover pagination, filters, missing IDs, duplicate approvals, and legacy manifests.
+- [x] API tests cover pagination, filters, missing IDs, duplicate approvals, and legacy manifests.
 - [ ] API docs and typed frontend contracts are updated additively.
 
 **Dependencies:** Task 3
@@ -96,9 +96,9 @@ kind and a bounded text query. Ordering is stable and newest approval appears fi
 
 ## Checkpoint: Persistent approvals
 
-- [ ] Approved sources survive restart and appear without starting ingestion.
-- [ ] Duplicate and revision behavior is demonstrated.
-- [ ] Full sourcing tests and lint pass.
+- [x] Approved sources survive restart and appear without starting ingestion.
+- [x] Duplicate and revision behavior is demonstrated.
+- [x] Full sourcing tests and lint pass.
 
 ## Task 5: Create one ingestion job per approved source
 

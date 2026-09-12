@@ -474,6 +474,46 @@ class SourcingManifest(WireModel):
     approved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ApprovalEvent(WireModel):
+    sourcing_run_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+    candidate_id: str = Field(pattern=r"^ds_[a-f0-9]{12}$")
+    manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    approved_at: datetime
+
+
+class ApprovedSourceSummary(WireModel):
+    approved_source_id: str = Field(pattern=r"^src_[a-f0-9]{24}$")
+    name: str
+    canonical_url: HttpUrl
+    source_kind: SourceKind
+    source_revision: str
+    license_id: str
+    labels: list[str]
+    file_extensions: list[str]
+    total_size_bytes: int | None = None
+    is_acquisition_ready: bool
+    approval_count: int = Field(ge=1)
+    latest_manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    created_at: datetime
+    latest_approved_at: datetime
+
+
+class ApprovedSourceDetail(ApprovedSourceSummary):
+    approvals: list[ApprovalEvent]
+
+
+class Pagination(WireModel):
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+    total_items: int = Field(ge=0)
+    total_pages: int = Field(ge=0)
+
+
+class ApprovedSourcePage(WireModel):
+    data: list[ApprovedSourceSummary]
+    pagination: Pagination
+
+
 class SourcingRun(WireModel):
     run_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
     status: RunStatus

@@ -7,12 +7,20 @@ import sqlite3
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from data_sourcing.models import (
+    ApprovalEvent,
+    ApprovedSourceDetail,
+    ApprovedSourcePage,
+    ApprovedSourceSummary,
+    AssetRole,
     CreateSourcingRun,
     ExecutionMode,
+    Pagination,
     RunStatus,
+    SourceKind,
     SourcingManifest,
     SourcingRun,
 )
@@ -23,6 +31,10 @@ class RunNotFound(LookupError):
 
 
 class ArtifactUnavailable(LookupError):
+    pass
+
+
+class ApprovedSourceNotFound(LookupError):
     pass
 
 
@@ -128,6 +140,249 @@ class ArtifactStore:
         if not path.is_file():
             raise ArtifactUnavailable("Manifest is only available after approval")
         return SourcingManifest.model_validate_json(path.read_text(encoding="utf-8"))
+
+    def manifests(self) -> list[SourcingManifest]:
+        manifests: list[SourcingManifest] = []
+        for directory in sorted(self.runs_dir.iterdir()):
+            if not directory.is_dir():
+                continue
+            try:
+                manifests.append(self.read_manifest(directory.name))
+            except (ArtifactUnavailable, RunNotFound, OSError, ValueError):
+                continue
+        return manifests
+
+
+def _canonical_manifest_json(manifest: SourcingManifest) -> str:
+    return json.dumps(
+        manifest.model_dump(mode="json", by_alias=True),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _manifest_identity(manifest: SourcingManifest) -> tuple[SourceKind, str, str]:
+    canonical_url = str(manifest.canonical_url).rstrip("/")
+    kind = manifest.source_kind
+    if kind is None:
+        host = (urlsplit(canonical_url).hostname or "").casefold()
+        kind = {
+            "github.com": SourceKind.GITHUB,
+            "zenodo.org": SourceKind.ZENODO,
+            "www.zenodo.org": SourceKind.ZENODO,
+            "huggingface.co": SourceKind.HUGGING_FACE,
+        }.get(host)
+    if kind is None:
+        raise ValueError("Approved manifest does not identify a supported source provider")
+    revision = manifest.source_revision
+    if revision is None and manifest.revision:
+        prefix = f"{kind.value}:"
+        revision = next(
+            (
+                value.removeprefix(prefix)
+                for value in manifest.revision.split(";")
+                if value.startswith(prefix)
+            ),
+            None,
+        )
+    if not revision:
+        raise ValueError("Approved manifest does not contain an immutable source revision")
+    return kind, canonical_url, revision
+
+
+class ApprovedSourceStore:
+    def __init__(self, path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.connection = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
+        self.connection.row_factory = sqlite3.Row
+        self.connection.execute("PRAGMA journal_mode=WAL")
+        self.connection.execute("PRAGMA foreign_keys=ON")
+        self.connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS approved_sources (
+                approved_source_id TEXT PRIMARY KEY,
+                source_kind TEXT NOT NULL,
+                canonical_url TEXT NOT NULL,
+                source_revision TEXT NOT NULL,
+                name TEXT NOT NULL,
+                latest_manifest_json TEXT NOT NULL,
+                latest_manifest_sha256 TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                latest_approved_at TEXT NOT NULL,
+                UNIQUE(source_kind, canonical_url, source_revision)
+            );
+            CREATE TABLE IF NOT EXISTS approval_events (
+                approved_source_id TEXT NOT NULL REFERENCES approved_sources(approved_source_id),
+                sourcing_run_id TEXT NOT NULL,
+                candidate_id TEXT NOT NULL,
+                manifest_json TEXT NOT NULL,
+                manifest_sha256 TEXT NOT NULL,
+                approved_at TEXT NOT NULL,
+                PRIMARY KEY(approved_source_id, sourcing_run_id)
+            );
+            """
+        )
+        self._lock = threading.RLock()
+
+    def close(self) -> None:
+        self.connection.close()
+
+    def record_approval(self, manifest: SourcingManifest) -> str:
+        kind, canonical_url, revision = _manifest_identity(manifest)
+        identity = "|".join((kind.value, canonical_url, revision))
+        approved_source_id = f"src_{hashlib.sha256(identity.encode()).hexdigest()[:24]}"
+        manifest_json = _canonical_manifest_json(manifest)
+        manifest_sha256 = hashlib.sha256(manifest_json.encode()).hexdigest()
+        approved_at = manifest.approved_at.isoformat()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                self.connection.execute(
+                    """
+                    INSERT INTO approved_sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(approved_source_id) DO UPDATE SET
+                        name = excluded.name,
+                        latest_manifest_json = excluded.latest_manifest_json,
+                        latest_manifest_sha256 = excluded.latest_manifest_sha256,
+                        latest_approved_at = excluded.latest_approved_at
+                    WHERE excluded.latest_approved_at > approved_sources.latest_approved_at
+                    """,
+                    (
+                        approved_source_id,
+                        kind.value,
+                        canonical_url,
+                        revision,
+                        manifest.name,
+                        manifest_json,
+                        manifest_sha256,
+                        approved_at,
+                        approved_at,
+                    ),
+                )
+                self.connection.execute(
+                    """
+                    INSERT OR IGNORE INTO approval_events VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        approved_source_id,
+                        manifest.run_id,
+                        manifest.candidate_id,
+                        manifest_json,
+                        manifest_sha256,
+                        approved_at,
+                    ),
+                )
+                self.connection.execute("COMMIT")
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+        return approved_source_id
+
+    @staticmethod
+    def _summary(row: sqlite3.Row) -> ApprovedSourceSummary:
+        manifest = SourcingManifest.model_validate_json(row["latest_manifest_json"])
+        return ApprovedSourceSummary(
+            approved_source_id=row["approved_source_id"],
+            name=row["name"],
+            canonical_url=row["canonical_url"],
+            source_kind=row["source_kind"],
+            source_revision=row["source_revision"],
+            license_id=manifest.license_id,
+            labels=manifest.labels,
+            file_extensions=manifest.file_extensions,
+            total_size_bytes=manifest.total_size_bytes,
+            is_acquisition_ready=(
+                manifest.schema_version == "1.1"
+                and any(asset.role is AssetRole.DATA for asset in manifest.assets)
+            ),
+            approval_count=row["approval_count"],
+            latest_manifest_sha256=row["latest_manifest_sha256"],
+            created_at=row["created_at"],
+            latest_approved_at=row["latest_approved_at"],
+        )
+
+    def list(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        source_kind: SourceKind | None = None,
+        query: str | None = None,
+    ) -> ApprovedSourcePage:
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if source_kind is not None:
+            clauses.append("source_kind = ?")
+            parameters.append(source_kind.value)
+        if query:
+            escaped = query.casefold().replace("\\", "\\\\").replace("%", "\\%")
+            escaped = escaped.replace("_", "\\_")
+            clauses.append(
+                "(lower(name) LIKE ? ESCAPE '\\' OR lower(canonical_url) LIKE ? ESCAPE '\\')"
+            )
+            parameters.extend((f"%{escaped}%", f"%{escaped}%"))
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        total = self.connection.execute(
+            f"SELECT count(*) FROM approved_sources {where}",  # noqa: S608 - fixed clauses only
+            parameters,
+        ).fetchone()[0]
+        rows = self.connection.execute(
+            f"""
+            SELECT approved_sources.*, count(approval_events.sourcing_run_id) AS approval_count
+            FROM approved_sources
+            JOIN approval_events USING (approved_source_id)
+            {where}
+            GROUP BY approved_source_id
+            ORDER BY latest_approved_at DESC, approved_source_id ASC
+            LIMIT ? OFFSET ?
+            """,  # noqa: S608 - fixed clauses only
+            (*parameters, page_size, (page - 1) * page_size),
+        ).fetchall()
+        return ApprovedSourcePage(
+            data=[self._summary(row) for row in rows],
+            pagination=Pagination(
+                page=page,
+                page_size=page_size,
+                total_items=total,
+                total_pages=(total + page_size - 1) // page_size,
+            ),
+        )
+
+    def get(self, approved_source_id: str) -> ApprovedSourceDetail:
+        row = self.connection.execute(
+            """
+            SELECT approved_sources.*, count(approval_events.sourcing_run_id) AS approval_count
+            FROM approved_sources
+            JOIN approval_events USING (approved_source_id)
+            WHERE approved_source_id = ?
+            GROUP BY approved_source_id
+            """,
+            (approved_source_id,),
+        ).fetchone()
+        if row is None:
+            raise ApprovedSourceNotFound("Approved source not found")
+        events = self.connection.execute(
+            """
+            SELECT sourcing_run_id, candidate_id, manifest_sha256, approved_at
+            FROM approval_events
+            WHERE approved_source_id = ?
+            ORDER BY approved_at DESC, sourcing_run_id ASC
+            """,
+            (approved_source_id,),
+        ).fetchall()
+        return ApprovedSourceDetail(
+            **self._summary(row).model_dump(),
+            approvals=[ApprovalEvent.model_validate(dict(event)) for event in events],
+        )
+
+    def read_manifest(self, approved_source_id: str) -> SourcingManifest:
+        row = self.connection.execute(
+            "SELECT latest_manifest_json FROM approved_sources WHERE approved_source_id = ?",
+            (approved_source_id,),
+        ).fetchone()
+        if row is None:
+            raise ApprovedSourceNotFound("Approved source not found")
+        return SourcingManifest.model_validate_json(row["latest_manifest_json"])
 
 
 class IdempotencyStore:

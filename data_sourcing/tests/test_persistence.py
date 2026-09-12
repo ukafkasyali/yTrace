@@ -1,12 +1,13 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
 from data_sourcing.config import Settings
 from data_sourcing.models import ApprovalRequest, CreateSourcingRun, RunStatus, SourcingManifest
 from data_sourcing.service import SourcingService
-from data_sourcing.storage import IdempotencyStore
+from data_sourcing.storage import ApprovedSourceStore, IdempotencyStore
 
 BRIEF = (
     "Find robot collision and contact time series from "
@@ -14,7 +15,7 @@ BRIEF = (
 )
 
 
-def test_legacy_manifest_defaults_to_schema_1_0_without_assets() -> None:
+def test_legacy_manifest_defaults_to_schema_1_0_without_assets(tmp_path: Path) -> None:
     manifest = SourcingManifest.model_validate(
         {
             "runId": str(uuid4()),
@@ -33,6 +34,90 @@ def test_legacy_manifest_defaults_to_schema_1_0_without_assets() -> None:
     assert manifest.schema_version == "1.0"
     assert manifest.source_kind is None
     assert manifest.assets == []
+    store = ApprovedSourceStore(tmp_path / "approved.sqlite3")
+    approved_source_id = store.record_approval(manifest)
+    assert store.get(approved_source_id).is_acquisition_ready is False
+    store.close()
+
+
+def approved_manifest(*, revision: str, approved_at: datetime | None = None) -> SourcingManifest:
+    return SourcingManifest(
+        schema_version="1.1",
+        run_id=str(uuid4()),
+        candidate_id="ds_0123456789ab",
+        name="Robot signal dataset",
+        canonical_url="https://zenodo.org/records/123",
+        revision=f"ZENODO:{revision}",
+        source_kind="ZENODO",
+        source_revision=revision,
+        assets=[
+            {
+                "assetId": "asset_0123456789abcdef",
+                "name": "signals.csv",
+                "role": "DATA",
+                "sizeBytes": 100,
+                "providerLocator": f"zenodo:123:{revision}:signals.csv",
+                "downloadUrl": "https://zenodo.org/api/files/123/signals.csv",
+            }
+        ],
+        license_id="cc-by-4.0",
+        labels=["collision"],
+        file_extensions=[".csv"],
+        total_size_bytes=100,
+        evidence_ids=["ev_0123456789abcdef"],
+        limitations=[],
+        approved_at=approved_at or datetime.now(UTC),
+    )
+
+
+def test_approved_source_store_groups_approval_history_by_revision(tmp_path: Path) -> None:
+    store = ApprovedSourceStore(tmp_path / "approved.sqlite3")
+    first = approved_manifest(revision="123.r1")
+    second = approved_manifest(
+        revision="123.r1",
+        approved_at=first.approved_at + timedelta(seconds=1),
+    )
+    changed = approved_manifest(
+        revision="123.r2",
+        approved_at=first.approved_at + timedelta(seconds=2),
+    )
+
+    first_id = store.record_approval(first)
+    second_id = store.record_approval(second)
+    changed_id = store.record_approval(changed)
+    page = store.list(page=1, page_size=1)
+    next_page = store.list(page=2, page_size=1)
+
+    assert first_id == second_id
+    assert changed_id != first_id
+    assert page.pagination.total_items == 2
+    assert page.pagination.total_pages == 2
+    assert page.data[0].approved_source_id != next_page.data[0].approved_source_id
+    original = store.get(first_id)
+    assert original.approval_count == 2
+    assert {event.sourcing_run_id for event in original.approvals} == {
+        first.run_id,
+        second.run_id,
+    }
+    store.close()
+
+
+def test_catalog_reconciles_approved_run_after_catalog_loss(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "persisted")
+    first = SourcingService(settings)
+    run_id, _ = first.create_run(CreateSourcingRun(brief=BRIEF), "catalog-reconcile")
+    first.execute_run(run_id)
+    candidate_id = first.artifacts.read_run(run_id).assessments[0].candidate_id
+    first.approve(run_id, ApprovalRequest(decision="APPROVE", candidate_id=candidate_id))
+    first.close()
+    settings.approved_sources_path.unlink()
+
+    second = SourcingService(settings)
+    page = second.approved_sources.list(page=1, page_size=20)
+
+    assert page.pagination.total_items == 1
+    assert page.data[0].approval_count == 1
+    second.close()
 
 
 def test_approval_resumes_from_sqlite_after_service_restart(tmp_path: Path) -> None:

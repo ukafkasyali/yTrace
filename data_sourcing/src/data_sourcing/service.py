@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 import threading
 from typing import Any
@@ -22,6 +23,7 @@ from data_sourcing.models import (
 )
 from data_sourcing.scoring import candidate_is_approvable
 from data_sourcing.storage import (
+    ApprovedSourceStore,
     ArtifactStore,
     IdempotencyConflict,
     IdempotencyStore,
@@ -29,6 +31,7 @@ from data_sourcing.storage import (
 )
 
 _DEMO_REPOSITORY = "github.com/zhang-zengjie/robot-raw-collision-signals"
+LOGGER = logging.getLogger(__name__)
 
 
 class RunConflict(ValueError):
@@ -40,6 +43,7 @@ class SourcingService:
         self.settings = settings
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         self.artifacts = ArtifactStore(settings.runs_dir)
+        self.approved_sources = ApprovedSourceStore(settings.approved_sources_path)
         self.idempotency = IdempotencyStore(settings.idempotency_path)
         self.checkpoint_connection = sqlite3.connect(
             settings.checkpoint_path,
@@ -49,11 +53,24 @@ class SourcingService:
         self.checkpointer.setup()
         self.scout = DatasetScoutGraph(settings, self.checkpointer)
         self._graph_lock = threading.RLock()
+        self._reconcile_approved_sources()
 
     def close(self) -> None:
         self.scout.close()
         self.checkpoint_connection.close()
         self.idempotency.close()
+        self.approved_sources.close()
+
+    def _reconcile_approved_sources(self) -> None:
+        for manifest in self.artifacts.manifests():
+            try:
+                self.approved_sources.record_approval(manifest)
+            except ValueError as exc:
+                LOGGER.warning(
+                    "Approved manifest %s could not be catalogued: %s",
+                    manifest.run_id,
+                    exc,
+                )
 
     @staticmethod
     def _config(run_id: str) -> dict:
@@ -153,6 +170,8 @@ class SourcingService:
                 and approval.decision is ApprovalDecision.APPROVE
                 and approval.candidate_id == approved_candidate_id
             ):
+                if run.manifest:
+                    self.approved_sources.record_approval(run.manifest)
                 return run
             raise RunConflict("Run is not awaiting approval or reviewer feedback")
         selected = next(
@@ -177,12 +196,15 @@ class SourcingService:
             raise RunConflict("Approved candidate must pass every mandatory gate")
         try:
             with self._graph_lock:
-                return self._stream_graph(
+                completed = self._stream_graph(
                     Command(resume=approval.model_dump(mode="json", by_alias=True)),
                     run_id,
                 )
         except Exception as exc:
             raise RunConflict(f"Approval could not be applied: {type(exc).__name__}") from exc
+        if completed.manifest:
+            self.approved_sources.record_approval(completed.manifest)
+        return completed
 
 
 __all__ = [

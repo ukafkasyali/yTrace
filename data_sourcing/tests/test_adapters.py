@@ -703,6 +703,29 @@ def test_hugging_face_native_adapter_contract() -> None:
     assert verified.profile.assets[0].source_checksum.value == "b" * 64
 
 
+def test_hugging_face_missing_revision_fails_closed() -> None:
+    payload = {
+        "id": "org/robot-data",
+        "description": "Dataset columns contain robot torque time-series signals.",
+        "cardData": {"license": "apache-2.0"},
+        "siblings": [{"rfilename": "train.parquet", "size": 300}],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_999999999999",
+        name="HF robot signals",
+        canonical_url="https://huggingface.co/datasets/org/robot-data",
+        source_kind=SourceKind.HUGGING_FACE,
+    )
+
+    with pytest.raises(SourceUnavailable, match="immutable revision"):
+        verifier.verify(candidate)
+
+
 def test_native_adapter_stops_stream_over_size_limit() -> None:
     verifier = NativeVerifier(
         settings(max_source_response_bytes=10_000),

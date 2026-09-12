@@ -203,6 +203,46 @@ Hub commit revision accepted by `hf_hub_url`/`hf_hub_download`:
 - https://developers.zenodo.org/#files
 - https://huggingface.co/docs/huggingface_hub/en/package_reference/file_download#huggingface_hub.hf_hub_url
 
+### `GET /api/approved-sources`
+
+Lists durable approved sources independently of sourcing runs. Results are ordered by latest
+approval, paginated with `page` and `pageSize`, and may be filtered by `sourceKind` or a literal
+case-insensitive `query` over the display name and canonical URL. Reapproving the same canonical
+provider URL and source revision increments `approvalCount`; it does not create another visible
+source. A changed provider revision is a separate source.
+
+```json
+{
+  "data": [
+    {
+      "approvedSourceId": "src_0123456789abcdef01234567",
+      "name": "Raw Torque Data — Part I",
+      "canonicalUrl": "https://zenodo.org/records/21927431",
+      "sourceKind": "ZENODO",
+      "sourceRevision": "21927431.r4",
+      "isAcquisitionReady": true,
+      "approvalCount": 2,
+      "latestManifestSha256": "..."
+    }
+  ],
+  "pagination": {"page": 1, "pageSize": 20, "totalItems": 1, "totalPages": 1}
+}
+```
+
+Approval writes the sourcing run first and then idempotently records its manifest in the catalog.
+Service startup reconciles approved run manifests, so an interruption between those writes does not
+lose the source. Approval still never downloads or ingests the dataset.
+
+### `GET /api/approved-sources/{approvedSourceId}`
+
+Returns the source summary plus immutable approval events containing the originating sourcing run,
+candidate, manifest SHA-256, and approval timestamp.
+
+### `GET /api/approved-sources/{approvedSourceId}/manifest`
+
+Returns the exact latest approved manifest snapshot. Unknown IDs return the shared
+`404 APPROVED_SOURCE_NOT_FOUND` envelope.
+
 ## Errors and operational bounds
 
 Errors use the shared envelope:
