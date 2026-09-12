@@ -1,0 +1,5 @@
+commit it from time to time so we dont lose progress, ideally to somewhere in https://github.com/ukafkasyali/ysamet/
+
+---
+
+I dont see the validation metrics in wandb  and this seems to take too long for our case. I need soemthing to believe it works. The train loss is dropping really quickly, spawn a subagent to analyze the current training and report back to you and restart a new run if needed.
