@@ -1,0 +1,149 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BZ2PJBGN376190ZET48SEE",
+  "session_id": "01a097a4-e68d-7451-b439-224653056c4c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:26:20.161183Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 5,
+  "save_step_count": 5,
+  "files_touched": [
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "inference/raw_recordings.py",
+    "inference/server.py",
+    "inference/test_server.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-luna",
+  "turn_id": "68d0ec435311",
+  "checkpoint_transcript_start": 1654,
+  "transcript_lines_at_start": 1654,
+  "compact_transcript_start": 224,
+  "token_usage": {
+    "input_tokens": 66418,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4431006,
+    "output_tokens": 4902,
+    "api_call_count": 28
+  },
+  "session_metrics": {
+    "turn_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:26:19.936389Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 218,
+    "human_modified": 44,
+    "human_removed": 0,
+    "total_committed": 221,
+    "total_lines_changed": 266,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1051,
+      "user_lines_removed": 25,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "inference/raw_recordings.py": 158,
+        "inference/server.py": 87,
+        "inference/test_server.py": 63
+      },
+      "user_removed_per_file": {
+        "inference/server.py": 25
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 308,
+      "agent_lines_removed": 25,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 816,
+      "user_lines_removed": 18,
+      "agent_lines_added": 308,
+      "agent_lines_removed": 25,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/App.tsx": 7,
+        "frontend/src/assistant/AssistantPanel.tsx": 9,
+        "frontend/src/lib/rawWindow.ts": 23,
+        "frontend/src/lib/useRawWindow.ts": 22,
+        "inference/raw_recordings.py": 12
+      },
+      "user_removed_per_file": {
+        "frontend/src/App.tsx": 4,
+        "frontend/src/assistant/AssistantPanel.tsx": 8,
+        "inference/raw_recordings.py": 6
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 849,
+      "user_lines_removed": 1,
+      "agent_lines_added": 330,
+      "agent_lines_removed": 37,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/lib/rawWindow.test.ts": 38,
+        "frontend/src/lib/rawWindow.ts": 23,
+        "frontend/src/lib/useRawWindow.ts": 22,
+        "inference/raw_recordings.py": 2,
+        "inference/test_server.py": 21
+      },
+      "user_removed_per_file": {
+        "inference/raw_recordings.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 826,
+      "user_lines_removed": 0,
+      "agent_lines_added": 352,
+      "agent_lines_removed": 37,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/lib/rawWindow.test.ts": 38,
+        "frontend/src/lib/rawWindow.ts": 23,
+        "frontend/src/lib/useRawWindow.ts": 22
+      }
+    }
+  ]
+}

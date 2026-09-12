@@ -3,15 +3,18 @@
   "checkpoint_id": "01M2BZ2PJBGN376190ZET48SEE",
   "strategy": "manual-commit",
   "branch": "codex/replay-workbench",
-  "checkpoints_count": 2,
+  "checkpoints_count": 7,
   "files_touched": [
     "AGENTS.md",
     "docs/submission/PRODUCT_PRIORITIES.md",
     "frontend/README.md",
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
     "frontend/src/lib/rawWindow.test.ts",
     "frontend/src/lib/useRawWindow.ts",
     "inference/README.md",
     "inference/raw_recordings.py",
+    "inference/server.py",
     "inference/test_server.py"
   ],
   "sessions": [
@@ -21,13 +24,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 389316,
+    "input_tokens": 455734,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 10404917,
-    "output_tokens": 24482,
-    "api_call_count": 84
+    "cache_read_tokens": 14835923,
+    "output_tokens": 29384,
+    "api_call_count": 112
   }
 }
