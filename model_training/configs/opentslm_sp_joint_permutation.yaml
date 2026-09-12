@@ -69,6 +69,6 @@ checkpoint_selection:
   joint_weight: 0.5
   onset_weight: 0.5
   gates:
-    schema_exact_match: 0.95
-    semantics_macro_f1: 0.90
-    contact_f1: 0.95
+    first_pass/schema_exact_match: 0.95
+    first_pass/semantics_macro_f1: 0.90
+    first_pass/contact_f1: 0.95
