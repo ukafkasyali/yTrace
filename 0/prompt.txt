@@ -1,0 +1,5 @@
+I saved the keys.
+
+---
+
+Great! Write a bash script to easily get the project up and running for testing please.
