@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, SearchCheck, X } from 'lucide-react';
+import { Check, Plus, SearchCheck, X } from 'lucide-react';
 import { sourcingIsActive, type RequirementsPreview, type Services, type SourcingReview, type SourcingRun } from '../services';
 import RequirementEditor, { selectedRequirements, type RequirementPriorities } from './RequirementEditor';
 import ScoutReview from './ScoutReview';
@@ -95,7 +95,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
   }
 
   return <section className="workspace-section dataset-scout" aria-labelledby="scout-title">
-    <div className="section-heading"><div><p className="eyebrow">Agentic sourcing</p><h2 id="scout-title">Evidence-complete dataset scout</h2><p>Search bounded hypotheses, verify native sources, and review a deterministic recommendation before ingestion.</p></div><SearchCheck size={20} aria-hidden="true" /></div>
+    <div className="section-heading"><div><h2 id="scout-title">Find and verify a dataset</h2><p>Describe the data you need. Trace searches bounded sources, checks native evidence, and waits for your approval.</p></div><SearchCheck size={20} aria-hidden="true" /></div>
     {!services.connected && <p className="status-note">Configure the team API to run or resume dataset research.</p>}
     <label htmlFor="sourcing-brief">Research brief</label>
     <textarea id="sourcing-brief" rows={3} value={brief} onChange={event => { setBrief(event.target.value); invalidatePreview(); }} disabled={!services.connected || Boolean(busy)} />
@@ -114,6 +114,6 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
     </div>
     {error && <p className="error-message" role="alert">{error}</p>}
     {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
-    {sourceReady && <p className="status-note" role="status">Source URL added to the ingestion form below. Review it before starting ingestion.</p>}
+    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved source is ready for the ingestion handoff below.</p>}
   </section>;
 }
