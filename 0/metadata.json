@@ -3,54 +3,37 @@
   "checkpoint_id": "01M2B3D63MT3M4Y4F1WK87GFJJ",
   "session_id": "01a09628-d41e-7d93-8805-f0a093ac63b3",
   "strategy": "manual-commit",
-  "created_at": "2026-09-12T15:22:35.868778271Z",
+  "created_at": "2026-09-12T15:22:55.94196358Z",
   "branch": "feat/data-ingestion-profiler",
   "checkpoints_count": 1,
   "save_step_count": 1,
   "files_touched": [
-    "README.md",
-    "data_ingestion/README.md"
+    "data_ingestion/.gitignore"
   ],
   "agent": "Codex",
   "model": "gpt-5.6-sol",
   "turn_id": "f4761d58ac99",
   "compact_transcript_start": 0,
   "token_usage": {
-    "input_tokens": 109927,
+    "input_tokens": 112430,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 2989056,
-    "output_tokens": 32064,
-    "api_call_count": 44
+    "cache_read_tokens": 3310208,
+    "output_tokens": 32644,
+    "api_call_count": 47
   },
   "session_metrics": {
     "turn_count": 1
   },
   "initial_attribution": {
-    "calculated_at": "2026-09-12T15:22:35.830344722Z",
-    "agent_lines": 3,
+    "calculated_at": "2026-09-12T15:22:55.900122038Z",
+    "agent_lines": 0,
     "agent_removed": 0,
-    "human_added": 14380,
-    "human_modified": 20,
+    "human_added": 14408,
+    "human_modified": 0,
     "human_removed": 0,
-    "total_committed": 14403,
-    "total_lines_changed": 14403,
-    "agent_percentage": 0.02082899395959175,
+    "total_committed": 14408,
+    "total_lines_changed": 14408,
+    "agent_percentage": 0,
     "metric_version": 2
-  },
-  "prompt_attributions": [
-    {
-      "checkpoint_number": 1,
-      "user_lines_added": 0,
-      "user_lines_removed": 0,
-      "agent_lines_added": 0,
-      "agent_lines_removed": 0
-    },
-    {
-      "checkpoint_number": 2,
-      "user_lines_added": 0,
-      "user_lines_removed": 0,
-      "agent_lines_added": 14383,
-      "agent_lines_removed": 0
-    }
-  ]
+  }
 }
