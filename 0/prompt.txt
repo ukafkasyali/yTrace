@@ -1,9 +1,1 @@
-current memory utilization is quite low, can't we increase the batch size to make the training faster as well to get the results. Use the quality neutral immediately available improvment ideas to increase the speed without quality sacrifice.
-
----
-
-spawn a subagent if you havent already done so, that reports on the data, if validation overfits, if training overfits, if training completes successfully. Create as much observability as possible so we can catch the methodologic inconsistencies and training problems. I think this will converge faster than 9 hours.
-
----
-
 I think connection may be interrupted, check everything
