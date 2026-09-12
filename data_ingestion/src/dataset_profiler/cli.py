@@ -5,7 +5,7 @@ from pathlib import Path
 import argparse
 import json
 
-from .datasets import KukaCollisionHints
+from .datasets import KukaCollisionHints, KukaContactPart2Hints
 from .inspection import inspect_mat_file
 from .io.matlab import load_matlab
 from .profiler import profile_dataset
@@ -13,7 +13,11 @@ from .visualization import plot_run
 
 
 def _hints(name: str):
-    return KukaCollisionHints() if name == "kuka-collision" else None
+    if name == "kuka-collision":
+        return KukaCollisionHints()
+    if name == "kuka-contact-part2":
+        return KukaContactPart2Hints()
+    return None
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -27,7 +31,9 @@ def _parser() -> argparse.ArgumentParser:
     profile = commands.add_parser("profile", help="Profile and audit a dataset directory")
     profile.add_argument("source", type=Path)
     profile.add_argument("--dataset-id", required=True)
-    profile.add_argument("--hints", choices=["none", "kuka-collision"], default="none")
+    profile.add_argument(
+        "--hints", choices=["none", "kuka-collision", "kuka-contact-part2"], default="none"
+    )
     profile.add_argument("--output", type=Path, default=Path("outputs/dataset_profile.json"))
 
     plot = commands.add_parser("plot", help="Interactively plot all channels in one run")

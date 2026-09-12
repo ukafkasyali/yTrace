@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://docs.timenet.ai/schemas/dataset-card-v1.schema.json
+yaml_schema_version: 1
+dataset_id: kuka/contact-part2
+dataset_version: 1.0.0
+name: KUKA Robot Contact Signals Part II
+description: Raw experimental runs from Part II of the KUKA intentional-contact dataset.
+license: MIT
+domains:
+  - motion
+tags:
+  - robotics
+  - contact
+  - joint-torque
+  - joint-position
+source_url: https://zenodo.org/records/21941203
+license_url: https://zenodo.org/records/21941203
+citation: "Zhang, Z. (2022). Raw Torque Data from Collision Experiments on a KUKA Robot (Part II: Intentional Contacts)."
+access: open

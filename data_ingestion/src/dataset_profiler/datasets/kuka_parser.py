@@ -1,4 +1,4 @@
-"""Deterministic parsing primitives for KUKA Part I MATLAB runs."""
+"""Deterministic parsing primitives shared by KUKA MATLAB experiment parts."""
 
 from __future__ import annotations
 
@@ -104,8 +104,8 @@ def matlab_index_to_python(index: int, *, n_samples: int | None = None) -> int:
     return python_index
 
 
-def parse_collision_indices(path: str | Path, *, n_samples: int | None = None) -> np.ndarray:
-    """Parse and validate the one-based collision sample indices."""
+def parse_event_indices(path: str | Path, *, n_samples: int | None = None) -> np.ndarray:
+    """Parse and validate the one-based event sample indices in ``JK_moments``."""
     source = Path(path)
     raw = load_matlab_variable(source, "JK_moments").reshape(-1)
     if not np.issubdtype(raw.dtype, np.number) or not np.all(np.isfinite(raw)):
@@ -118,7 +118,17 @@ def parse_collision_indices(path: str | Path, *, n_samples: int | None = None) -
     return indices
 
 
-def collision_time_seconds(time_axis: np.ndarray, matlab_index: int) -> float:
-    """Return the timestamp addressed by a one-based MATLAB collision index."""
+def parse_collision_indices(path: str | Path, *, n_samples: int | None = None) -> np.ndarray:
+    """Backward-compatible Part I name for :func:`parse_event_indices`."""
+    return parse_event_indices(path, n_samples=n_samples)
+
+
+def event_time_seconds(time_axis: np.ndarray, matlab_index: int) -> float:
+    """Return the timestamp addressed by a one-based MATLAB event index."""
     python_index = matlab_index_to_python(matlab_index, n_samples=int(time_axis.size))
     return float(time_axis[python_index])
+
+
+def collision_time_seconds(time_axis: np.ndarray, matlab_index: int) -> float:
+    """Backward-compatible Part I name for :func:`event_time_seconds`."""
+    return event_time_seconds(time_axis, matlab_index)

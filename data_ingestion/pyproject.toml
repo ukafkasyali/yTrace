@@ -25,4 +25,8 @@ dataset-profiler = "dataset_profiler.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-dataset_profiler = ["py.typed", "timenet/kuka_collision/dataset.yaml"]
+dataset_profiler = [
+  "py.typed",
+  "timenet/kuka_contact/dataset.yaml",
+  "timenet/kuka_collision/dataset.yaml",
+]
