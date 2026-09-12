@@ -62,19 +62,26 @@ class TavilySearchAdapter:
             raise SourceUnavailable("Tavily is not configured and no exact demo cache applies")
         if self.settings.tavily_base_url.rstrip("/") != "https://api.tavily.com":
             raise SourceUnavailable("Tavily base URL must be https://api.tavily.com")
-        response = self.client.post(
-            "https://api.tavily.com/search",
-            headers={"Authorization": f"Bearer {self.settings.tavily_api_key.get_secret_value()}"},
-            json={
-                "query": query,
-                "search_depth": "advanced",
-                "max_results": 8,
-                "include_usage": True,
-                "include_domains": ["github.com", "zenodo.org", "huggingface.co"],
-                "safe_search": True,
-            },
-        )
-        response.raise_for_status()
+        try:
+            response = self.client.post(
+                "https://api.tavily.com/search",
+                headers={
+                    "Authorization": f"Bearer {self.settings.tavily_api_key.get_secret_value()}"
+                },
+                json={
+                    "query": query,
+                    "search_depth": "advanced",
+                    "max_results": 8,
+                    "include_usage": True,
+                    "include_domains": ["github.com", "zenodo.org", "huggingface.co"],
+                    "safe_search": True,
+                },
+            )
+            response.raise_for_status()
+        except httpx.HTTPError:
+            if allow_cached_demo:
+                return self._cached_batch(query)
+            raise
         if len(response.content) > self.settings.max_source_response_bytes:
             raise SourceUnavailable("Tavily response exceeded the configured size limit")
         payload = _TavilyResponse.model_validate(response.json())

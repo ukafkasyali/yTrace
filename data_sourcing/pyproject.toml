@@ -14,6 +14,9 @@ dependencies = [
   "uvicorn>=0.35,<1",
 ]
 
+[project.scripts]
+dataset-scout = "data_sourcing.__main__:main"
+
 [dependency-groups]
 dev = [
   "pytest>=8.4,<9",

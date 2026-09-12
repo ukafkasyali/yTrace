@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from hashlib import sha256
 
 from data_sourcing.models import (
     CandidateTier,
@@ -67,6 +68,31 @@ def evidence(value: str, source: SourceKind, suffix: str) -> EvidenceRecord:
     )
 
 
+def complete_evidence(candidate_id: str) -> list[EvidenceRecord]:
+    facts = {
+        "revision": "1",
+        "license": "cc-by-4.0",
+        "file_extensions": ".mat,.zip",
+        "labels": "collision,contact,free",
+        "sample_rate_hz": "1000",
+        "schema": "documented",
+        "total_size_bytes": "9100000000",
+    }
+    return [
+        EvidenceRecord(
+            id=f"ev_{sha256(f'{candidate_id}:{claim}'.encode()).hexdigest()[:16]}",
+            candidate_id=candidate_id,
+            claim_key=claim,
+            observed_value=value,
+            source_url="https://zenodo.org/records/21941203",
+            source_kind=SourceKind.ZENODO,
+            status=VerificationStatus.VERIFIED,
+            precedence=100,
+        )
+        for claim, value in facts.items()
+    ]
+
+
 def test_complete_candidate_is_recommended() -> None:
     requirements = [
         requirement(RequirementCategory.TASK_LABELS, "collision", "contact", "free"),
@@ -78,7 +104,12 @@ def test_complete_candidate_is_recommended() -> None:
         requirement(RequirementCategory.ACQUISITION),
     ]
 
-    assessment = assess_candidate(profile(), requirements, [])
+    dataset_profile = profile()
+    assessment = assess_candidate(
+        dataset_profile,
+        requirements,
+        complete_evidence(dataset_profile.candidate_id),
+    )
 
     assert assessment.tier is CandidateTier.RECOMMEND
     assert assessment.total_score >= 80
@@ -107,10 +138,44 @@ def test_conflicting_batch_counts_are_retained() -> None:
 
 def test_recommendation_confidence_requires_margin() -> None:
     requirements = [requirement(RequirementCategory.TASK_LABELS, "collision")]
-    first = assess_candidate(profile("ds_0123456789ab"), requirements, [])
+    first_profile = profile("ds_0123456789ab")
+    first = assess_candidate(
+        first_profile,
+        requirements,
+        complete_evidence(first_profile.candidate_id),
+    )
     second_profile = profile("ds_abcdef012345")
-    second = assess_candidate(second_profile, requirements, [])
+    second = assess_candidate(
+        second_profile,
+        requirements,
+        complete_evidence(second_profile.candidate_id),
+    )
 
     updated = apply_recommendation_confidence([first, second])
 
     assert updated[0].recommendation_confidence is ConfidenceLevel.MEDIUM
+
+
+def test_explicit_license_outside_allowlist_fails_hard_gate() -> None:
+    licence = requirement(RequirementCategory.LICENSE, "apache-2.0")
+
+    dataset_profile = profile()
+    assessment = assess_candidate(
+        dataset_profile,
+        [licence],
+        complete_evidence(dataset_profile.candidate_id),
+    )
+
+    assert assessment.tier is CandidateTier.REJECT
+    assert next(gate for gate in assessment.gates if gate.gate == "license").passed is False
+
+
+def test_profile_facts_without_evidence_cannot_be_scored_as_ready() -> None:
+    assessment = assess_candidate(
+        profile(),
+        [requirement(RequirementCategory.TASK_LABELS, "collision")],
+        [],
+    )
+
+    assert assessment.tier is CandidateTier.REJECT
+    assert assessment.total_score == 0

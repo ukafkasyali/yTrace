@@ -2,7 +2,7 @@ import httpx
 
 from data_sourcing.adapters import NativeVerifier, TavilySearchAdapter, canonicalize_results
 from data_sourcing.config import Settings
-from data_sourcing.models import ExecutionMode, SearchResult
+from data_sourcing.models import DatasetCandidate, ExecutionMode, SearchResult, SourceKind
 from data_sourcing.scoring import detect_conflicts
 
 
@@ -54,6 +54,21 @@ def test_cached_search_is_explicit_and_free() -> None:
     assert len(batch.results) == 3
 
 
+def test_live_search_failure_uses_cache_only_for_exact_demo() -> None:
+    def unavailable(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"error": "unavailable"})
+
+    adapter = TavilySearchAdapter(
+        settings(tavily_api_key="test-key"),
+        httpx.Client(transport=httpx.MockTransport(unavailable)),
+    )
+
+    batch = adapter.search("robot collision dataset", allow_cached_demo=True)
+
+    assert batch.execution_mode is ExecutionMode.CACHED
+    assert batch.credits_used == 0
+
+
 def test_canonicalization_groups_repo_and_linked_records() -> None:
     results = [
         SearchResult(
@@ -95,7 +110,7 @@ def test_native_fixture_retains_batch_contradiction_and_coverage_limits() -> Non
     assert verified.profile.channel_count == 7
     assert verified.profile.license_id == "cc-by-4.0"
     assert verified.profile.acquisition_feasible is True
-    assert detect_conflicts(verified.evidence, candidate.id) >= ["batch_count"]
+    assert "batch_count_part_ii" in detect_conflicts(verified.evidence, candidate.id)
 
 
 def test_acquisition_gate_fails_when_cached_data_exceeds_request_bound() -> None:
@@ -112,3 +127,109 @@ def test_acquisition_gate_fails_when_cached_data_exceeds_request_bound() -> None
     )
 
     assert verified.profile.acquisition_feasible is False
+
+
+def test_github_native_adapter_contract() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/readme"):
+            return httpx.Response(
+                200,
+                text=(
+                    "Dataset Structure with collision time-series torque signals at 1 kHz "
+                    "for all seven joints in MATLAB (.mat)."
+                ),
+            )
+        if "/commits/" in path:
+            return httpx.Response(200, json={"sha": "abc123"})
+        if "/git/trees/" in path:
+            return httpx.Response(
+                200,
+                json={"tree": [{"path": "signals.mat", "type": "blob", "size": 200}]},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "full_name": "org/repo",
+                "description": "Robot collision signals",
+                "default_branch": "main",
+                "license": {"spdx_id": "MIT"},
+            },
+        )
+
+    candidate = DatasetCandidate(
+        id="ds_111111111111",
+        name="Robot signals",
+        canonical_url="https://github.com/org/repo",
+        source_kind=SourceKind.GITHUB,
+    )
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(handler)),
+        validate_dns=False,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.revision == "GITHUB:abc123"
+    assert verified.profile.license_id == "MIT"
+    assert verified.profile.has_time_series_files is True
+
+
+def test_zenodo_native_adapter_contract() -> None:
+    payload = {
+        "title": "Robot collision record",
+        "revision": 3,
+        "metadata": {
+            "description": (
+                "Dataset structure: collision time-series torque signals at 1 kHz "
+                "for all seven joints in MATLAB (.mat)."
+            ),
+            "license": {"id": "cc-by-4.0"},
+        },
+        "files": [{"key": "collision-batch-01.tar.zst", "size": 500}],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_222222222222",
+        name="Zenodo robot signals",
+        canonical_url="https://zenodo.org/records/123",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.revision == "ZENODO:123.r3"
+    assert verified.profile.total_size_bytes == 500
+    assert verified.profile.labels == ["collision"]
+
+
+def test_hugging_face_native_adapter_contract() -> None:
+    payload = {
+        "id": "org/robot-data",
+        "sha": "def456",
+        "description": "Dataset columns contain robot contact torque time-series signals.",
+        "cardData": {"license": "apache-2.0"},
+        "siblings": [{"rfilename": "train.parquet", "size": 300}],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_333333333333",
+        name="HF robot signals",
+        canonical_url="https://huggingface.co/datasets/org/robot-data",
+        source_kind=SourceKind.HUGGING_FACE,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.revision == "HUGGING_FACE:def456"
+    assert verified.profile.license_id == "apache-2.0"
+    assert verified.profile.file_extensions == [".parquet"]

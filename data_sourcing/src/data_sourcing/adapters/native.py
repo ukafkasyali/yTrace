@@ -145,12 +145,13 @@ def build_verified_candidate(
         joint_match = re.search(r"\b(?:all\s+)?(seven|7)\s+joints?\b", text)
         if joint_match:
             channel_counts.append(7)
-        schema_documented |= bool(
+        document_schema = bool(
             re.search(
                 r"\b(?:dataset structure|file structure|seven joints|channels?|columns?)\b", text
             )
             and re.search(r"\b(?:torque|position|velocity|sensor|signal)\b", text)
         )
+        schema_documented |= document_schema
 
         evidence.append(_evidence(candidate.id, document, "revision", document.revision))
         if document.license_id:
@@ -175,13 +176,29 @@ def build_verified_candidate(
             )
         if joint_match:
             evidence.append(_evidence(candidate.id, document, "channel_count", "7"))
-        if schema_documented:
+        if document_schema:
             evidence.append(_evidence(candidate.id, document, "schema", "documented"))
         batch_count = document.batch_count
         if batch_count is None and (match := _BATCHES.search(document.text)):
             batch_count = int(match.group(1))
         if batch_count is not None:
-            evidence.append(_evidence(candidate.id, document, "batch_count", str(batch_count)))
+            if document.source_kind is SourceKind.GITHUB and "each part" in text:
+                evidence.append(
+                    _evidence(candidate.id, document, "batch_count_part_i", str(batch_count))
+                )
+                evidence.append(
+                    _evidence(candidate.id, document, "batch_count_part_ii", str(batch_count))
+                )
+            else:
+                scope = (
+                    "part_ii"
+                    if "part ii" in document.name.casefold() or "intentional contact" in text
+                    else "part_i"
+                    if "part i" in document.name.casefold() or "accidental collision" in text
+                    else ""
+                )
+                claim = f"batch_count_{scope}" if scope else "batch_count"
+                evidence.append(_evidence(candidate.id, document, claim, str(batch_count)))
         if document.files:
             evidence.append(
                 _evidence(
@@ -227,7 +244,14 @@ def build_verified_candidate(
         channel_count=max(channel_counts) if channel_counts else None,
         has_time_series_files=has_time_series,
         schema_documented=schema_documented,
-        acquisition_feasible=bool(dataset_documents) and total_size <= max_download_bytes,
+        acquisition_feasible=(
+            bool(dataset_documents)
+            and all(
+                document.files and all(file.size > 0 for file in document.files)
+                for document in dataset_documents
+            )
+            and total_size <= max_download_bytes
+        ),
     )
     return VerifiedCandidate(profile=profile, evidence=evidence)
 
@@ -292,6 +316,16 @@ class NativeVerifier:
             raise SourceUnavailable("Native source returned an unexpected JSON shape")
         return payload
 
+    def _get_text(self, url: str, headers: dict[str, str] | None = None) -> str:
+        validate_source_url(url)
+        if self.validate_dns:
+            resolve_public_host(urlsplit(url).hostname or "")
+        response = self.client.get(url, headers=headers)
+        response.raise_for_status()
+        if len(response.content) > self.settings.max_source_response_bytes:
+            raise SourceUnavailable("Native source response exceeded the configured size limit")
+        return response.text
+
     def _live_documents(self, candidate: DatasetCandidate) -> list[NativeDocument]:
         queued = [str(candidate.canonical_url), *(str(url) for url in candidate.related_urls)]
         documents: list[NativeDocument] = []
@@ -324,12 +358,10 @@ class NativeVerifier:
         if self.settings.github_token:
             headers["Authorization"] = f"Bearer {self.settings.github_token.get_secret_value()}"
         metadata = self._get_json(api, headers)
-        readme_response = self.client.get(
+        readme = self._get_text(
             f"{api}/readme",
             headers=headers | {"Accept": "application/vnd.github.raw+json"},
         )
-        readme_response.raise_for_status()
-        readme = readme_response.text[: self.settings.max_source_response_bytes]
         branch = str(metadata.get("default_branch", "main"))
         commit = self._get_json(f"{api}/commits/{branch}", headers)
         tree = self._get_json(f"{api}/git/trees/{branch}?recursive=1", headers)
