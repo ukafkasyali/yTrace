@@ -1,6 +1,7 @@
 """Approved-source handoff and idempotent ingestion jobs."""
 
 from .acquisition import AcquiredAsset, AcquisitionError, ZenodoAcquirer
+from .archive import ArchiveError, ExtractedFile, ExtractionResult, SafeArchiveExtractor
 from .contracts import ApprovedManifest, ManifestContractError, parse_manifest
 from .jobs import (
     AssetReceipt,
@@ -18,8 +19,11 @@ __all__ = [
     "AcquisitionError",
     "AcquisitionWorker",
     "ApprovedManifest",
+    "ArchiveError",
     "AssetReceipt",
     "CreateIngestion",
+    "ExtractedFile",
+    "ExtractionResult",
     "IngestionJob",
     "IngestionJobConflict",
     "IngestionJobStore",
@@ -27,6 +31,7 @@ __all__ = [
     "IngestionState",
     "ManifestContractError",
     "ProviderAcquirer",
+    "SafeArchiveExtractor",
     "ZenodoAcquirer",
     "parse_manifest",
 ]
