@@ -1,0 +1,65 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BV1VEV9YB7F1MPJ4GCZCM3",
+  "session_id": "01a097a5-8462-7e92-9c92-6c85d9e47df1",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:15:50.528177Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "docs/submission/UI_WALKTHROUGH.md",
+    "frontend/src/App.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "b51051456cc8",
+  "checkpoint_transcript_start": 254,
+  "transcript_lines_at_start": 254,
+  "compact_transcript_start": 31,
+  "token_usage": {
+    "input_tokens": 186,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 103070,
+    "output_tokens": 255,
+    "api_call_count": 1
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:15:50.486703Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 3,
+    "total_committed": 0,
+    "total_lines_changed": 3,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 746,
+      "user_lines_removed": 3,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "docs/submission/UI_WALKTHROUGH.md": 1,
+        "frontend/src/App.tsx": 2
+      },
+      "user_removed_per_file": {
+        "docs/submission/UI_WALKTHROUGH.md": 1,
+        "frontend/src/App.tsx": 2
+      }
+    }
+  ]
+}
