@@ -223,6 +223,40 @@ def test_zenodo_native_adapter_contract() -> None:
     assert verified.profile.labels == ["collision"]
 
 
+def test_zenodo_label_aliases_are_normalized_to_task_classes() -> None:
+    payload = {
+        "title": "Robot collision and contact signals",
+        "revision": 1,
+        "metadata": {
+            "description": (
+                "Dataset structure: accidental collision (cls), intentional manual contacts "
+                "(ctc), and free from contacts (fre), sampled at 1 kHz."
+            ),
+            "license": {"id": "cc-by-4.0"},
+        },
+        "files": [{"key": "fre-joint-1.csv", "size": 500}],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_444444444444",
+        name="Robot signal classes",
+        canonical_url="https://zenodo.org/records/6461868",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.labels == ["collision", "contact", "free"]
+    label_evidence = [
+        item.observed_value for item in verified.evidence if item.claim_key == "labels"
+    ]
+    assert label_evidence == ["collision,contact,free"]
+
+
 def test_hugging_face_native_adapter_contract() -> None:
     payload = {
         "id": "org/robot-data",

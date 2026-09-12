@@ -88,3 +88,42 @@ def test_model_draft_is_normalized_to_deterministic_bounds() -> None:
     assert bounded.task_labels == [f"label-{index}" for index in range(8)]
     assert bounded.modality_terms == [f"modality-{index}" for index in range(8)]
     assert bounded.search_terms == [f"term-{index}" for index in range(12)]
+
+
+def test_merged_draft_is_normalized_to_deterministic_bounds(monkeypatch) -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    monkeypatch.setattr(
+        planner,
+        "_model_draft",
+        lambda _: PlanningDraft(
+            task_labels=[f"label-{index}" for index in range(8)],
+            modality_terms=[f"modality-{index}" for index in range(8)],
+            search_terms=[f"term-{index}" for index in range(12)],
+        ),
+    )
+
+    draft = planner.draft(
+        request("Find 1 kHz robot collision and contact time series with joint torque.")
+    )
+
+    assert draft.task_labels[:2] == ["collision", "contact"]
+    assert len(draft.task_labels) == 8
+    assert len(draft.modality_terms) == 8
+    assert len(draft.search_terms) == 12
+
+
+def test_model_label_variants_are_normalized_to_task_classes(monkeypatch) -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    monkeypatch.setattr(
+        planner,
+        "_model_draft",
+        lambda _: PlanningDraft(
+            task_labels=["collision", "intentional contact", "free from contacts"]
+        ),
+    )
+
+    draft = planner.draft(
+        request("Find collision, intentional contact, and free-motion telemetry.")
+    )
+
+    assert draft.task_labels == ["collision", "contact", "free"]

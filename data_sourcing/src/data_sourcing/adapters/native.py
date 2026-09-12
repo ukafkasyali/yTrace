@@ -134,7 +134,7 @@ def build_verified_candidate(
         for label, pattern in {
             "collision": r"\bcollisions?\b",
             "contact": r"\bcontacts?\b",
-            "free": r"\bfree[- ](?:motion|movement|space)\b",
+            "free": r"\b(?:free[- ](?:motion|movement|space)|free from contacts?|fre)\b",
             "anomaly": r"\banomal(?:y|ies|ous)\b",
             "internal mechanical fault": r"\binternal mechanical faults?\b",
         }.items():

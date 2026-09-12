@@ -52,7 +52,7 @@ def _bounded_model_draft(draft: _ModelPlanningDraft) -> PlanningDraft:
 _LABEL_PATTERNS = {
     "collision": r"\bcollisions?\b",
     "contact": r"\bcontacts?\b",
-    "free": r"\bfree(?:[- ]motion|[- ]movement|[- ]space)?\b",
+    "free": r"\b(?:free(?:[- ]motion|[- ]movement|[- ]space)?|free from contacts?|fre)\b",
     "anomaly": r"\banomal(?:y|ies|ous)\b",
     "internal mechanical fault": r"\binternal mechanical faults?\b",
 }
@@ -60,6 +60,25 @@ _LABEL_PATTERNS = {
 
 def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(value.strip().casefold() for value in values if value.strip()))
+
+
+def _normalize_labels(values: Iterable[str]) -> list[str]:
+    normalized: list[str] = []
+    for value in _unique(values):
+        canonical = (
+            "free"
+            if re.search(_LABEL_PATTERNS["free"], value)
+            else next(
+                (
+                    label
+                    for label, pattern in _LABEL_PATTERNS.items()
+                    if label != "free" and re.search(pattern, value)
+                ),
+                value,
+            )
+        )
+        normalized.append(canonical)
+    return _unique(normalized)
 
 
 def deterministic_draft(request: CreateSourcingRun) -> PlanningDraft:
@@ -126,12 +145,14 @@ class RequirementPlanner:
             or "internal mechanical fault" in fallback.task_labels
         ]
         return PlanningDraft(
-            task_labels=_unique([*fallback.task_labels, *model_labels]),
+            task_labels=_normalize_labels([*fallback.task_labels, *model_labels])[:8],
             minimum_sample_rate_hz=(
                 fallback.minimum_sample_rate_hz or model_draft.minimum_sample_rate_hz
             ),
-            modality_terms=_unique([*fallback.modality_terms, *model_draft.modality_terms]),
-            search_terms=_unique([*fallback.search_terms, *model_draft.search_terms]),
+            modality_terms=_unique(
+                [*fallback.modality_terms, *model_draft.modality_terms]
+            )[:8],
+            search_terms=_unique([*fallback.search_terms, *model_draft.search_terms])[:12],
         )
 
     def requirements(self, request: CreateSourcingRun) -> list[ResearchRequirement]:
