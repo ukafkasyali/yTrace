@@ -1,10 +1,13 @@
-"""TimeF connector for Part I of the KUKA accidental-collision dataset."""
+"""Shared TimeF connector implementation for separately identified KUKA parts."""
+
+from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
 import os
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pyarrow as pa
@@ -15,34 +18,14 @@ from timenet.types import Annotation, DataSource, TimePoint, TimeSeriesSpec, ure
 
 from ...datasets import (
     TimedJointMatrix,
-    collision_time_seconds,
     discover_kuka_runs,
-    parse_collision_indices,
+    event_time_seconds,
+    parse_event_indices,
     parse_time_axis,
     parse_timed_joint_matrix,
 )
 
-_ROOT_ENV = "KUKA_PART1_ROOT"
 _RATE_HZ = 1000
-_SOURCE = DataSource(
-    data_source_type="robot_experiment",
-    name="KUKA LWR4+ accidental-collision experiment",
-    provider="Technical University of Munich",
-)
-_TORQUE = TimeSeriesSpec(
-    spec_type="measured_external_joint_torque",
-    name="Measured external joint torque",
-    unit_value=ureg.Unit("newton * meter"),
-    data_source=_SOURCE,
-    dtype="float64",
-)
-_POSITION = TimeSeriesSpec(
-    spec_type="measured_joint_position",
-    name="Measured joint position",
-    unit_value=ureg.radian,
-    data_source=_SOURCE,
-    dtype="float64",
-)
 
 
 @dataclass(frozen=True)
@@ -72,21 +55,31 @@ def _run_key(source_run_id: str) -> str:
     return source_run_id.replace("/", "--")
 
 
-class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
-    """Convert local KUKA Part I runs into raw-run TimeF records."""
+class KukaPartConnector(BaseConnector[KukaRunRef]):
+    """Reusable raw-run KUKA connector; subclasses supply only identity semantics."""
+
+    ROOT_ENV: ClassVar[str]
+    PART_LABEL: ClassVar[str]
+    RECORD_PREFIX: ClassVar[str]
+    EVENT_KEY: ClassVar[str]
+    EVENT_LABEL: ClassVar[str]
+    EVENT_OBJECT: ClassVar[str | None] = None
+    EXPERIMENT_NAME: ClassVar[str]
 
     def discover(self, source_root: Path) -> list[KukaRunRef]:
-        """Discover complete runs beneath a batch directory or future Part I root."""
+        """Discover complete runs beneath a batch directory or a part root."""
         root = source_root.expanduser().resolve()
         runs = discover_kuka_runs(root)
         if not runs:
-            raise RuntimeError(f"no complete KUKA Part I runs found under {root}")
+            raise RuntimeError(f"no complete KUKA {self.PART_LABEL} runs found under {root}")
         return [self._run_ref(root, run_dir) for run_dir in runs]
 
     def download(self, cache_dir: Path) -> list[KukaRunRef]:  # noqa: ARG002
-        configured = os.environ.get(_ROOT_ENV)
+        configured = os.environ.get(self.ROOT_ENV)
         if not configured:
-            raise RuntimeError(f"{_ROOT_ENV} must name an extracted Part I root or batch directory")
+            raise RuntimeError(
+                f"{self.ROOT_ENV} must name an extracted {self.PART_LABEL} root or batch directory"
+            )
         return self.discover(Path(configured))
 
     @staticmethod
@@ -103,14 +96,38 @@ class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
             source_subset=subset,
         )
 
+    @classmethod
+    def _specs(cls) -> tuple[TimeSeriesSpec, TimeSeriesSpec]:
+        source = DataSource(
+            data_source_type="robot_experiment",
+            name=cls.EXPERIMENT_NAME,
+            provider="Technical University of Munich",
+        )
+        return (
+            TimeSeriesSpec(
+                spec_type="measured_external_joint_torque",
+                name="Measured external joint torque",
+                unit_value=ureg.Unit("newton * meter"),
+                data_source=source,
+                dtype="float64",
+            ),
+            TimeSeriesSpec(
+                spec_type="measured_joint_position",
+                name="Measured joint position",
+                unit_value=ureg.radian,
+                data_source=source,
+                dtype="float64",
+            ),
+        )
+
     def convert(self, raw_refs: list[KukaRunRef]) -> TimeFDataset:
         dataset = TimeFDataset(metadata=self.metadata())
         for raw_ref in sorted(raw_refs, key=lambda ref: ref.source_run_id):
             self._add_run(dataset, raw_ref)
         return dataset
 
-    @staticmethod
-    def _add_run(dataset: TimeFDataset, raw_ref: KukaRunRef) -> None:
+    @classmethod
+    def _add_run(cls, dataset: TimeFDataset, raw_ref: KukaRunRef) -> None:
         time_axis = parse_time_axis(raw_ref.run_dir)
         expected_time = np.arange(time_axis.size, dtype=np.float64) / _RATE_HZ
         if not np.allclose(time_axis, expected_time, rtol=0.0, atol=1e-12):
@@ -118,6 +135,7 @@ class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
 
         axis = RegularAxis.from_rate_hz(_RATE_HZ)
         run_key = _run_key(raw_ref.source_run_id)
+        torque_spec, position_spec = cls._specs()
         torque = _series_loaders(raw_ref.run_dir / "JK_MsrExtTrq.mat", "MsrExtTrq", time_axis)
         position = _series_loaders(raw_ref.run_dir / "JK_PosMsr.mat", "PosMsr", time_axis)
         series = tuple(
@@ -127,16 +145,16 @@ class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
                 time_axis=axis,
                 loader=loaders[joint - 1],
                 source_id=raw_ref.source_run_id,
-                time_series_id=f"kuka-part1-{run_key}-{kind}-joint-{joint}",
+                time_series_id=f"{cls.RECORD_PREFIX}-{run_key}-{kind}-joint-{joint}",
                 n_values=int(time_axis.size),
             )
             for kind, spec, loaders in (
-                ("external-torque", _TORQUE, torque),
-                ("position", _POSITION, position),
+                ("external-torque", torque_spec, torque),
+                ("position", position_spec, position),
             )
             for joint in range(1, 8)
         )
-        record_id = f"kuka-part1-{run_key}"
+        record_id = f"{cls.RECORD_PREFIX}-{run_key}"
         record = dataset.add_record(time_series=series, record_id=record_id)
         record.add_annotations(
             [
@@ -149,7 +167,7 @@ class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
                 Annotation(
                     key="unit_resolution",
                     value={
-                        "spec_type": _POSITION.spec_type,
+                        "spec_type": position_spec.spec_type,
                         "unit": "radian",
                         "unit_resolution": "inferred",
                         "confidence": "high",
@@ -159,22 +177,45 @@ class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
                 ),
             ]
         )
-        collision_source = f"{raw_ref.source_run_id}/JK_moments.mat"
-        indices = parse_collision_indices(raw_ref.run_dir / "JK_moments.mat", n_samples=int(time_axis.size))
+        event_source = f"{raw_ref.source_run_id}/JK_moments.mat"
+        indices = parse_event_indices(
+            raw_ref.run_dir / "JK_moments.mat", n_samples=int(time_axis.size)
+        )
         for number, raw_index in enumerate(indices, start=1):
             matlab_index = int(raw_index)
             python_index = matlab_index - 1
-            timestamp = collision_time_seconds(time_axis, matlab_index)
+            timestamp = event_time_seconds(time_axis, matlab_index)
+            value: dict[str, object] = {
+                "label": cls.EVENT_LABEL,
+                "matlab_index": matlab_index,
+                "python_index": python_index,
+                "timestamp_seconds": timestamp,
+                "source_variable": "JK_moments",
+                "source_file": event_source,
+            }
+            if cls.EVENT_OBJECT is not None:
+                value["object"] = cls.EVENT_OBJECT
             record.add_annotation(
                 Annotation(
-                    key="collision",
-                    value={"label": "collision", "object": "ball", "matlab_index": matlab_index,
-                           "python_index": python_index, "timestamp_seconds": timestamp},
+                    key=cls.EVENT_KEY,
+                    value=value,
                     span=TimePoint.seconds(timestamp),
-                    source=collision_source,
-                    id=f"{record_id}-collision-{number:03d}",
+                    source=event_source,
+                    id=f"{record_id}-{cls.EVENT_KEY}-{number:03d}",
                 )
             )
+
+
+class KukaCollisionPart1Connector(KukaPartConnector):
+    """Convert local KUKA Part I accidental-collision runs into TimeF records."""
+
+    ROOT_ENV = "KUKA_PART1_ROOT"
+    PART_LABEL = "Part I"
+    RECORD_PREFIX = "kuka-part1"
+    EVENT_KEY = "collision"
+    EVENT_LABEL = "collision"
+    EVENT_OBJECT = "ball"
+    EXPERIMENT_NAME = "KUKA LWR4+ accidental-collision experiment"
 
 
 CONNECTOR = KukaCollisionPart1Connector

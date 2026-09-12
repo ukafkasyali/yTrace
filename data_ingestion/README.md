@@ -76,3 +76,23 @@ The validator emits JSON and exits nonzero if any check fails. The checked-in re
 Batch 01 build is [`outputs/kuka_timef_validation.json`](outputs/kuka_timef_validation.json). The
 generated TimeF registry used for that result remains at `outputs/timef/` (ignored by Git because it
 is a reproducible 36 MB build artifact).
+
+## KUKA Part II intentional contacts to TimeF
+
+Part II is deliberately separate as `kuka/contact-part2`; it uses the same shared KUKA parser and
+signal representation as Part I, but emits `intentional_contact` point annotations. Build and
+validate it with:
+
+```bash
+export KUKA_PART2_ROOT=/path/to/extracted/contact-batch-or-part-ii-root
+.venv/bin/python -m dataset_profiler.cli profile "$KUKA_PART2_ROOT" \
+  --dataset-id kuka/contact-part2 --hints kuka-contact-part2 \
+  --output outputs/kuka_contact_part2_profile.json
+.venv/bin/python scripts/build_kuka_contact_part2_timef.py "$KUKA_PART2_ROOT" outputs/timef-part2
+.venv/bin/python scripts/validate_kuka_contact_part2_timef.py outputs/timef-part2 \
+  outputs/kuka_contact_part2_profile.json --source "$KUKA_PART2_ROOT" \
+  --output outputs/kuka_contact_part2_timef_validation.json
+```
+
+The checked-in profile, full-array validation result, and the raw comparison are documented in
+[`docs/KUKA_CONTACT_PART2_INSPECTION.md`](docs/KUKA_CONTACT_PART2_INSPECTION.md).
