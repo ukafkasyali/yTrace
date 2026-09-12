@@ -11,6 +11,8 @@ licence semantics before any source is marked ready.
 - [ ] Versioned JSON schemas and golden fixtures cover all boundary objects.
 - [x] Old sourcing manifests remain readable but report incomplete acquisition metadata.
 - [ ] Dataset and code licences are separate; unresolved mismatch blocks READY.
+  - [x] Producer contract separates `datasetLicenseId` from `codeLicenseId`.
+  - [ ] Ingestion readiness blocks unresolved dataset-file rights.
 
 **Verification:**
 

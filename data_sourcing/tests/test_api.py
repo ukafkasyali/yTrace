@@ -61,6 +61,8 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         assert manifest.json()["schemaVersion"] == "1.1"
         assert manifest.json()["sourceKind"] in {"GITHUB", "ZENODO", "HUGGING_FACE"}
         assert manifest.json()["sourceRevision"]
+        assert manifest.json()["datasetLicenseId"] == "cc-by-4.0"
+        assert manifest.json()["codeLicenseId"] in {None, "MIT"}
         assert any(asset["role"] == "DATA" for asset in manifest.json()["assets"])
         assert "internal mechanical faults" in " ".join(manifest.json()["limitations"])
 

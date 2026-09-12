@@ -288,6 +288,8 @@ class ApprovedSourceStore:
             source_kind=row["source_kind"],
             source_revision=row["source_revision"],
             license_id=manifest.license_id,
+            dataset_license_id=manifest.dataset_license_id,
+            code_license_id=manifest.code_license_id,
             labels=manifest.labels,
             file_extensions=manifest.file_extensions,
             total_size_bytes=manifest.total_size_bytes,

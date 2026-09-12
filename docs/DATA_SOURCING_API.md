@@ -195,6 +195,12 @@ size, role, and the provider checksum when one is available. Existing persisted 
 these fields deserialize as schema `1.0` with an empty asset list and remain displayable, but are not
 acquisition-ready.
 
+`datasetLicenseId` and `codeLicenseId` keep artifact rights separate. A GitHub repository's SPDX
+license is recorded as code rights and is not silently applied to dataset bytes. When a linked
+Zenodo or Hugging Face artifact supplies the dataset license, it is retained separately. The legacy
+`licenseId` field remains additive compatibility data; ingestion readiness must not use it to fill a
+missing dataset license.
+
 GitHub tree entries follow the documented `path`, `sha`, `size`, `url`, and `truncated` contract;
 Zenodo retains its documented MD5 checksum rather than relabelling it; and Hugging Face URLs pin the
 Hub commit revision accepted by `hf_hub_url`/`hf_hub_download`:

@@ -253,6 +253,8 @@ class DatasetProfile(WireModel):
     source_revision: str | None = Field(default=None, max_length=200)
     assets: list[SourceAsset] = Field(default_factory=list)
     license_id: str | None = None
+    dataset_license_id: str | None = None
+    code_license_id: str | None = None
     file_count: int | None = Field(default=None, ge=0)
     total_size_bytes: int | None = Field(default=None, ge=0)
     file_extensions: list[str] = Field(default_factory=list)
@@ -465,6 +467,8 @@ class SourcingManifest(WireModel):
     source_revision: str | None = Field(default=None, max_length=200)
     assets: list[SourceAsset] = Field(default_factory=list)
     license_id: str
+    dataset_license_id: str | None = None
+    code_license_id: str | None = None
     labels: list[str]
     sample_rate_hz: float | None = None
     file_extensions: list[str]
@@ -488,6 +492,8 @@ class ApprovedSourceSummary(WireModel):
     source_kind: SourceKind
     source_revision: str
     license_id: str
+    dataset_license_id: str | None = None
+    code_license_id: str | None = None
     labels: list[str]
     file_extensions: list[str]
     total_size_bytes: int | None = None

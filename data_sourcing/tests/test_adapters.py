@@ -274,6 +274,8 @@ def test_github_native_adapter_contract() -> None:
 
     assert verified.profile.revision == "GITHUB:abc123"
     assert verified.profile.license_id == "MIT"
+    assert verified.profile.dataset_license_id is None
+    assert verified.profile.code_license_id == "MIT"
     assert verified.profile.has_time_series_files is True
     assert verified.profile.source_kind is SourceKind.GITHUB
     assert verified.profile.source_revision == "abc123"
@@ -554,6 +556,8 @@ def test_zenodo_native_adapter_contract() -> None:
     verified = verifier.verify(candidate)
 
     assert verified.profile.revision == "ZENODO:123.r3"
+    assert verified.profile.dataset_license_id == "cc-by-4.0"
+    assert verified.profile.code_license_id is None
     assert verified.profile.total_size_bytes == 500
     assert verified.profile.labels == ["collision"]
     assert verified.profile.assets[0].source_checksum is not None
@@ -694,6 +698,8 @@ def test_hugging_face_native_adapter_contract() -> None:
     verified = verifier.verify(candidate)
 
     assert verified.profile.revision == "HUGGING_FACE:def456"
+    assert verified.profile.dataset_license_id == "apache-2.0"
+    assert verified.profile.code_license_id is None
     assert verified.profile.license_id == "apache-2.0"
     assert verified.profile.file_extensions == [".parquet"]
     assert str(verified.profile.assets[0].download_url) == (

@@ -340,6 +340,15 @@ def build_verified_candidate(
     total_size = sum(sum(file.size for file in document.files) for document in dataset_documents)
     file_count = sum(len(document.files) for document in dataset_documents)
     licence = next((document.license_id for document in preferred if document.license_id), None)
+    dataset_licence = next(
+        (
+            document.license_id
+            for document in preferred
+            if document.source_kind is not SourceKind.GITHUB and document.license_id
+        ),
+        primary.license_id if primary.source_kind is not SourceKind.GITHUB else None,
+    )
+    code_licence = primary.license_id if primary.source_kind is SourceKind.GITHUB else None
     revision = ";".join(
         f"{document.source_kind.value}:{document.revision}" for document in preferred
     )
@@ -357,6 +366,8 @@ def build_verified_candidate(
         source_revision=primary.revision,
         assets=_source_assets(candidate, primary),
         license_id=licence,
+        dataset_license_id=dataset_licence,
+        code_license_id=code_licence,
         file_count=file_count,
         total_size_bytes=total_size,
         file_extensions=sorted(extensions),

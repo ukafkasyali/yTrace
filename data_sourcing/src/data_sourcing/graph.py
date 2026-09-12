@@ -927,6 +927,8 @@ class DatasetScoutGraph:
             source_revision=profile.source_revision,
             assets=profile.assets,
             license_id=profile.license_id or "",
+            dataset_license_id=profile.dataset_license_id,
+            code_license_id=profile.code_license_id,
             labels=profile.labels,
             sample_rate_hz=profile.sample_rate_hz,
             file_extensions=profile.file_extensions,
