@@ -100,6 +100,48 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
     connection.close()
 
 
+def test_reviewer_can_approve_an_alternate_eligible_candidate(monkeypatch) -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    state = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief=(
+                    "Find robot collision and intentional contact time-series torque data from "
+                    "https://github.com/zhang-zengjie/robot-raw-collision-signals"
+                )
+            ),
+            allow_cached_demo=True,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+    recommended_id = state["recommended_candidate_id"]
+    alternate_id = "ds_aaaaaaaaaaaa"
+    alternate_profile = dict(state["profiles"][0], candidate_id=alternate_id)
+    alternate_assessment = dict(state["assessments"][0], candidate_id=alternate_id)
+    alternate_evidence = [
+        dict(item, id=f"ev_{index:016x}", candidate_id=alternate_id)
+        for index, item in enumerate(state["evidence"], start=1)
+    ]
+    state["profiles"] = [*state["profiles"], alternate_profile]
+    state["assessments"] = [*state["assessments"], alternate_assessment]
+    state["evidence"] = [*state["evidence"], *alternate_evidence]
+    monkeypatch.setattr(
+        "data_sourcing.graph.interrupt",
+        lambda _: {"decision": "APPROVE", "candidateId": alternate_id},
+    )
+
+    approval_update = scout.approval(state)
+    manifest_update = scout.manifest_generation(state | approval_update)
+
+    assert recommended_id != alternate_id
+    assert approval_update["approved_candidate_id"] == alternate_id
+    assert manifest_update["manifest"]["candidate_id"] == alternate_id
+    scout.close()
+    connection.close()
+
+
 def test_unresolved_free_motion_label_uses_two_gap_queries_and_abstains() -> None:
     scout, connection = build_graph()
     run_id = str(uuid4())

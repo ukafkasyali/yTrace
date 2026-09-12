@@ -17,6 +17,7 @@ from data_sourcing.models import (
     RunStatus,
     SourcingRun,
 )
+from data_sourcing.scoring import candidate_is_approvable
 from data_sourcing.storage import (
     ArtifactStore,
     IdempotencyConflict,
@@ -118,18 +119,28 @@ class SourcingService:
     def approve(self, run_id: str, approval: ApprovalRequest) -> SourcingRun:
         run = self.artifacts.read_run(run_id)
         if run.status is not RunStatus.AWAITING_APPROVAL:
+            approved_candidate_id = run.approved_candidate_id or (
+                run.manifest.candidate_id if run.manifest else None
+            )
             if (
                 run.status is RunStatus.APPROVED
                 and approval.decision is ApprovalDecision.APPROVE
-                and approval.candidate_id == run.recommended_candidate_id
+                and approval.candidate_id == approved_candidate_id
             ):
                 return run
             raise RunConflict("Run is not awaiting approval")
-        if (
-            approval.decision is ApprovalDecision.APPROVE
-            and approval.candidate_id != run.recommended_candidate_id
+        selected = next(
+            (
+                item
+                for item in run.assessments
+                if item.candidate_id == approval.candidate_id
+            ),
+            None,
+        )
+        if approval.decision is ApprovalDecision.APPROVE and (
+            selected is None or not candidate_is_approvable(selected)
         ):
-            raise RunConflict("Approved candidate must match the current recommendation")
+            raise RunConflict("Approved candidate must pass every mandatory gate")
         try:
             with self._graph_lock:
                 return self._stream_graph(

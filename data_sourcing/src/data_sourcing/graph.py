@@ -39,6 +39,7 @@ from data_sourcing.planning import (
 from data_sourcing.scoring import (
     apply_recommendation_confidence,
     assess_candidate,
+    candidate_is_approvable,
     requirement_claim_key,
     requirement_is_evidenced,
 )
@@ -57,6 +58,7 @@ class SourcingState(TypedDict, total=False):
     evidence: list[dict[str, Any]]
     assessments: list[dict[str, Any]]
     recommended_candidate_id: str | None
+    approved_candidate_id: str | None
     gap_queries_used: int
     tavily_credits_used: int
     execution_mode: str
@@ -91,6 +93,7 @@ def initial_state(
         "evidence": [],
         "assessments": [],
         "recommended_candidate_id": None,
+        "approved_candidate_id": None,
         "gap_queries_used": 0,
         "tavily_credits_used": 0,
         "execution_mode": ExecutionMode.LIVE.value,
@@ -463,20 +466,34 @@ class DatasetScoutGraph:
             {
                 "runId": state["run_id"],
                 "recommendedCandidateId": state["recommended_candidate_id"],
+                "eligibleCandidateIds": [
+                    assessment.candidate_id
+                    for assessment in (
+                        CandidateAssessment.model_validate(item)
+                        for item in state["assessments"]
+                    )
+                    if candidate_is_approvable(assessment)
+                ],
                 "message": "Approve the evidence-backed dataset manifest?",
             }
         )
         approval = ApprovalRequest.model_validate(payload)
-        if (
-            approval.decision is ApprovalDecision.APPROVE
-            and approval.candidate_id != state["recommended_candidate_id"]
+        assessments = [
+            CandidateAssessment.model_validate(item) for item in state["assessments"]
+        ]
+        selected = next(
+            (item for item in assessments if item.candidate_id == approval.candidate_id),
+            None,
+        )
+        if approval.decision is ApprovalDecision.APPROVE and (
+            selected is None or not candidate_is_approvable(selected)
         ):
             return {
                 "status": RunStatus.NEEDS_INPUT.value,
                 "approval_decision": ApprovalDecision.REJECT.value,
                 "errors": [
                     *state["errors"],
-                    "Approval candidate did not match the recommendation",
+                    "Approval candidate did not pass every mandatory gate",
                 ],
             }
         if approval.decision is ApprovalDecision.REJECT:
@@ -498,6 +515,7 @@ class DatasetScoutGraph:
         return {
             "status": RunStatus.APPROVED.value,
             "approval_decision": approval.decision.value,
+            "approved_candidate_id": approval.candidate_id,
         }
 
     @staticmethod
@@ -542,7 +560,7 @@ class DatasetScoutGraph:
         return "end" if state["status"] == RunStatus.NEEDS_INPUT.value else "continue"
 
     def manifest_generation(self, state: SourcingState) -> dict[str, Any]:
-        candidate_id = state["recommended_candidate_id"]
+        candidate_id = state["approved_candidate_id"]
         profile = next(
             DatasetProfile.model_validate(item)
             for item in state["profiles"]

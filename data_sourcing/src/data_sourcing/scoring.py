@@ -263,3 +263,11 @@ def apply_recommendation_confidence(
         ranked[0] = top.model_copy(update={"recommendation_confidence": confidence})
     by_id = {item.candidate_id: item for item in ranked}
     return [by_id[item.candidate_id] for item in assessments]
+
+
+def candidate_is_approvable(assessment: CandidateAssessment) -> bool:
+    return (
+        assessment.tier is not CandidateTier.REJECT
+        and not assessment.missing_requirement_ids
+        and all(gate.passed for gate in assessment.gates)
+    )
