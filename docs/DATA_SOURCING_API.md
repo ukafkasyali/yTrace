@@ -187,6 +187,22 @@ the strengths, limitations, or blockers that produced it; numeric scores are omi
 
 Returns the approved manifest. Before approval it returns `409 ARTIFACT_UNAVAILABLE`.
 
+New approvals use additive manifest schema `1.1`. `sourceKind` and `sourceRevision` identify the
+approved provider record, while `assets` contains only non-empty data, documentation, or checksum
+files for which the native provider returned enough information to construct a credential-free,
+revision-pinned locator. Each asset includes a stable `assetId`, provider locator, download URL,
+size, role, and the provider checksum when one is available. Existing persisted manifests without
+these fields deserialize as schema `1.0` with an empty asset list and remain displayable, but are not
+acquisition-ready.
+
+GitHub tree entries follow the documented `path`, `sha`, `size`, `url`, and `truncated` contract;
+Zenodo retains its documented MD5 checksum rather than relabelling it; and Hugging Face URLs pin the
+Hub commit revision accepted by `hf_hub_url`/`hf_hub_download`:
+
+- https://docs.github.com/en/rest/git/trees?apiVersion=2022-11-28#get-a-tree
+- https://developers.zenodo.org/#files
+- https://huggingface.co/docs/huggingface_hub/en/package_reference/file_download#huggingface_hub.hf_hub_url
+
 ## Errors and operational bounds
 
 Errors use the shared envelope:

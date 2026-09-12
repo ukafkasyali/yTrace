@@ -64,6 +64,42 @@ class SourceKind(StrEnum):
     HUGGING_FACE = "HUGGING_FACE"
 
 
+class AssetRole(StrEnum):
+    DATA = "DATA"
+    DOCUMENTATION = "DOCUMENTATION"
+    CHECKSUM = "CHECKSUM"
+
+
+class ChecksumAlgorithm(StrEnum):
+    MD5 = "md5"
+    SHA256 = "sha256"
+
+
+class SourceChecksum(WireModel):
+    algorithm: ChecksumAlgorithm
+    value: str = Field(pattern=r"^[a-fA-F0-9]{32,64}$")
+
+    @model_validator(mode="after")
+    def value_matches_algorithm(self) -> SourceChecksum:
+        expected_length = 32 if self.algorithm is ChecksumAlgorithm.MD5 else 64
+        if len(self.value) != expected_length:
+            raise ValueError(
+                f"{self.algorithm.value} checksums must be {expected_length} hex digits"
+            )
+        self.value = self.value.casefold()
+        return self
+
+
+class SourceAsset(WireModel):
+    asset_id: str = Field(pattern=r"^asset_[a-f0-9]{16}$")
+    name: str = Field(min_length=1, max_length=1_024)
+    role: AssetRole
+    size_bytes: int = Field(gt=0)
+    provider_locator: str = Field(min_length=1, max_length=2_000)
+    download_url: HttpUrl
+    source_checksum: SourceChecksum | None = None
+
+
 class SourceRole(StrEnum):
     DISCOVERY_LEAD = "DISCOVERY_LEAD"
     DATASET_ARTIFACT = "DATASET_ARTIFACT"
@@ -213,6 +249,9 @@ class DatasetProfile(WireModel):
     canonical_url: HttpUrl
     source_kinds: list[SourceKind]
     revision: str | None = None
+    source_kind: SourceKind | None = None
+    source_revision: str | None = Field(default=None, max_length=200)
+    assets: list[SourceAsset] = Field(default_factory=list)
     license_id: str | None = None
     file_count: int | None = Field(default=None, ge=0)
     total_size_bytes: int | None = Field(default=None, ge=0)
@@ -416,11 +455,15 @@ class RefinementOutcome(WireModel):
 
 
 class SourcingManifest(WireModel):
+    schema_version: str = Field(default="1.0", pattern=r"^1\.[01]$")
     run_id: str
     candidate_id: str
     name: str
     canonical_url: HttpUrl
     revision: str | None = None
+    source_kind: SourceKind | None = None
+    source_revision: str | None = Field(default=None, max_length=200)
+    assets: list[SourceAsset] = Field(default_factory=list)
     license_id: str
     labels: list[str]
     sample_rate_hz: float | None = None

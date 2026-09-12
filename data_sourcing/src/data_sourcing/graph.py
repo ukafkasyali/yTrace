@@ -917,11 +917,15 @@ class DatasetScoutGraph:
             "Collision/contact observations are not evidence of internal mechanical faults."
         )
         manifest = SourcingManifest(
+            schema_version="1.1",
             run_id=state["run_id"],
             candidate_id=profile.candidate_id,
             name=profile.name,
             canonical_url=profile.canonical_url,
             revision=profile.revision,
+            source_kind=profile.source_kind,
+            source_revision=profile.source_revision,
+            assets=profile.assets,
             license_id=profile.license_id or "",
             labels=profile.labels,
             sample_rate_hz=profile.sample_rate_hz,

@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from data_sourcing.config import Settings
-from data_sourcing.models import ApprovalRequest, CreateSourcingRun, RunStatus
+from data_sourcing.models import ApprovalRequest, CreateSourcingRun, RunStatus, SourcingManifest
 from data_sourcing.service import SourcingService
 from data_sourcing.storage import IdempotencyStore
 
@@ -12,6 +12,27 @@ BRIEF = (
     "Find robot collision and contact time series from "
     "https://github.com/zhang-zengjie/robot-raw-collision-signals"
 )
+
+
+def test_legacy_manifest_defaults_to_schema_1_0_without_assets() -> None:
+    manifest = SourcingManifest.model_validate(
+        {
+            "runId": str(uuid4()),
+            "candidateId": "ds_0123456789ab",
+            "name": "Legacy dataset",
+            "canonicalUrl": "https://zenodo.org/records/123",
+            "revision": "ZENODO:123.r1",
+            "licenseId": "cc-by-4.0",
+            "labels": ["collision"],
+            "fileExtensions": [".mat"],
+            "evidenceIds": ["ev_0123456789abcdef"],
+            "limitations": [],
+        }
+    )
+
+    assert manifest.schema_version == "1.0"
+    assert manifest.source_kind is None
+    assert manifest.assets == []
 
 
 def test_approval_resumes_from_sqlite_after_service_restart(tmp_path: Path) -> None:

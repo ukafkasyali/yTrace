@@ -7,9 +7,9 @@
     "license_id": "MIT",
     "text": "Raw torque sensor data from robot collision and intentional contact experiments. Dataset Structure: each part contains 42 compressed packages. Each package contains time-series torque data. The scripts document signal segmentation and seven joint channels. Part I: https://zenodo.org/records/21927431 Part II: https://zenodo.org/records/21941203",
     "files": [
-      {"name": "PureSgn/DataStillSpl.mat", "size": 247},
+      {"name": "PureSgn/DataStillSpl.mat", "size": 247, "provider_locator": "github:zhang-zengjie/robot-raw-collision-signals:blob:1111111111111111111111111111111111111111", "download_url": "https://api.github.com/repos/zhang-zengjie/robot-raw-collision-signals/git/blobs/1111111111111111111111111111111111111111"},
       {"name": "Scripts/GenSeqCSV.m", "size": 5285},
-      {"name": "README.md", "size": 7388}
+      {"name": "README.md", "size": 7388, "provider_locator": "github:zhang-zengjie/robot-raw-collision-signals:blob:2222222222222222222222222222222222222222", "download_url": "https://api.github.com/repos/zhang-zengjie/robot-raw-collision-signals/git/blobs/2222222222222222222222222222222222222222"}
     ],
     "related_urls": [
       "https://zenodo.org/records/21927431",
@@ -25,8 +25,8 @@
     "license_id": "cc-by-4.0",
     "text": "206 accidental collision sequences of raw torque sensor signals sampled at 1 kHz for all seven joints. Data are stored in MATLAB (.mat) format and archived as time-series batches. Dataset structure and units are documented.",
     "files": [
-      {"name": "collision-batches-01-42.tar.zst", "size": 8975703735},
-      {"name": "ReadMe.md", "size": 2831}
+      {"name": "collision-batches-01-42.tar.zst", "size": 8975703735, "provider_locator": "zenodo:21927431:collision-batches-01-42.tar.zst", "download_url": "https://zenodo.org/api/files/21927431/collision-batches-01-42.tar.zst"},
+      {"name": "ReadMe.md", "size": 2831, "provider_locator": "zenodo:21927431:ReadMe.md", "download_url": "https://zenodo.org/api/files/21927431/ReadMe.md"}
     ],
     "related_urls": ["https://github.com/zhang-zengjie/robot-raw-collision-signals"],
     "batch_count": 42
@@ -39,8 +39,8 @@
     "license_id": "cc-by-4.0",
     "text": "239 intentional contact sequences of raw torque sensor signals sampled at 1 kHz for all seven joints. Data are stored in MATLAB (.mat) format and archived as time-series batches. Dataset structure and units are documented.",
     "files": [
-      {"name": "contact-batches-01-48.tar.zst", "size": 9070414245},
-      {"name": "ReadMe.md", "size": 2840}
+      {"name": "contact-batches-01-48.tar.zst", "size": 9070414245, "provider_locator": "zenodo:21941203:contact-batches-01-48.tar.zst", "download_url": "https://zenodo.org/api/files/21941203/contact-batches-01-48.tar.zst"},
+      {"name": "ReadMe.md", "size": 2840, "provider_locator": "zenodo:21941203:ReadMe.md", "download_url": "https://zenodo.org/api/files/21941203/ReadMe.md"}
     ],
     "related_urls": ["https://github.com/zhang-zengjie/robot-raw-collision-signals"],
     "batch_count": 48

@@ -58,6 +58,10 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         manifest = client.get(f"/api/sourcing-runs/{run_id}/manifest")
         assert manifest.status_code == 200
         assert manifest.json()["candidateId"] == candidate_id
+        assert manifest.json()["schemaVersion"] == "1.1"
+        assert manifest.json()["sourceKind"] in {"GITHUB", "ZENODO", "HUGGING_FACE"}
+        assert manifest.json()["sourceRevision"]
+        assert any(asset["role"] == "DATA" for asset in manifest.json()["assets"])
         assert "internal mechanical faults" in " ".join(manifest.json()["limitations"])
 
     run_dir = settings.runs_dir / run_id
