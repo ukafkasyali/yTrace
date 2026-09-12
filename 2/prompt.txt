@@ -15,3 +15,7 @@ Okay, agents are working in parallel, are they doing this?
 ---
 
 So what do we do? Tell me what you're working on, use sub-agents if needed, then also give me a prompt for agent 3 and 4 what they can work on what you think is the highest lever.
+
+---
+
+Continue
