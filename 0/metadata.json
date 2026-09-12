@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BYZW93ZN162BDWNZ8765H6",
+  "session_id": "01a09636-4732-7010-81b0-79958f5daa26",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:24:43.075914427Z",
+  "branch": "codex/robot-observability-training",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "model_training/scripts/evaluate_grounding_panel.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "53300e97a3f3",
+  "checkpoint_transcript_start": 7600,
+  "transcript_lines_at_start": 7600,
+  "compact_transcript_start": 1002,
+  "token_usage": {
+    "input_tokens": 47430,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 486272,
+    "output_tokens": 2145,
+    "api_call_count": 6
+  },
+  "session_metrics": {
+    "turn_count": 9
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:24:42.184747148Z",
+    "agent_lines": 66,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 66,
+    "total_lines_changed": 66,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
