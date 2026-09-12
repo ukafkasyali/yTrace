@@ -1,0 +1,9 @@
+# Python 3.12 on the GPU VM. Core versions align with upstream requirements.
+torch==2.9.1
+transformers==4.57.3
+huggingface-hub==0.36.0
+peft==0.18.0
+# open-flamingo pins datasets 2.14.x, which imports the older PyArrow extension API.
+numpy==1.26.4
+pyarrow==16.1.0
+opentslm @ git+https://github.com/OpenTSLM/OpenTSLM.git@2968f4b891baab4307f7e9d0043e87677b593a30

@@ -11,3 +11,7 @@ contract is documented in [docs/DATA_SOURCING_API.md](docs/DATA_SOURCING_API.md)
 approved source manifest but does not ingest data.
 
 Entire checkpoint capture is configured for Codex. Approve the installed commands in Codex `/hooks` and restart/resume to enable automatic capture. Check `entire status` before relying on it.
+
+## Deterministic dataset profiler
+
+The deterministic MATLAB inspection, profiling, auditing, and visualization project lives in [data_ingestion/](data_ingestion/README.md).

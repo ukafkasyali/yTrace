@@ -19,6 +19,20 @@ tests. Serve the app at the site root: the bundled fixture uses `/data/…` URLs
 
 ## What works now
 
+- Switch the recording context between **Overview** and **3D reference**. The
+  optional Three.js module loads on demand, renders original schematic geometry,
+  supports orbit/zoom/reset and shares joint highlighting with the signal strips.
+  Recorded articulation uses validated joint positions at 100 Hz, synchronized
+  with replay. Body shape and global base orientation remain schematic. Positions
+  and torque use samples at or before the cursor; switching views preserves the
+  conversation and interval. Missing positions show a labeled fixed pose.
+- Refresh one shared model registry from comparison. The assistant becomes
+  available only when the backend declares an `assistant` language service;
+  direct OpenTSLM availability does not imply orchestration. Comparison receives
+  the assistant's draft or latest question and lets you edit it before running.
+- Resume an interrupted ingestion-status check using the existing job ID, without
+  accidentally submitting another import.
+
 - Replay a real 170-second KUKA recording with pause, seek, speed and publisher
   marker navigation. The browser reveals samples up to its playback cursor;
   this is recorded-data replay, not a live robot feed.
@@ -80,15 +94,18 @@ Setting the URL enables requests; it does not prove a service is healthy.
   selected interval cannot extend past it. SSE streams must use the configured
   API origin and increasing decimal event IDs, followed by a terminal event.
 
-No real model endpoint, trained checkpoint, agentic ingestion run or live backend
-integration has been verified in this frontend. The next team acceptance check
-is one retrieved recording, one actual model answer with evidence and one actual
-ingestion job, including failure and cancellation behavior.
+The private Nebius bridge and Vite proxy have been verified against the real data
+endpoint: seven channels and exactly 1,024 raw samples per channel for the initial
+interval. Model loading is blocked by Hugging Face access to the Llama backbone;
+no actual generated answer or agentic ingestion run has passed acceptance yet.
+See [inference setup](../inference/README.md) for authentication and resume steps.
 
 ## Design and ownership
 
 [PRODUCT.md](PRODUCT.md) records product intent and [DESIGN.md](DESIGN.md) describes
-the interface decisions. The upper-left panel is a recording/data explorer;
-3D robot animation is deferred until pose signals and joint mapping are verified.
+the interface decisions. The upper-left panel switches between the recording
+explorer and measured 3D articulation. See
+[position validation](public/robot/kuka/POSITION_VALIDATION.md) for the numerical
+check and its calibration limits.
 “Trace” is a provisional interface name. Samet owns this frontend; ingestion and
 model-training implementations stay in the team's separately owned modules.

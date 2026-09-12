@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dataset-profiler"
+version = "0.1.0"
+description = "Deterministic profiling and auditing for time-series datasets"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+hdf5 = ["h5py>=3.8"]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+dataset-profiler = "dataset_profiler.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

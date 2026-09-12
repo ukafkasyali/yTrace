@@ -1,0 +1,81 @@
+{
+  "recordingId": "05-28-21-25",
+  "mappingVerified": true,
+  "scope": "Recorded joint articulation; global base frame remains uncalibrated",
+  "method": "Direct PosMsr radians, sequential joint order and model axes; compare geometric Jacobian in end-effector frame with recorded Jcb",
+  "sourceSampleCount": 170001,
+  "validatedSampleCount": 169997,
+  "validatedStartSec": 0.004,
+  "validatedEndSec": 170.0,
+  "excludedStartupSampleIndices": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "excludedReason": "Both joint positions and recorded Jacobian are all-zero initialization values",
+  "jacobianConvention": "Jcb rows 1..42 reshape C-order to 6x7; first3 rows tip-frame linear XYZ, last3 rows tip-frame angular ZYX",
+  "errors": {
+    "maxAbsolute": 1.824748351308969e-07,
+    "rms": 1.6817299643705815e-08
+  },
+  "linearErrorsMetersPerRadian": {
+    "maxAbsolute": 1.1001958805795242e-07,
+    "rms": 1.0283542101083616e-08
+  },
+  "angularErrors": {
+    "maxAbsolute": 1.824748351308969e-07,
+    "rms": 2.144509026485121e-08
+  },
+  "negativeControls": {
+    "treatPositionsAsDegrees": {
+      "maxAbsolute": 1.9964218253041768,
+      "rms": 0.37439608672892877
+    },
+    "reverseJointOrder": {
+      "maxAbsolute": 1.9996086623888547,
+      "rms": 0.3933686482834653
+    },
+    "negateAllJointAngles": {
+      "maxAbsolute": 1.9802785945787047,
+      "rms": 0.4107725973934706
+    }
+  },
+  "quarterRadianOffsetControls": {
+    "joint_1": {
+      "maxAbsolute": 1.313460493146401e-07,
+      "rms": 1.6836458308036074e-08
+    },
+    "joint_2": {
+      "maxAbsolute": 0.24914286890120382,
+      "rms": 0.04678627176335906
+    },
+    "joint_3": {
+      "maxAbsolute": 0.24934930336400327,
+      "rms": 0.056808696957140005
+    },
+    "joint_4": {
+      "maxAbsolute": 0.24934648472605836,
+      "rms": 0.06122314955382545
+    },
+    "joint_5": {
+      "maxAbsolute": 0.24895793256929694,
+      "rms": 0.0725493559575508
+    },
+    "joint_6": {
+      "maxAbsolute": 0.24912159771662631,
+      "rms": 0.07776685608624712
+    },
+    "joint_7": {
+      "maxAbsolute": 0.24934809600860341,
+      "rms": 0.0824367416083833
+    }
+  },
+  "allAnglesWithinUrdfLimits": true,
+  "timestampsExactlyMatchTorque": true,
+  "limits": [
+    "A body Jacobian is invariant to the first joint's angle and global rigid base pose. The first channel uses the same recorded-unit convention as its six verified companions; its absolute zero cannot be independently validated by this test.",
+    "This validates internal kinematic consistency, not experimental camera/world alignment, housing geometry, contact point or sensor calibration.",
+    "No external motion capture or video was used to verify physical pose."
+  ]
+}
