@@ -5,6 +5,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import Command
 
 from data_sourcing.adapters.discovery import SearchBatch
+from data_sourcing.adapters.native import NativeDocument, NativeFile, build_verified_candidate
 from data_sourcing.config import Settings
 from data_sourcing.graph import DatasetScoutGraph, initial_state
 from data_sourcing.models import (
@@ -95,6 +96,22 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
         "Prioritize datasets that include free-motion baseline recordings."
     ]
     assert any(item["id"] == "hyp_review_refinement_1" for item in refined["hypotheses"])
+    assert refined["refinement_outcomes"] == [
+        {
+            "iteration": 1,
+            "feedback": "Prioritize datasets that include free-motion baseline recordings.",
+            "query": next(
+                item["query"]
+                for item in refined["hypotheses"]
+                if item["id"] == "hyp_review_refinement_1"
+            ),
+            "outcome": "NO_CHANGE",
+            "previous_recommended_candidate_id": refined["recommended_candidate_id"],
+            "recommended_candidate_id": refined["recommended_candidate_id"],
+            "new_candidate_ids": [],
+            "new_evidence_ids": [],
+        }
+    ]
     assert scout.graph.get_state(config).next == ("approval",)
 
     second_refinement = scout.graph.invoke(
@@ -120,6 +137,89 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
     assert second_refinement["review_iterations_used"] == 2
     assert exhausted["status"] == RunStatus.NEEDS_INPUT.value
     assert exhausted["review_feedback"] == second_refinement["review_feedback"]
+    scout.close()
+    connection.close()
+
+
+def test_refinement_prioritizes_new_results_and_records_recommendation_change() -> None:
+    original_url = "https://zenodo.org/records/6461868"
+    refined_url = "https://zenodo.org/records/1"
+
+    class SequencedSearch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.calls += 1
+            url = original_url if self.calls <= 3 else refined_url
+            return SearchBatch(
+                results=[SearchResult(title=f"Dataset {self.calls}", url=url, query=query)],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class CompleteVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url),
+                source_kind=candidate.source_kind,
+                name=candidate.name,
+                revision="v1",
+                license_id="cc-by-4.0",
+                text=(
+                    "Collision and intentional contact torque time-series at 1 kHz. "
+                    "Dataset structure documents seven joints and signal columns."
+                ),
+                files=[NativeFile(name="signals.csv", size=100)],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=SequencedSearch(),
+        verifier=CompleteVerifier(),
+    )
+    run_id = str(uuid4())
+    config = {"configurable": {"thread_id": run_id}}
+    paused = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief="Find robot collision and intentional contact torque data sampled at 1 kHz."
+            ),
+            allow_cached_demo=False,
+        ),
+        config,
+    )
+
+    refined = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Find another independently published dataset.",
+            }
+        ),
+        config,
+    )
+
+    outcome = refined["refinement_outcomes"][0]
+    assert paused["recommended_candidate_id"] == "ds_9be731e6fb6b"
+    assert refined["recommended_candidate_id"] == "ds_7d0f10684c2e"
+    assert outcome["outcome"] == "RECOMMENDATION_CHANGED"
+    assert outcome["previous_recommended_candidate_id"] == "ds_9be731e6fb6b"
+    assert outcome["recommended_candidate_id"] == "ds_7d0f10684c2e"
+    assert outcome["new_candidate_ids"] == ["ds_7d0f10684c2e"]
+    assert outcome["new_evidence_ids"]
     scout.close()
     connection.close()
 

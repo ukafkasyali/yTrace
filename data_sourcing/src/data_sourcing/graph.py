@@ -22,6 +22,8 @@ from data_sourcing.models import (
     EvidenceRecord,
     ExecutionMode,
     HypothesisStatus,
+    RefinementOutcome,
+    RefinementOutcomeStatus,
     ResearchRequirement,
     RunStatus,
     SearchHypothesis,
@@ -72,6 +74,8 @@ class SourcingState(TypedDict, total=False):
     approval_decision: str | None
     review_feedback: list[str]
     review_iterations_used: int
+    refinement_outcomes: list[dict[str, Any]]
+    pending_refinement: dict[str, Any] | None
     active_research_seconds: float
     planning_draft: dict[str, Any]
 
@@ -107,6 +111,8 @@ def initial_state(
         "approval_decision": None,
         "review_feedback": [],
         "review_iterations_used": 0,
+        "refinement_outcomes": [],
+        "pending_refinement": None,
         "active_research_seconds": 0.0,
         "planning_draft": {},
     }
@@ -184,7 +190,7 @@ class DatasetScoutGraph:
         builder.add_conditional_edges(
             "review_refinement",
             self.route_after_review_refinement,
-            {"continue": "canonicalization", "end": END},
+            {"continue": "verification", "end": END},
         )
         builder.add_edge("manifest_generation", END)
         return builder
@@ -356,7 +362,12 @@ class DatasetScoutGraph:
         return update
 
     def scoring(self, state: SourcingState) -> dict[str, Any]:
-        profiles = [DatasetProfile.model_validate(item) for item in state["profiles"]]
+        active_candidate_ids = {item["id"] for item in state["candidates"]}
+        profiles = [
+            DatasetProfile.model_validate(item)
+            for item in state["profiles"]
+            if item["candidate_id"] in active_candidate_ids
+        ]
         requirements = [ResearchRequirement.model_validate(item) for item in state["requirements"]]
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
         assessments = apply_recommendation_confidence(
@@ -374,11 +385,42 @@ class DatasetScoutGraph:
         )
         eligible = recommended is not None and not missing_mandatory
         status = RunStatus.AWAITING_APPROVAL if eligible else RunStatus.NEEDS_INPUT
+        recommended_candidate_id = recommended.candidate_id if eligible else None
+        refinement_outcomes = list(state.get("refinement_outcomes", []))
+        pending = state.get("pending_refinement")
+        if pending:
+            new_evidence_ids = sorted(
+                {item.id for item in evidence} - set(pending["previous_evidence_ids"])
+            )
+            new_candidate_ids = pending["new_candidate_ids"]
+            if pending["previous_recommended_candidate_id"] != recommended_candidate_id:
+                outcome_status = RefinementOutcomeStatus.RECOMMENDATION_CHANGED
+            elif new_evidence_ids:
+                outcome_status = RefinementOutcomeStatus.EVIDENCE_EXPANDED
+            elif new_candidate_ids:
+                outcome_status = RefinementOutcomeStatus.CANDIDATES_ADDED
+            else:
+                outcome_status = RefinementOutcomeStatus.NO_CHANGE
+            outcome = RefinementOutcome(
+                iteration=pending["iteration"],
+                feedback=pending["feedback"],
+                query=pending["query"],
+                outcome=outcome_status,
+                previous_recommended_candidate_id=pending[
+                    "previous_recommended_candidate_id"
+                ],
+                recommended_candidate_id=recommended_candidate_id,
+                new_candidate_ids=new_candidate_ids,
+                new_evidence_ids=new_evidence_ids,
+            )
+            refinement_outcomes.append(outcome.model_dump(mode="json"))
         report = self._report(state, ranked, missing_mandatory)
         return {
             "status": status.value,
             "assessments": _json_list(ranked),
-            "recommended_candidate_id": recommended.candidate_id if eligible else None,
+            "recommended_candidate_id": recommended_candidate_id,
+            "refinement_outcomes": refinement_outcomes,
+            "pending_refinement": None,
             "report_markdown": report,
             "active_research_seconds": min(
                 self.settings.run_timeout_seconds,
@@ -553,8 +595,41 @@ class DatasetScoutGraph:
         hypotheses.append(hypothesis)
         temporary_state = dict(state)
         temporary_state["hypotheses"] = _json_list(hypotheses)
+        previous_result_count = len(state["search_results"])
         update = self._perform_searches(temporary_state, [hypothesis])
+        review_results = [
+            SearchResult.model_validate(item)
+            for item in update["search_results"][previous_result_count:]
+        ]
+        discovered = canonicalize_results(review_results, self.settings.candidate_limit)
+        existing = [DatasetCandidate.model_validate(item) for item in state["candidates"]]
+        verified_ids = {item["candidate_id"] for item in state["profiles"]}
+        merged: list[DatasetCandidate] = []
+        seen: set[str] = set()
+        for candidate in [
+            *[item for item in existing if item.id in verified_ids],
+            *discovered,
+            *existing,
+        ]:
+            if candidate.id not in seen:
+                seen.add(candidate.id)
+                merged.append(candidate)
+            if len(merged) == self.settings.candidate_limit:
+                break
+        previous_candidate_ids = {item.id for item in existing}
+        new_candidate_ids = [
+            item.id for item in discovered if item.id not in previous_candidate_ids
+        ]
+        update["candidates"] = _json_list(merged)
         update["review_iterations_used"] = iteration
+        update["pending_refinement"] = {
+            "iteration": iteration,
+            "feedback": state["review_feedback"][-1],
+            "query": hypothesis.query,
+            "previous_recommended_candidate_id": state.get("recommended_candidate_id"),
+            "previous_evidence_ids": [item["id"] for item in state["evidence"]],
+            "new_candidate_ids": new_candidate_ids,
+        }
         return update
 
     @staticmethod

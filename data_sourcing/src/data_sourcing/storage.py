@@ -84,6 +84,7 @@ class ArtifactStore:
             approved_candidate_id=state.get("approved_candidate_id"),
             review_feedback=state.get("review_feedback", []),
             review_iterations_used=state.get("review_iterations_used", 0),
+            refinement_outcomes=state.get("refinement_outcomes", []),
             gap_queries_used=state.get("gap_queries_used", 0),
             tavily_credits_used=state.get("tavily_credits_used", 0),
             execution_mode=ExecutionMode(state.get("execution_mode", ExecutionMode.LIVE.value)),

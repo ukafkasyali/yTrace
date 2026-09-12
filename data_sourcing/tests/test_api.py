@@ -101,6 +101,36 @@ def test_rejection_requires_feedback_before_refining(tmp_path: Path) -> None:
         assert rejection.json()["error"]["code"] == "INVALID_REQUEST"
 
 
+def test_refinement_response_persists_an_explicit_decision_delta(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        created = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "refinement-outcome"},
+            json={"brief": BRIEF},
+        )
+        run_id = created.json()["runId"]
+
+        refinement = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={
+                "decision": "REJECT",
+                "note": "Prioritize free-motion baseline recordings.",
+            },
+        )
+
+        assert refinement.status_code == 200
+        outcome = refinement.json()["refinementOutcomes"][0]
+        assert outcome["outcome"] == "NO_CHANGE"
+        assert outcome["previousRecommendedCandidateId"] == outcome[
+            "recommendedCandidateId"
+        ]
+        persisted = json.loads(
+            (settings.runs_dir / run_id / "run.json").read_text(encoding="utf-8")
+        )
+        assert persisted["refinementOutcomes"] == refinement.json()["refinementOutcomes"]
+
+
 def test_api_returns_consistent_validation_and_not_found_errors(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:

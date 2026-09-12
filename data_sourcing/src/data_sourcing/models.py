@@ -92,6 +92,13 @@ class ApprovalDecision(StrEnum):
     REJECT = "REJECT"
 
 
+class RefinementOutcomeStatus(StrEnum):
+    RECOMMENDATION_CHANGED = "RECOMMENDATION_CHANGED"
+    EVIDENCE_EXPANDED = "EVIDENCE_EXPANDED"
+    CANDIDATES_ADDED = "CANDIDATES_ADDED"
+    NO_CHANGE = "NO_CHANGE"
+
+
 class SourcingConstraints(WireModel):
     must_have: list[str] = Field(default_factory=list, max_length=20)
     preferred: list[str] = Field(default_factory=list, max_length=20)
@@ -228,6 +235,17 @@ class ApprovalRequest(WireModel):
         return self
 
 
+class RefinementOutcome(WireModel):
+    iteration: int = Field(ge=1, le=2)
+    feedback: str = Field(min_length=1, max_length=1_000)
+    query: str = Field(min_length=3, max_length=400)
+    outcome: RefinementOutcomeStatus
+    previous_recommended_candidate_id: str | None = None
+    recommended_candidate_id: str | None = None
+    new_candidate_ids: list[str] = Field(default_factory=list)
+    new_evidence_ids: list[str] = Field(default_factory=list)
+
+
 class SourcingManifest(WireModel):
     run_id: str
     candidate_id: str
@@ -259,6 +277,7 @@ class SourcingRun(WireModel):
     approved_candidate_id: str | None = None
     review_feedback: list[str] = Field(default_factory=list, max_length=2)
     review_iterations_used: int = Field(default=0, ge=0, le=2)
+    refinement_outcomes: list[RefinementOutcome] = Field(default_factory=list, max_length=2)
     gap_queries_used: int = Field(default=0, ge=0, le=2)
     tavily_credits_used: int = Field(default=0, ge=0, le=12)
     execution_mode: ExecutionMode = ExecutionMode.LIVE
