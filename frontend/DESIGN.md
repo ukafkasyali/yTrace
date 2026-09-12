@@ -9,7 +9,7 @@ Operate-mode recording workbench, inspired by the supplied Foxglove screenshot. 
 - Panels are divided by hairlines, not nested cards. Four-pixel control corners, no gradients, ornamental badges or hero metrics.
 - Focus rings, named icon buttons, keyboard event selection, explicit failure and disconnected states, reduced-motion support.
 - Signal plots and annotation markers use real source measurements, with 100 Hz overview and 1 kHz detail explicitly distinguished. Local analysis is identified as calculated evidence, never model output. Disconnected ingestion and model controls remain unavailable until an API is configured; no progress is fabricated.
-- Replay reveals measurements and annotation marks up to a shared playback cursor. Interval selection and answer evidence preserve context; querying future intervals is rejected. Dataset exploration replaces unverified 3D pose animation.
+- Replay reveals measurements and annotation marks up to a shared playback cursor. Interval selection and answer evidence preserve context; querying future intervals is rejected. A compact Overview / 3D reference control changes only the upper-left context. The reference follows measured joint positions at the shared replay cursor, with real torque readouts and joint colors matching the signal strips. Body shape and global base orientation are schematic; absent measurements show an explicitly illustrative fixed pose. Camera controls sit below the model; the camera never rotates automatically. Position sample-and-hold does not interpolate future data.
 
 ## Investigation refinement
 

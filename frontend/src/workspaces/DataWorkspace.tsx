@@ -16,6 +16,9 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
   const [sourceUrl, setSourceUrl] = useState('');
   const [job, setJob] = useState<ImportJob | null>(null);
   const [jobId, setJobId] = useState('');
+  const [importStatusError, setImportStatusError] = useState('');
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [statusRevision, setStatusRevision] = useState(0);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [catalogRevision, setCatalogRevision] = useState(0);
@@ -40,16 +43,22 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
     if (!jobId || !services.connected) return;
     let alive = true; let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
+      setCheckingStatus(true);
       try {
         const next = await services.getImport(jobId);
         if (!alive) return;
         setJob(next);
+        setImportStatusError('');
         if (!['ready', 'needs_input', 'failed', 'cancelled'].includes(next.state)) timer = setTimeout(poll, 2000);
-      } catch (reason) { if (alive) setError(errorText(reason)); }
+      } catch (reason) {
+        if (alive) setImportStatusError(errorText(reason));
+      } finally {
+        if (alive) setCheckingStatus(false);
+      }
     };
     void poll();
     return () => { alive = false; clearTimeout(timer); };
-  }, [services, jobId]);
+  }, [services, jobId, statusRevision]);
 
   async function run(action: string, work: () => Promise<void>) {
     setBusy(action); setError('');
@@ -75,13 +84,14 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
         <label htmlFor="dataset-search">Search for a dataset</label><div className="field-row"><input id="dataset-search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Robot torque, contact events…" disabled={!services.connected} /><button className="btn" disabled={!services.connected || !search.trim() || Boolean(busy)}><Search size={15} aria-hidden="true" />{busy === 'search' ? 'Searching…' : 'Search'}</button></div>
       </form>
       {results.length > 0 && <ul className="source-results">{results.map(result => <li key={result.id}><strong>{result.name}</strong>{result.description && <p>{result.description}</p>}<a href={result.sourceUrl} target="_blank" rel="noopener noreferrer">View source</a><button className="btn" onClick={() => setSourceUrl(result.sourceUrl)}>Use this source</button></li>)}</ul>}
-      <form onSubmit={event => { event.preventDefault(); void run('import', async () => { const result = await services.startImport(sourceUrl); setJob(null); setJobId(result.ingestionId); }); }}>
+      <form onSubmit={event => { event.preventDefault(); void run('import', async () => { const result = await services.startImport(sourceUrl); setJob(null); setImportStatusError(''); setJobId(result.ingestionId); }); }}>
         <label htmlFor="source-url">Source URL</label><div className="field-row"><input id="source-url" type="url" value={sourceUrl} onChange={event => setSourceUrl(event.target.value)} placeholder="https://zenodo.org/records/…" disabled={!services.connected} required /><button className="btn btn-primary" disabled={!services.connected || !sourceUrl.trim() || Boolean(busy) || Boolean(jobId && (!job || !['ready', 'needs_input', 'failed', 'cancelled'].includes(job.state)))}><Download size={15} aria-hidden="true" />{busy === 'import' ? 'Starting…' : 'Start ingestion'}</button></div>
       </form>
     </section>
 
     <section className="workspace-section" aria-live="polite"><h2>Ingestion activity</h2>
-      {job ? <><p><strong>{job.state.replace('_', ' ')}</strong>{typeof job.progress === 'number' && Number.isFinite(job.progress) ? ` · ${job.progress}%` : ''}</p>{job.message && <p>{job.message}</p>}{job.steps && <ol>{job.steps.map((step, index) => <li key={index}>{step.label} — {step.completed ? 'Complete' : 'Pending'}</li>)}</ol>}{job.warnings?.map((warning, index) => <p className="status-note" key={index}>{warning}</p>)}{job.state === 'ready' && <button className="btn btn-primary" onClick={() => { setCatalogRevision(value => value + 1); if (job.datasetId || job.datasetIds?.[0]) setDatasetId(job.datasetId ?? job.datasetIds![0]); }}>Refresh imported recordings</button>}</> : <><p className="status-note">{jobId ? 'Waiting for ingestion status…' : 'No ingestion running. Planned stages:'}</p><ol className="ingestion-stages">{stages.map(stage => <li key={stage}>{stage} <span className="status-note">— not started</span></li>)}</ol></>}
+      {importStatusError && <div><p className="error-message" role="alert">Could not refresh ingestion status: {importStatusError}</p><p className="status-note">The import may still be running on the server. Retry checks the same job; it does not start another import.</p><button className="btn" type="button" disabled={checkingStatus || !services.connected} onClick={() => { setCheckingStatus(true); setStatusRevision(value => value + 1); }}>{checkingStatus ? 'Checking status…' : 'Retry status'}</button></div>}
+      {job ? <><p>{importStatusError && <span className="status-note">Last known status: </span>}<strong>{job.state.replace('_', ' ')}</strong>{typeof job.progress === 'number' && Number.isFinite(job.progress) ? ` · ${job.progress}%` : ''}</p>{job.message && <p>{job.message}</p>}{job.steps && <ol>{job.steps.map((step, index) => <li key={index}>{step.label} — {step.completed ? 'Complete' : 'Pending'}</li>)}</ol>}{job.warnings?.map((warning, index) => <p className="status-note" key={index}>{warning}</p>)}{job.state === 'ready' && <button className="btn btn-primary" onClick={() => { setCatalogRevision(value => value + 1); if (job.datasetId || job.datasetIds?.[0]) setDatasetId(job.datasetId ?? job.datasetIds![0]); }}>Refresh imported recordings</button>}</> : jobId ? <p className="status-note">{importStatusError ? 'No status has been received for this import yet.' : 'Waiting for ingestion status…'}</p> : <><p className="status-note">No ingestion running. Planned stages:</p><ol className="ingestion-stages">{stages.map(stage => <li key={stage}>{stage} <span className="status-note">— not started</span></li>)}</ol></>}
     </section>
 
     {services.connected && <section className="workspace-section"><h2>Backend catalog</h2><label htmlFor="catalog-dataset">Dataset</label><select id="catalog-dataset" value={datasetId} onChange={event => setDatasetId(event.target.value)}><option value="">Select dataset</option>{datasets.map(dataset => <option key={dataset.id} value={dataset.id}>{dataset.name}</option>)}</select>{recordings.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Recording</th><th>Duration</th><th>Channels</th><th>Action</th></tr></thead><tbody>{recordings.map(record => <tr key={record.id}><td>{record.name}</td><td>{record.durationSec.toFixed(1)} s</td><td>{record.channels.length}</td><td><button className="btn" disabled={Boolean(busy)} onClick={() => void run(`open-${record.id}`, () => onOpenRecording(record))}>Open recording</button></td></tr>)}</tbody></table></div> : <p className="empty-state">No recordings loaded for this dataset.</p>}</section>}

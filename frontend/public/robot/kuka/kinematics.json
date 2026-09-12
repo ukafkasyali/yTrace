@@ -1,0 +1,181 @@
+{
+  "sourceRepository": "https://github.com/jkaniuka/kuka_lwr4plus_urdf",
+  "sourceRevision": "d080ec1f0076d6e76c3fcddcd547b54db81c3df4",
+  "linearUnit": "meter",
+  "angularUnit": "radian",
+  "sourceUpAxis": "Z",
+  "joints": [
+    {
+      "name": "Joint_1",
+      "channelId": "joint_1",
+      "originXYZ": [
+        0,
+        0,
+        0.11
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "limitsRadians": [
+        -2.9670597283903604,
+        2.9670597283903604
+      ]
+    },
+    {
+      "name": "Joint_2",
+      "channelId": "joint_2",
+      "originXYZ": [
+        0,
+        0,
+        0.2005
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "limitsRadians": [
+        -2.0943951023931953,
+        2.0943951023931953
+      ]
+    },
+    {
+      "name": "Joint_3",
+      "channelId": "joint_3",
+      "originXYZ": [
+        0,
+        0,
+        0.2
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "limitsRadians": [
+        -2.9670597283903604,
+        2.9670597283903604
+      ]
+    },
+    {
+      "name": "Joint_4",
+      "channelId": "joint_4",
+      "originXYZ": [
+        0,
+        0,
+        0.2
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "limitsRadians": [
+        -2.0943951023931953,
+        2.0943951023931953
+      ]
+    },
+    {
+      "name": "Joint_5",
+      "channelId": "joint_5",
+      "originXYZ": [
+        0,
+        0,
+        0.2
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "limitsRadians": [
+        -2.9670597283903604,
+        2.9670597283903604
+      ]
+    },
+    {
+      "name": "Joint_6",
+      "channelId": "joint_6",
+      "originXYZ": [
+        0,
+        0,
+        0.19
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "limitsRadians": [
+        -2.0943951023931953,
+        2.0943951023931953
+      ]
+    },
+    {
+      "name": "Joint_7",
+      "channelId": "joint_7",
+      "originXYZ": [
+        0,
+        0,
+        0.078
+      ],
+      "originRPY": [
+        0,
+        0,
+        0
+      ],
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "limitsRadians": [
+        -2.9670597283903604,
+        2.9670597283903604
+      ]
+    }
+  ],
+  "illustrativePoseRadians": [
+    0,
+    0.55,
+    0,
+    1.1,
+    0,
+    0.55,
+    0
+  ],
+  "poseMeaning": "Illustrative articulation only; not a pose reconstructed from recording measurements",
+  "representation": "Independently rendered mechanical schematic from numerical kinematics; no CAD geometry"
+}

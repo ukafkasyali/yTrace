@@ -3,3 +3,4 @@ dist/
 *.tsbuildinfo
 .env.local
 test-results/
+__pycache__/
