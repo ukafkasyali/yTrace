@@ -1,0 +1,193 @@
+{
+  "dataset_id": "kuka/collision-part1",
+  "passed": true,
+  "checks": [
+    {
+      "check": "source_run_count",
+      "passed": true,
+      "expected": 1,
+      "actual": 1,
+      "details": {}
+    },
+    {
+      "check": "source_run_ids_unique_and_retained",
+      "passed": true,
+      "expected": [
+        "03-15-12-53"
+      ],
+      "actual": [
+        "03-15-12-53"
+      ],
+      "details": {
+        "errors": []
+      }
+    },
+    {
+      "check": "tasks_absent",
+      "passed": true,
+      "expected": 0,
+      "actual": 0,
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:torque_channels",
+      "passed": true,
+      "expected": 7,
+      "actual": 7,
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:position_channels",
+      "passed": true,
+      "expected": 7,
+      "actual": 7,
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:samples",
+      "passed": true,
+      "expected": [
+        232001
+      ],
+      "actual": [
+        232001
+      ],
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:sampling_rate_hz",
+      "passed": true,
+      "expected": [
+        1000.0
+      ],
+      "actual": [
+        1000.0
+      ],
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:time_range_seconds",
+      "passed": true,
+      "expected": [
+        0.0,
+        232.0
+      ],
+      "actual": [
+        0.0,
+        232.0
+      ],
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:collision_count",
+      "passed": true,
+      "expected": 27,
+      "actual": 27,
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:collision_index_and_timestamp_conversion",
+      "passed": true,
+      "expected": "all i -> i - 1 and timestamp == time[i - 1]",
+      "actual": "valid",
+      "details": {
+        "errors": []
+      }
+    },
+    {
+      "check": "run:03-15-12-53:source_files",
+      "passed": true,
+      "expected": [
+        "03-15-12-53/JK_MsrExtTrq.mat",
+        "03-15-12-53/JK_PosMsr.mat",
+        "03-15-12-53/JK_moments.mat",
+        "03-15-12-53/JsmoExp.mat"
+      ],
+      "actual": [
+        "03-15-12-53/JK_MsrExtTrq.mat",
+        "03-15-12-53/JK_PosMsr.mat",
+        "03-15-12-53/JK_moments.mat",
+        "03-15-12-53/JsmoExp.mat"
+      ],
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:position_unit_radian_high_confidence_inference",
+      "passed": true,
+      "expected": true,
+      "actual": true,
+      "details": {
+        "timef_units": [
+          "radian"
+        ],
+        "unit_resolution": {
+          "spec_type": "measured_joint_position",
+          "unit": "radian",
+          "unit_resolution": "inferred",
+          "confidence": "high"
+        }
+      }
+    },
+    {
+      "check": "run:03-15-12-53:series_source_ids",
+      "passed": true,
+      "expected": [
+        "03-15-12-53"
+      ],
+      "actual": [
+        "03-15-12-53"
+      ],
+      "details": {}
+    },
+    {
+      "check": "run:03-15-12-53:selected_torque_values",
+      "passed": true,
+      "expected": "exact raw equality",
+      "actual": "equal",
+      "details": {
+        "sample_indices": [
+          0,
+          116000,
+          232000
+        ]
+      }
+    },
+    {
+      "check": "run:03-15-12-53:selected_position_values",
+      "passed": true,
+      "expected": "exact raw equality",
+      "actual": "equal",
+      "details": {
+        "sample_indices": [
+          0,
+          116000,
+          232000
+        ]
+      }
+    },
+    {
+      "check": "run:03-15-12-53:all_torque_values",
+      "passed": true,
+      "expected": "exact raw equality",
+      "actual": "equal",
+      "details": {
+        "shape": [
+          7,
+          232001
+        ]
+      }
+    },
+    {
+      "check": "run:03-15-12-53:all_position_values",
+      "passed": true,
+      "expected": "exact raw equality",
+      "actual": "equal",
+      "details": {
+        "shape": [
+          7,
+          232001
+        ]
+      }
+    }
+  ]
+}

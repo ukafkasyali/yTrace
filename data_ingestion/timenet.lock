@@ -1,0 +1,5 @@
+{
+  "repository": "https://github.com/OpenTSLM/TimeNet.git",
+  "commit": "c39ca32b64ad0c89ea54093dbcb285c1a93eb006",
+  "package_subdirectory": "packages/timenet"
+}

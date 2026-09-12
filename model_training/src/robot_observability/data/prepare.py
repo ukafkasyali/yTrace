@@ -5,16 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import random
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass
 from itertools import pairwise
+from pathlib import Path
 
 import numpy as np
 
 from robot_observability.config import DataConfig
 from robot_observability.constants import JOINT_NAMES
 from robot_observability.data.pseudolabels import derive_evidence_labels, top_fraction_mean
-from robot_observability.data.raw import RawSession, RawSessionRef, discover_sessions, load_session
+from robot_observability.data.raw import RawSession, SessionRef, discover_sessions, load_session
 from robot_observability.data.splits import stratified_session_split
 
 
@@ -93,13 +94,17 @@ def _session_specs(session: RawSession, split: str, config: DataConfig) -> list[
 
 
 def calculate_train_normalization(
-    sessions: list[RawSessionRef], split_map: dict[str, str], config: DataConfig
+    sessions: list[SessionRef],
+    split_map: dict[str, str],
+    config: DataConfig,
+    *,
+    loader: Callable[[SessionRef, float], RawSession] = load_session,
 ) -> tuple[np.ndarray, np.ndarray]:
     sampled: list[np.ndarray] = []
     for ref in sessions:
         if split_map[ref.session_id] != "train":
             continue
-        values = load_session(ref, config.sampling_hz).torque_nm[:: config.normalization_sample_stride]
+        values = loader(ref, config.sampling_hz).torque_nm[:: config.normalization_sample_stride]
         sampled.append(values)
     combined = np.concatenate(sampled, axis=0)
     center = np.median(combined, axis=0)
@@ -109,16 +114,18 @@ def calculate_train_normalization(
 
 
 def _free_joint_thresholds(
-    sessions: list[RawSessionRef],
+    sessions: list[SessionRef],
     split_map: dict[str, str],
     train_scale: np.ndarray,
     config: DataConfig,
+    *,
+    loader: Callable[[SessionRef, float], RawSession] = load_session,
 ) -> np.ndarray:
     free_scores: list[np.ndarray] = []
     for ref in sessions:
         if split_map[ref.session_id] != "train":
             continue
-        session = load_session(ref, config.sampling_hz)
+        session = loader(ref, config.sampling_hz)
         for spec in _hard_free_windows(session, "train", config):
             window = session.torque_nm[spec.start_sample : spec.start_sample + config.window_samples]
             baseline = np.median(window[: config.pre_event_samples], axis=0)
@@ -166,16 +173,21 @@ def _metadata_for_window(
     return metadata
 
 
-def prepare_dataset(config: DataConfig) -> dict[str, object]:
-    """Prepare normalized mmap arrays and JSONL metadata; refuse overwrite."""
+def _prepare_sessions(
+    config: DataConfig,
+    sessions: list[SessionRef],
+    *,
+    loader: Callable[[SessionRef, float], RawSession],
+    source_receipt: dict[str, object],
+) -> dict[str, object]:
+    """Prepare normalized mmap arrays from validated continuous sessions."""
     output = config.prepared_root
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Prepared output already exists and is non-empty: {output}")
     output.mkdir(parents=True, exist_ok=True)
 
-    sessions = discover_sessions(config.raw_root)
     if not sessions:
-        raise FileNotFoundError(f"No raw sessions found below {config.raw_root}")
+        raise FileNotFoundError("No source sessions were discovered")
     split_map = stratified_session_split(
         sessions,
         train_fraction=config.split.train,
@@ -185,8 +197,8 @@ def prepare_dataset(config: DataConfig) -> dict[str, object]:
     (output / "splits.json").write_text(
         json.dumps(split_map, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    center, scale = calculate_train_normalization(sessions, split_map, config)
-    thresholds = _free_joint_thresholds(sessions, split_map, scale, config)
+    center, scale = calculate_train_normalization(sessions, split_map, config, loader=loader)
+    thresholds = _free_joint_thresholds(sessions, split_map, scale, config, loader=loader)
     normalization = {
         "method": "train-session robust median/MAD; no per-window normalization",
         "center_nm": center.tolist(),
@@ -199,14 +211,14 @@ def prepare_dataset(config: DataConfig) -> dict[str, object]:
     )
 
     counts: dict[str, dict[str, int]] = {}
-    refs_by_id = {ref.session_id: ref for ref in sessions}
+    refs_by_id: dict[str, SessionRef] = {ref.session_id: ref for ref in sessions}
     for split in ("train", "validation", "test"):
         specs: list[WindowSpec] = []
         loaded: dict[str, RawSession] = {}
         for session_id, assigned_split in split_map.items():
             if assigned_split != split:
                 continue
-            session = load_session(refs_by_id[session_id], config.sampling_hz)
+            session = loader(refs_by_id[session_id], config.sampling_hz)
             loaded[session_id] = session
             specs.extend(_session_specs(session, split, config))
         split_dir = output / split
@@ -234,6 +246,7 @@ def prepare_dataset(config: DataConfig) -> dict[str, object]:
         counts[split] = label_counts
 
     summary: dict[str, object] = {
+        "source_backend": source_receipt["source_backend"],
         "sessions": len(sessions),
         "session_counts": {
             split: sum(value == split for value in split_map.values())
@@ -250,4 +263,38 @@ def prepare_dataset(config: DataConfig) -> dict[str, object]:
     (output / "dataset_summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    (output / "source_receipt.json").write_text(
+        json.dumps(source_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return summary
+
+
+def prepare_dataset(config: DataConfig) -> dict[str, object]:
+    """Prepare windows directly from MATLAB (legacy compatibility path)."""
+    sessions = discover_sessions(config.raw_root)
+    return _prepare_sessions(
+        config,
+        sessions,
+        loader=load_session,
+        source_receipt={
+            "source_backend": "raw_matlab",
+            "raw_root": str(config.raw_root.expanduser().resolve()),
+        },
+    )
+
+
+def prepare_timef_dataset(config: DataConfig, version_dirs: list[Path]) -> dict[str, object]:
+    """Prepare training windows only after data passes through canonical TimeNet/TimeF."""
+    from robot_observability.data.timef import (
+        discover_timef_sessions,
+        load_timef_session,
+        timef_source_receipt,
+    )
+
+    sessions = discover_timef_sessions(version_dirs)
+    return _prepare_sessions(
+        config,
+        sessions,
+        loader=load_timef_session,
+        source_receipt=timef_source_receipt(version_dirs),
+    )

@@ -5,11 +5,11 @@ from __future__ import annotations
 import random
 from collections import defaultdict
 
-from robot_observability.data.raw import RawSessionRef
+from robot_observability.data.raw import SessionRef
 
 
 def stratified_session_split(
-    sessions: list[RawSessionRef],
+    sessions: list[SessionRef],
     *,
     train_fraction: float = 0.70,
     validation_fraction: float = 0.15,
@@ -19,7 +19,7 @@ def stratified_session_split(
         raise ValueError("Split fractions must be between zero and one")
     if train_fraction + validation_fraction >= 1:
         raise ValueError("Train and validation fractions must leave a test split")
-    grouped: dict[str, list[RawSessionRef]] = defaultdict(list)
+    grouped: dict[str, list[SessionRef]] = defaultdict(list)
     for session in sessions:
         grouped[session.event_type].append(session)
 

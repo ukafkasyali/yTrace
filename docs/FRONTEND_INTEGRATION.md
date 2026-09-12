@@ -1,6 +1,43 @@
 # Frontend integration handoff
 
-Samet owns the dashboard. Uğur and Atakan provide ingestion and recording access; Atakan, Uğur and Ece provide model inference. The frontend currently replays a real measured recording and calculates local numerical answers. Model inference, ingestion and their progress are not simulated. Service clients are implemented, but no real backend integration has been verified. Nothing here requires a backend framework change.
+## First OpenTSLM connection
+
+An isolated Python bridge is deployed privately on the Nebius H100; see
+[`inference/README.md`](../inference/README.md) for the Nebius VM, SSH tunnel,
+checkpoint configuration and real smoke-test commands. CUDA and OpenTSLM imports
+are verified, and all 16 bridge tests pass on the VM. The real data path through
+Vite and SSH returns the exact initial historical window. Model loading awaits
+Hugging Face access to the Llama backbone; no generated answer has passed yet.
+This first service exposes direct OpenTSLM-SP, the bundled dataset,
+and query streaming/cancellation. It does not provide assistant orchestration or
+ingestion. Vite proxies `/api` to `127.0.0.1:8000` when connected mode is enabled.
+
+The completion payload adds an optional `inputTrace`: `window`, `playheadSec`,
+`samplesPerChannel`, `inputSha256`, `model`, `revision`, `normalization`, `padding`
+and `latencyMs`. The smoke client checks this receipt against the requested
+historical interval. The initial selection contains 1,024 raw samples per channel.
+Evidence identifies the model's input, not a verified physical explanation.
+
+## Integration ownership
+
+The header, assistant and model comparison now share a refreshable registry.
+Return an available model with ID `assistant` and capability `language` to enable
+orchestration mode. A direct `opentslm` model alone enables comparison, not the LLM
+assistant. Refresh failures revoke previous availability. Comparison snapshots
+the editable question together with the selected window. Ingestion status retries
+reuse the existing job ID and never start a replacement import.
+
+The optional 3D reference in `frontend/src/robot/` is independent of inference and
+ingestion. It loads only when selected. It uses `public/robot/kuka/kinematics.json`
+and original schematic geometry; no third-party CAD meshes are redistributed.
+It replays `positions.json` using validated `PosMsr` joint articulation at 100 Hz.
+The original 1 kHz positions reproduce the recorded Jacobian across all 169,997
+nonstartup samples (maximum error 1.82e-7). Body shape and global base frame remain
+schematic; see `public/robot/kuka/POSITION_VALIDATION.md`. Both positions and torque
+sample at or before the shared cursor, never interpolating from future data.
+The position fixture is recording-specific, independent of torque and inference.
+
+Samet owns the dashboard. Uğur and Atakan provide ingestion and recording access; Atakan, Uğur and Ece provide model inference. The frontend currently replays a real measured recording and calculates local numerical answers. Model inference, ingestion and their progress are not simulated. The Nebius data connection is verified; real inference and ingestion still require acceptance checks. Nothing here requires a backend framework change.
 
 The implementation contract is `frontend/src/services/index.ts`. Configure `VITE_API_BASE_URL` with the API prefix (for example `/api`); without it, backend controls remain disconnected. Setting a prefix enables requests but is not a health check. See `frontend/README.md` for development setup and CORS limitations.
 

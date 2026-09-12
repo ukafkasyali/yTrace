@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://docs.timenet.ai/schemas/dataset-card-v1.schema.json
+yaml_schema_version: 1
+dataset_id: kuka/collision-part1
+dataset_version: 1.0.0
+name: KUKA Robot Collision Signals Part I
+description: Raw experimental runs from Part I of the KUKA accidental-collision dataset.
+license: MIT
+domains:
+  - motion
+tags:
+  - robotics
+  - collision
+  - joint-torque
+  - joint-position
+source_url: https://zenodo.org/records/21927431
+license_url: https://zenodo.org/records/21927431
+citation: "Zhang, Z. (2022). Raw Torque Data from Collision Experiments on a KUKA Robot (Part I: Accidental Collisions)."
+access: open

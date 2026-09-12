@@ -20,6 +20,7 @@ import yaml
 from torch.utils.data import DataLoader, Dataset, Subset
 from torch.utils.tensorboard import SummaryWriter
 
+from robot_observability.checkpoints import store_runtime_checkpoint
 from robot_observability.constants import OPENTSLM_COMMIT, TIMENET_COMMIT
 from robot_observability.metrics import evaluate_rows, parse_answer
 from robot_observability.opentslm_dataset import RobotQADataset
@@ -276,6 +277,7 @@ def prepared_hashes(root: Path) -> dict[str, str]:
     relative_paths = (
         "dataset_summary.json",
         "normalization.json",
+        "source_receipt.json",
         "splits.json",
         "train/records.jsonl",
         "train/signals.npy",
@@ -801,7 +803,7 @@ def run(args: argparse.Namespace) -> None:
             )
         if improved:
             best_validation = validation_loss
-            model.store_to_file(str(run_root / "best_model.pt"))
+            store_runtime_checkpoint(model, run_root / "best_model.pt")
         probe_every_steps = int(probe_config.get("every_steps", 100))
         probe_generation_every = int(probe_config.get("generation_every_steps", 250))
         should_generate_probe = phase != "step" or step % probe_generation_every == 0
@@ -1137,7 +1139,7 @@ def run(args: argparse.Namespace) -> None:
                     best_validation_loss=best_validation,
                 )
 
-        model.store_to_file(str(run_root / "last_model.pt"))
+        store_runtime_checkpoint(model, run_root / "last_model.pt")
         _, improved = validate("epoch", epoch, global_step)
         if improved:
             patience = 0

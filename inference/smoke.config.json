@@ -1,0 +1,9 @@
+{
+  "architecture": "sp",
+  "base_model": "meta-llama/Llama-3.2-1B",
+  "checkpoint_repo": "OpenTSLM/llama-3.2-1b-tsqa-sp",
+  "checkpoint_revision": "1904441f0d87c458d6e9376de04ada5f4c9ab5b7",
+  "checkpoint_sha256": "5550d41429e4ba50b3e89cbd247bc6b3dfa50368ec6942e422ab1f18b26553f2",
+  "normalization": "zscore_sample",
+  "max_new_tokens": 128
+}

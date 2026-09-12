@@ -4,9 +4,27 @@ This package prepares raw KUKA LWR4+ external-joint-torque recordings and fine-t
 OpenTSLM model to answer natural-language questions about contact, event semantics, affected joints,
 and event timing. It is the data/training half of the Foxglove-like observability demo.
 
-The design is intentionally extensible: raw-source readers produce canonical window records, while
-the TimeNet connector, model adapters, baselines, prompts, and UI payload consume that common
-contract. A new robot dataset should add a reader and mapping rather than fork the training loop.
+The canonical path is **raw source -> TimeNet connector -> TimeF dataset -> training-window
+adapter -> model**. TimeF records preserve complete recordings, signal metadata, units, and event
+provenance. The adapter validates that contract and materializes memory-mapped windows once so GPU
+training does not repeatedly decode Parquet. A new robot dataset should add a TimeNet connector and
+mapping rather than fork the training loop.
+
+## Audited submission comparison
+
+The completed feature, OpenTSLM, Qwen plot and zero-signal predictions are archived in
+[`docs/submission/evaluation`](../docs/submission/evaluation/report/comparison.md). Recompute the
+matched 512-window comparison without heavy dependencies using:
+
+```bash
+PYTHONPATH=src python3 -m robot_observability.comparison \
+  --source ../docs/submission/evaluation/source --output /tmp/trace-comparison
+```
+
+The report validates example/target/split identity and distinguishes positive-contact F1 from
+answer availability, complete-summary usability and recording-group uncertainty. The feature
+baseline is stronger on classification; no OpenTSLM superiority is claimed.
+
 
 ## Locked decisions
 
@@ -20,6 +38,8 @@ contract. A new robot dataset should add a reader and mapping rather than fork t
 - Strongest-joint pseudo-label is calibrated top-5%-mean disturbance, not contact-location truth.
 - Natural-language evidence plus strict JSON output. Free motion uses `null` onset/joint fields.
 - Primary TSLM: OpenTSLM SoftPrompt + Llama 3.2 1B + HAR warm start.
+- Training checkpoints contain only tensors and primitive flags, so inference can
+  validate them with PyTorch's weights-only loader before release.
 - Baselines: transparent signal features and Qwen3-VL 4B over equivalent seven-panel plots.
 - Retrospective observability only; this is not a causal collision detector or safety controller.
 
@@ -33,13 +53,19 @@ uv venv
 uv pip install -e '.[train,dev,timenet]'
 
 robot-observe download --output data/raw
-robot-observe prepare --config configs/data.yaml
-robot-observe baseline --prepared-root data/prepared/v1 \
+PYTHONPATH=../data_ingestion/src python ../data_ingestion/scripts/build_kuka_timef_dataset.py \
+  data/raw/collision artifacts/timef-raw --part part1
+PYTHONPATH=../data_ingestion/src python ../data_ingestion/scripts/build_kuka_timef_dataset.py \
+  data/raw/contact artifacts/timef-raw --part part2
+
+robot-observe prepare-timef --config configs/data_timef.yaml \
+  --timef-version artifacts/timef-raw/kuka/collision-part1/1.0.0 \
+  --timef-version artifacts/timef-raw/kuka/contact-part2/1.0.0
+robot-observe baseline --prepared-root data/prepared/timef-v1 \
   --output-root artifacts/baseline/signal-features-512 --limit 512
 
-python scripts/build_timef.py --registry artifacts/timef-registry --cache data/raw
 python -m robot_observability.train_opentslm \
-  --prepared-root data/prepared/v1 \
+  --prepared-root data/prepared/timef-v1 \
   --run-name llama-har-sp-smoke \
   --smoke --max-steps 200
 ```
@@ -56,7 +82,7 @@ Run the capacity/fit check before another expensive run:
 
 ```bash
 python -m robot_observability.train_opentslm \
-  --prepared-root data/prepared/v1 \
+  --prepared-root data/prepared/timef-v1 \
   --run-name llama-har-sp-fit-probe \
   --smoke --max-steps 320
 python scripts/report_fit_probe.py --run-dir runs/llama-har-sp-fit-probe
