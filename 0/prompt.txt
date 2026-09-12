@@ -1,0 +1,11 @@
+Tell me what things can be missing and what they mean in the decision reason of our data sourcing system?
+
+---
+
+Got it. What I also want is to make these mandatory requirements toggleable before starting the data sourcing. We can even provide the user the ability to add a custom mandatory requirement with natural language.
+
+What do you think?
+
+---
+
+Great! Let's plan and implement it! [$using-agent-skills](/Users/I776111/.agents/skills/using-agent-skills/SKILL.md)
