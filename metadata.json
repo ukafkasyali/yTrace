@@ -3,19 +3,41 @@
   "checkpoint_id": "01M2BWDAD4RGGG3BNP8G1Q7D0A",
   "strategy": "manual-commit",
   "branch": "codex/replay-workbench",
-  "checkpoints_count": 2,
+  "checkpoints_count": 4,
   "files_touched": [
+    "AGENTS.md",
+    "docs/FRONTEND_INTEGRATION.md",
+    "docs/submission/UI_WALKTHROUGH.md",
+    "frontend/README.md",
+    "frontend/public/robot/kuka/POSITION_VALIDATION.md",
+    "frontend/public/robot/kuka/positions-04-22-15-33.json",
+    "frontend/public/robot/kuka/positions-04-22-15-53.json",
+    "frontend/public/robot/kuka/positions-05-26-14-28.json",
+    "frontend/public/robot/kuka/positions-05-28-20-57.json",
+    "frontend/public/robot/kuka/positions-05-28-21-02.json",
+    "frontend/public/robot/kuka/positions-05-28-21-07.json",
+    "frontend/public/robot/kuka/positions-05-28-21-15.json",
     "frontend/scripts/prepare_example_positions.py",
     "frontend/src/App.tsx",
     "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/investigationReport.test.ts",
+    "frontend/src/assistant/investigationReport.ts",
     "frontend/src/assistant/predictionBrief.test.ts",
     "frontend/src/assistant/predictionBrief.ts",
     "frontend/src/recordings/RecordingContext.tsx",
+    "frontend/src/recordings/RecordingExplorer.test.tsx",
     "frontend/src/recordings/RecordingExplorer.tsx",
     "frontend/src/robot/RobotPanel.tsx",
     "frontend/src/robot/scene.ts",
+    "frontend/src/robot/telemetry.test.ts",
     "frontend/src/robot/telemetry.ts",
+    "frontend/src/styles.css",
+    "inference/README.md",
     "inference/build_demo_cases.py",
+    "inference/demo_cases.json",
+    "inference/demo_data/04-22-15-33.json.gz",
+    "inference/demo_data/04-22-15-53.json.gz",
+    "inference/demo_data/05-26-14-28.json.gz",
     "inference/test_server.py"
   ],
   "sessions": [
@@ -25,13 +47,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 25374,
+    "input_tokens": 45442,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 1999506,
-    "output_tokens": 6757,
-    "api_call_count": 13
+    "cache_read_tokens": 5034534,
+    "output_tokens": 8173,
+    "api_call_count": 28
   }
 }
