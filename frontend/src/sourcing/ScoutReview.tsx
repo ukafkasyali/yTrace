@@ -1,12 +1,11 @@
-import { AlertTriangle, ArrowUpRight, Check, CircleX, FileText } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, CircleX } from 'lucide-react';
 import type { CandidateAssessment, DatasetCandidate, DatasetProfile, SourcingManifest, SourcingRun } from '../services';
+import DecisionEvidence, { friendlyRetrievalNote } from './DecisionEvidence';
 
 type Props = {
   run: SourcingRun;
-  report: string;
   busy: string;
   onReview: (decision: 'APPROVE' | 'REJECT') => void;
-  onLoadReport: () => void;
   onUseSource: (url: string) => void;
 };
 
@@ -41,7 +40,7 @@ function Manifest({ manifest, onUseSource }: { manifest: SourcingManifest; onUse
   </div>;
 }
 
-export default function ScoutReview({ run, report, busy, onReview, onLoadReport, onUseSource }: Props) {
+export default function ScoutReview({ run, busy, onReview, onUseSource }: Props) {
   const candidate = run.candidates.find(item => item.id === run.recommendedCandidateId);
   const profile = run.profiles.find(item => item.candidateId === run.recommendedCandidateId);
   const assessment = run.assessments.find(item => item.candidateId === run.recommendedCandidateId);
@@ -49,12 +48,11 @@ export default function ScoutReview({ run, report, busy, onReview, onLoadReport,
 
   return <div className="scout-review" aria-live="polite">
     <div className="scout-run-line"><span className={`run-status status-${run.status.toLowerCase()}`}>{run.status.replaceAll('_', ' ')}</span><span>mode: {run.executionMode.toLowerCase()} · {run.tavilyCreditsUsed}/12 Tavily credits · {run.gapQueriesUsed}/2 gap searches</span><span className="mono">{run.runId}</span></div>
-    {run.errors.length > 0 && <details className="scout-errors" open={run.status === 'FAILED'}><summary>Retrieval notes ({run.errors.length})</summary><ul>{run.errors.map(error => <li role={run.status === 'FAILED' ? 'alert' : undefined} key={error}>{error}</li>)}</ul></details>}
+    {run.errors.length > 0 && <details className="scout-errors" open={run.status === 'FAILED'}><summary>Source coverage notes ({run.errors.length})</summary><ul>{run.errors.map(error => <li role={run.status === 'FAILED' ? 'alert' : undefined} key={error}>{friendlyRetrievalNote(error, run)}</li>)}</ul></details>}
     {mandatoryGaps.length > 0 && <div className="scout-warning"><AlertTriangle size={15} aria-hidden="true" /><div><strong>{run.status === 'NEEDS_INPUT' ? 'Recommendation withheld' : 'Mandatory evidence gaps'}</strong><ul>{mandatoryGaps.map(gap => <li key={gap.id}>{gap.label} — {gap.status.toLowerCase()}</li>)}</ul></div></div>}
     {candidate && assessment && <CandidateSummary candidate={candidate} profile={profile} assessment={assessment} />}
-    {run.assessments.length > 1 && <details><summary>Compare all {run.assessments.length} assessed candidates</summary><div className="table-scroll"><table className="data-table"><thead><tr><th>Candidate</th><th>Score</th><th>Tier</th><th>Hard gates</th></tr></thead><tbody>{[...run.assessments].sort((a, b) => b.totalScore - a.totalScore).map(item => <tr key={item.candidateId}><td>{run.candidates.find(candidateItem => candidateItem.id === item.candidateId)?.name ?? item.candidateId}</td><td>{item.totalScore}</td><td>{item.tier.toLowerCase()}</td><td>{item.gates.filter(gate => gate.passed).length}/{item.gates.length}</td></tr>)}</tbody></table></div></details>}
+    {run.assessments.length > 0 && <DecisionEvidence run={run} />}
     {run.status === 'AWAITING_APPROVAL' && candidate && <div className="scout-approval"><div><strong>Human decision required</strong><p>Approval creates a manifest. It does not download or ingest data.</p></div><div><button className="btn" disabled={Boolean(busy)} onClick={() => onReview('REJECT')}>Reject</button><button className="btn btn-primary" disabled={Boolean(busy)} onClick={() => onReview('APPROVE')}>{busy === 'APPROVE' ? 'Approving…' : 'Approve manifest'}</button></div></div>}
     {run.manifest && <Manifest manifest={run.manifest} onUseSource={onUseSource} />}
-    {run.reportMarkdown && <details className="scout-report" onToggle={event => { if ((event.currentTarget as HTMLDetailsElement).open && !report) onLoadReport(); }}><summary><FileText size={13} aria-hidden="true" />Evidence report</summary>{busy === 'report' ? <p>Loading report…</p> : <pre>{report || run.reportMarkdown}</pre>}</details>}
   </div>;
 }
