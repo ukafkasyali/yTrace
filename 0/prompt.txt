@@ -1,9 +1,1 @@
-Looks good, let's move onto implementing the plan.
-
----
-
-open the pr
-
----
-
 After that continue with the implementation as tracked.
