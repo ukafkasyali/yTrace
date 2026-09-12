@@ -9,12 +9,16 @@ next_run="runs/llama-har-sp-timef-rationale-focused-v6"
 v5_eval="artifacts/evaluation/v5b-conversational-validation-512"
 next_eval="artifacts/evaluation/v6-conversational-validation-512"
 
-for target in "$next_run" "$v5_eval" "$next_eval"; do
+for target in "$next_run" "$next_eval"; do
   if [[ -e "$target" ]]; then
     echo "Refusing to overwrite $target" >&2
     exit 1
   fi
 done
+if [[ -e "$v5_eval" && ! -f "$v5_eval/predictions.jsonl" ]]; then
+  echo "Incomplete V5 evaluation directory has no prediction receipt: $v5_eval" >&2
+  exit 1
+fi
 
 wait_started=$(date +%s)
 last_progress=$wait_started
@@ -64,13 +68,26 @@ print(
 )
 PY
 
-PYTHONPATH=src .venv/bin/python scripts/evaluate_grounding_panel.py \
-  --checkpoint "$current_run/best_model.pt" \
-  --prepared-root data/prepared/timef-v1 \
-  --output "$v5_eval" \
-  --samples 512 \
-  --batch-size 4 \
-  --selection event-intent-stratified
+if [[ -f "$v5_eval/metrics.json" ]]; then
+  echo "Using completed V5 conversational audit at $v5_eval."
+elif [[ -f "$v5_eval/predictions.jsonl" ]]; then
+  PYTHONPATH=src .venv/bin/python scripts/evaluate_grounding_panel.py \
+    --checkpoint "$current_run/best_model.pt" \
+    --prepared-root data/prepared/timef-v1 \
+    --output "$v5_eval" \
+    --samples 512 \
+    --batch-size 4 \
+    --selection event-intent-stratified \
+    --reuse-predictions
+else
+  PYTHONPATH=src .venv/bin/python scripts/evaluate_grounding_panel.py \
+    --checkpoint "$current_run/best_model.pt" \
+    --prepared-root data/prepared/timef-v1 \
+    --output "$v5_eval" \
+    --samples 512 \
+    --batch-size 4 \
+    --selection event-intent-stratified
+fi
 
 PYTHONPATH=src .venv/bin/python -m robot_observability.train_opentslm \
   --config configs/opentslm_sp_focused_control.yaml \
