@@ -157,6 +157,20 @@ class ZeroSignalDataset:
         return sample
 
 
+def stratified_subset(dataset: Dataset, size: int, seed: int) -> Dataset:
+    groups: dict[str, list[int]] = {}
+    for index in range(len(dataset)):
+        sample = dataset[index]
+        groups.setdefault(str(sample["metadata"]["event_type"]), []).append(index)
+    rng = np.random.default_rng(seed)
+    classes = sorted(groups)
+    selected = []
+    for class_index, label in enumerate(classes):
+        requested = size // len(classes) + (class_index < size % len(classes))
+        selected.extend(rng.choice(groups[label], size=requested, replace=False).tolist())
+    return Subset(dataset, sorted(selected))
+
+
 def run(args: argparse.Namespace) -> None:
     config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
     run_root = args.output / args.run_name
@@ -226,9 +240,10 @@ def run(args: argparse.Namespace) -> None:
         else stratified_summary_subset(validation_summary_dataset, generation_size, seed + 3)
     )
     zero_signal_dataset: Dataset = ZeroSignalDataset(
-        Subset(
+        stratified_subset(
             generation_dataset,
-            range(min(len(generation_dataset), int(config["validation"].get("zero_signal_subset", 0)))),
+            min(len(generation_dataset), int(config["validation"].get("zero_signal_subset", 0))),
+            seed + 4,
         )
     )
 
@@ -374,8 +389,8 @@ def run(args: argparse.Namespace) -> None:
                 run_root / f"generation_zero_signal_{phase}_step_{step:06d}.jsonl",
                 batch_size=validation_batch_size,
             )
-            paired_rows = zip(generation_rows[: len(zero_rows)], zero_rows)
-            changed = [real["prediction"] != zero["prediction"] for real, zero in paired_rows]
+            real_predictions = {row["record_id"]: row["prediction"] for row in generation_rows}
+            changed = [real_predictions.get(zero["record_id"]) != zero["prediction"] for zero in zero_rows]
             zero_metrics["prediction_change_rate"] = float(np.mean(changed)) if changed else 0.0
             emit(
                 metrics_path,

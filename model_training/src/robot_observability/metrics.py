@@ -72,7 +72,13 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
         semantics_pred = np.asarray([str(value) for value in y_pred], dtype=str)
         metrics["semantics_accuracy"] = float(accuracy_score(semantics_true, semantics_pred))
         metrics["semantics_macro_f1"] = float(
-            f1_score(semantics_true, semantics_pred, average="macro", zero_division=0)
+            f1_score(
+                semantics_true,
+                semantics_pred,
+                labels=("free", "intentional", "accidental"),
+                average="macro",
+                zero_division=0,
+            )
         )
     y_true, y_pred = pairs("strongest_joint")
     event_pairs = [(truth, pred) for truth, pred in zip(y_true, y_pred) if truth is not None]

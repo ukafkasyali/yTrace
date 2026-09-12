@@ -14,3 +14,16 @@ def test_metrics_include_invalid_outputs() -> None:
     metrics = evaluate_rows(rows)
     assert metrics["parse_validity"] == 0.5
     assert metrics["contact_accuracy"] == 0.5
+
+
+def test_semantics_macro_f1_uses_only_declared_classes() -> None:
+    rows = [
+        {"target": {"event_type": "free"}, "prediction": {"event_type": "free"}},
+        {
+            "target": {"event_type": "intentional"},
+            "prediction": {"event_type": "intentional"},
+        },
+        {"target": {"event_type": "accidental"}, "prediction": None},
+    ]
+    metrics = evaluate_rows(rows)
+    assert metrics["semantics_macro_f1"] == 2 / 3
