@@ -1,0 +1,14 @@
+also we want this to be conversational. In validation we always have intent as summary but maybe we have a query about only a part of the task, for example when did the onset occur, then the reasoning trace can change based on that. It doesnt look good that it has a fixed template for every output. If this is an easy fix, implemen tit
+
+---
+
+atakantopaloglu@computeinstance-e00t9md3vh369m8cy9:~$ tail -f "/home/atakantopaloglu/ysamet-training/logs/overnight-focused-v6-supervisor.log"
+    "event_counts": dict(Counter(str(row["target"]["event_type"]) for row in rows)),
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/collections/__init__.py", line 607, in __init__
+    self.update(iterable, **kwds)
+  File "/usr/lib/python3.12/collections/__init__.py", line 699, in update
+    _count_elements(self, iterable)
+  File "/home/atakantopaloglu/ysamet-training/scripts/evaluate_grounding_panel.py", line 74, in <genexpr>
+    "event_counts": dict(Counter(str(row["target"]["event_type"]) for row in rows)),
+                                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^
