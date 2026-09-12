@@ -7,16 +7,72 @@ torch = pytest.importorskip("torch")
 
 from robot_observability.train_opentslm import (
     generation_eval,
+    grounding_selection_result,
     mean_loss,
     optimizer_group_snapshots,
     optimizer_group_stats,
     optimizer_group_update_stats,
     should_run_generation,
     signal_preview,
+    stratified_grounding_subset,
     stratified_training_probe_subset,
     training_manifest_rows,
+    wandb_examples_table,
     wandb_manifest_table,
 )
+
+
+def test_grounding_panel_covers_tail_joints_and_retains_display_order() -> None:
+    records = []
+    samples = []
+    groups = [("free", None, 20), *[(f"J{joint}", f"J{joint}", 10) for joint in range(1, 7)], ("J7", "J7", 3)]
+    for label, joint, count in groups:
+        for index in range(count):
+            records.append(
+                {
+                    "event_type": "free" if joint is None else "accidental",
+                    "strongest_joint": joint,
+                    "onset_sample": None if joint is None else index * 100,
+                }
+            )
+            samples.append({"label": label, "position": index})
+
+    class FakeDataset:
+        mode = "summary"
+        prepared = SimpleNamespace(records=records)
+
+        def __len__(self):
+            return len(samples)
+
+        def __getitem__(self, index):
+            return samples[index]
+
+    subset = stratified_grounding_subset(FakeDataset(), 48, seed=7)
+    labels = [sample["label"] for sample in subset]
+    assert labels[:8] == ["free", "J1", "J2", "J3", "J4", "J5", "J6", "J7"]
+    assert set(labels) == {"free", "J1", "J2", "J3", "J4", "J5", "J6", "J7"}
+    assert labels.count("J7") == 3
+    for joint in range(1, 7):
+        selected_positions = [sample["position"] for sample in subset if sample["label"] == f"J{joint}"]
+        assert min(selected_positions) < 2
+        assert max(selected_positions) >= 8
+
+
+def test_grounding_checkpoint_selection_uses_joint_macro_and_onset_gate() -> None:
+    config = {
+        "joint_weight": 0.5,
+        "onset_weight": 0.5,
+        "gates": {"schema_exact_match": 0.95, "semantics_macro_f1": 0.9},
+    }
+    metrics = {
+        "strongest_joint_macro_accuracy": 0.6,
+        "onset_within_50ms": 0.8,
+        "schema_exact_match": 1.0,
+        "semantics_macro_f1": 0.91,
+    }
+    assert grounding_selection_result(metrics, config) == {"score": 0.7, "eligible": True}
+    metrics["schema_exact_match"] = 0.9
+    assert grounding_selection_result(metrics, config)["eligible"] is False
 
 
 @pytest.mark.parametrize("phase", ["epoch", "final"])
@@ -141,6 +197,53 @@ def test_training_manifest_wandb_table_includes_supervised_answer() -> None:
     answer_index = table.columns.index("supervised_answer")
     assert rows[0]["supervised_answer"] == sample["answer"]
     assert table.data[0][answer_index] == sample["answer"]
+
+
+def test_wandb_reasoning_table_contains_text_traces_without_signal_images() -> None:
+    sample = {
+        "record_id": "record-1",
+        "intent": "summary",
+        "post_prompt": "Question: What happened?\nReturn JSON.",
+        "answer": 'Rationale: target evidence.\nAnswer: {"contact":false}',
+        "metadata": {
+            "session_id": "session-1",
+            "event_type": "free",
+            "contact": False,
+            "onset_sample": None,
+            "strongest_joint": None,
+            "affected_joints": [],
+            "evidence_start_ms": None,
+            "evidence_end_ms": None,
+        },
+    }
+
+    class FakeWandb:
+        class Table:
+            def __init__(self, *, columns, data):
+                self.columns = columns
+                self.data = data
+
+    prediction_rows = [
+        {
+            "prediction": {
+                "contact": False,
+                "event_type": "free",
+                "onset_ms": None,
+                "strongest_joint": None,
+                "affected_joints": [],
+                "evidence_start_ms": None,
+                "evidence_end_ms": None,
+            },
+            "output": 'Rationale: generated evidence.\nAnswer: {"contact":false}',
+            "first_pass_output": "first",
+            "retry_used": False,
+        }
+    ]
+    table = wandb_examples_table(FakeWandb, [sample], prediction_rows=prediction_rows)
+
+    assert "signal" not in " ".join(table.columns).lower()
+    assert table.data[0][table.columns.index("target_reasoning")] == "target evidence."
+    assert table.data[0][table.columns.index("generated_reasoning")] == "generated evidence."
 
 
 def test_generation_eval_retries_invalid_first_pass_and_reports_it(tmp_path) -> None:

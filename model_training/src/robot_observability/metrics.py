@@ -10,6 +10,102 @@ import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
 
 _ANSWER = re.compile(r"Answer:\s*", re.IGNORECASE)
+_EVENT_TYPES = {"free", "intentional", "accidental"}
+_JOINTS = {f"J{index}" for index in range(1, 8)}
+
+
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def _time_value(value: object, *, endpoint: bool = False) -> bool:
+    return (
+        type(value) in (int, float)
+        and np.isfinite(value)
+        and 0 <= value <= 1024
+        and (endpoint or value < 1024)
+    )
+
+
+def schema_value_valid(prediction: object, target: dict[str, object]) -> bool:
+    """Validate the typed/domain contract for the fields requested by an intent."""
+    if not isinstance(prediction, dict) or set(prediction) != set(target):
+        return False
+    if "contact" in prediction and type(prediction["contact"]) is not bool:
+        return False
+    if "event_type" in prediction and prediction["event_type"] not in _EVENT_TYPES:
+        return False
+    if (
+        "onset_ms" in prediction
+        and prediction["onset_ms"] is not None
+        and not _time_value(prediction["onset_ms"])
+    ):
+        return False
+    if "strongest_joint" in prediction:
+        joint = prediction["strongest_joint"]
+        if joint is not None and joint not in _JOINTS:
+            return False
+    if "affected_joints" in prediction:
+        affected = prediction["affected_joints"]
+        if (
+            not isinstance(affected, list)
+            or any(type(joint) is not str or joint not in _JOINTS for joint in affected)
+            or len(set(affected)) != len(affected)
+        ):
+            return False
+    if (
+        "evidence_start_ms" in prediction
+        and prediction["evidence_start_ms"] is not None
+        and not _time_value(prediction["evidence_start_ms"])
+    ):
+        return False
+    if (
+        "evidence_end_ms" in prediction
+        and prediction["evidence_end_ms"] is not None
+        and not _time_value(prediction["evidence_end_ms"], endpoint=True)
+    ):
+        return False
+    if {"evidence_start_ms", "evidence_end_ms"} <= set(prediction):
+        start, end = prediction["evidence_start_ms"], prediction["evidence_end_ms"]
+        if (start is None) != (end is None) or (start is not None and not start < end):
+            return False
+    summary_keys = {
+        "contact",
+        "event_type",
+        "onset_ms",
+        "strongest_joint",
+        "affected_joints",
+        "evidence_start_ms",
+        "evidence_end_ms",
+    }
+    if set(prediction) == summary_keys:
+        if not prediction["contact"]:
+            return (
+                prediction["event_type"] == "free"
+                and not prediction["affected_joints"]
+                and all(
+                    prediction[key] is None
+                    for key in (
+                        "onset_ms",
+                        "strongest_joint",
+                        "evidence_start_ms",
+                        "evidence_end_ms",
+                    )
+                )
+            )
+        return (
+            prediction["event_type"] != "free"
+            and prediction["onset_ms"] is not None
+            and prediction["strongest_joint"] in prediction["affected_joints"]
+            and prediction["evidence_start_ms"] is not None
+            and prediction["evidence_end_ms"] is not None
+        )
+    return True
 
 
 def parse_answer(text: str) -> dict[str, object] | None:
@@ -21,8 +117,8 @@ def parse_answer(text: str) -> dict[str, object] | None:
     if brace < 0:
         return None
     try:
-        value, _ = json.JSONDecoder().raw_decode(text[brace:])
-    except (json.JSONDecodeError, TypeError):
+        value, _ = json.JSONDecoder(object_pairs_hook=_unique_object).raw_decode(text[brace:])
+    except (json.JSONDecodeError, TypeError, ValueError):
         return None
     return value if isinstance(value, dict) else None
 
@@ -38,11 +134,23 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
     metrics: dict[str, float | int] = {
         "n": len(items),
         "parse_validity": sum(prediction is not None for prediction in parsed) / len(items) if items else 0.0,
-        "schema_exact_match": (
+        "schema_key_exact_match": (
             float(
                 np.mean(
                     [
                         isinstance(prediction, dict) and set(prediction) == set(item["target"])
+                        for item, prediction in zip(items, parsed)
+                    ]
+                )
+            )
+            if items
+            else 0.0
+        ),
+        "schema_exact_match": (
+            float(
+                np.mean(
+                    [
+                        schema_value_valid(prediction, item["target"])
                         for item, prediction in zip(items, parsed)
                     ]
                 )
@@ -116,6 +224,21 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
                 np.asarray([str(pair[1]) for pair in event_pairs], dtype=str),
             )
         )
+        per_joint_accuracy = []
+        for joint in sorted(_JOINTS):
+            joint_pairs = [pair for pair in event_pairs if pair[0] == joint]
+            if joint_pairs:
+                accuracy = float(np.mean([prediction == joint for _, prediction in joint_pairs]))
+                metrics[f"strongest_joint/{joint}_accuracy"] = accuracy
+                metrics[f"strongest_joint/{joint}_n"] = len(joint_pairs)
+                per_joint_accuracy.append(accuracy)
+        metrics["strongest_joint_macro_accuracy"] = float(np.mean(per_joint_accuracy))
+        tail_pairs = [pair for pair in event_pairs if pair[0] in {"J5", "J6", "J7"}]
+        if tail_pairs:
+            metrics["strongest_joint_tail_n"] = len(tail_pairs)
+            metrics["strongest_joint_tail_accuracy"] = float(
+                np.mean([truth == prediction for truth, prediction in tail_pairs])
+            )
     y_true, y_pred = pairs("onset_ms")
     contact_onsets = [(truth, pred) for truth, pred in zip(y_true, y_pred) if truth is not None]
     errors = []

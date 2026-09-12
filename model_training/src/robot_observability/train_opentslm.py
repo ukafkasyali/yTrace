@@ -21,9 +21,10 @@ import yaml
 from torch.utils.data import DataLoader, Dataset, Subset
 from torch.utils.tensorboard import SummaryWriter
 
+from robot_observability.augmentation import JointAttributionCurriculumDataset
 from robot_observability.checkpoints import store_runtime_checkpoint
-from robot_observability.constants import OPENTSLM_COMMIT, TIMENET_COMMIT
-from robot_observability.metrics import evaluate_rows, parse_answer
+from robot_observability.constants import JOINT_NAMES, OPENTSLM_COMMIT, TIMENET_COMMIT
+from robot_observability.metrics import evaluate_rows, parse_answer, schema_value_valid
 from robot_observability.opentslm_dataset import RobotQADataset
 from robot_observability.qa import answer_payload
 
@@ -67,6 +68,65 @@ def stratified_summary_subset(dataset: RobotQADataset, size: int, seed: int) -> 
         requested = min(requested, len(groups[label]))
         selected.extend(rng.choice(groups[label], size=requested, replace=False).tolist())
     return Subset(dataset, sorted(selected))
+
+
+def stratified_grounding_subset(dataset: RobotQADataset, size: int, seed: int) -> Dataset:
+    """Build a stable panel spanning free motion and every observable joint.
+
+    Contact rows are spread across onset-time quintiles within each joint. Selection
+    order is intentionally retained so a truncated W&B table still displays every
+    group before repeating one.
+    """
+    if dataset.mode != "summary":
+        raise ValueError("Grounding validation panel requires summary mode")
+    group_order = ["free", *JOINT_NAMES]
+    groups: dict[str, list[int]] = {key: [] for key in group_order}
+    for index, record in enumerate(dataset.prepared.records):
+        strongest_joint = record.get("strongest_joint")
+        key = "free" if strongest_joint is None else str(strongest_joint)
+        if key in groups:
+            groups[key].append(index)
+
+    rng = np.random.default_rng(seed)
+    queues: dict[str, list[int]] = {}
+    for key in group_order:
+        indices = groups[key]
+        if key == "free":
+            queues[key] = rng.permutation(indices).tolist()
+            continue
+        ordered = sorted(indices, key=lambda index: int(dataset.prepared.records[index]["onset_sample"]))
+        bins = [rng.permutation(chunk).tolist() for chunk in np.array_split(ordered, 5) if len(chunk)]
+        queue: list[int] = []
+        while any(bins):
+            for bucket in bins:
+                if bucket:
+                    queue.append(int(bucket.pop()))
+        queues[key] = queue
+
+    selected: list[int] = []
+    requested = min(size, len(dataset))
+    while len(selected) < requested:
+        previous_size = len(selected)
+        for key in group_order:
+            if queues[key] and len(selected) < requested:
+                selected.append(int(queues[key].pop(0)))
+        if len(selected) == previous_size:
+            break
+    return Subset(dataset, selected)
+
+
+def grounding_selection_result(
+    metrics: dict[str, float | int], config: dict[str, object]
+) -> dict[str, float | bool]:
+    """Score decoded grounding only when minimum safety/task gates are met."""
+    joint_weight = float(config.get("joint_weight", 0.5))
+    onset_weight = float(config.get("onset_weight", 0.5))
+    joint = float(metrics.get("strongest_joint_macro_accuracy", 0.0))
+    onset = float(metrics.get("onset_within_50ms", 0.0))
+    score = joint_weight * joint + onset_weight * onset
+    gates = config.get("gates", {})
+    eligible = all(float(metrics.get(str(key), 0.0)) >= float(value) for key, value in gates.items())
+    return {"score": score, "eligible": eligible}
 
 
 def load_model(config: dict[str, object], device: str):
@@ -233,8 +293,11 @@ def write_probe_manifest(path: Path, dataset: Dataset) -> None:
 
 
 def source_index(dataset: Dataset, index: int) -> int:
-    while isinstance(dataset, Subset):
-        index = int(dataset.indices[index])
+    while isinstance(dataset, Subset) or hasattr(dataset, "source_index"):
+        if isinstance(dataset, Subset):
+            index = int(dataset.indices[index])
+        else:
+            index = int(dataset.source_index(index))
         dataset = dataset.dataset
     return index
 
@@ -249,9 +312,11 @@ def training_manifest_rows(dataset: Dataset) -> list[dict[str, object]]:
                 "selected_position": index,
                 "source_index": source_index(dataset, index),
                 "record_id": sample["record_id"],
+                "source_record_id": metadata.get("source_record_id", sample["record_id"]),
                 "session_id": metadata["session_id"],
                 "intent": sample["intent"],
                 "event_type": metadata["event_type"],
+                "augmentation": metadata.get("augmentation", {"type": "identity"}),
                 "post_prompt": sample["post_prompt"],
                 "target": answer_payload(metadata, sample["intent"]),
                 "supervised_answer": sample["answer"],
@@ -292,14 +357,16 @@ def prepared_hashes(root: Path) -> dict[str, str]:
     }
 
 
-def wandb_manifest_table(wandb_module, rows: list[dict[str, object]]):
+def wandb_manifest_table(wandb_module, rows: list[dict[str, object]], maximum: int = 256):
     columns = [
         "selected_position",
         "source_index",
         "record_id",
+        "source_record_id",
         "session_id",
         "intent",
         "event_type",
+        "augmentation",
         "post_prompt",
         "target",
         "supervised_answer",
@@ -311,14 +378,16 @@ def wandb_manifest_table(wandb_module, rows: list[dict[str, object]]):
                 row["selected_position"],
                 row["source_index"],
                 row["record_id"],
+                row["source_record_id"],
                 row["session_id"],
                 row["intent"],
                 row["event_type"],
+                json.dumps(row["augmentation"], sort_keys=True),
                 row["post_prompt"],
                 json.dumps(row["target"], sort_keys=True),
                 row["supervised_answer"],
             ]
-            for row in rows
+            for row in rows[:maximum]
         ],
     )
 
@@ -337,17 +406,27 @@ def wandb_examples_table(
         "session_id",
         "intent",
         "event_type",
+        "question_and_contract",
+        "target_reasoning",
+        "generated_reasoning",
         "target",
         "prediction",
-        "schema_exact",
+        "strict_schema_valid",
         "answer_exact",
         "onset_error_ms",
-        "model_output",
-        "pre_prompt",
-        "channel_descriptions",
-        "post_prompt",
-        "normalized_signal",
+        "retry_used",
+        "first_pass_output",
+        "final_model_output",
     ]
+
+    def reasoning(text: object) -> str | None:
+        value = str(text or "")
+        rationale = value.lower().find("rationale:")
+        answer = value.lower().rfind("answer:")
+        if rationale < 0 or answer <= rationale:
+            return None
+        return value[rationale + len("rationale:") : answer].strip()
+
     data = []
     for index in range(min(len(dataset), maximum)):
         sample = dataset[index]
@@ -355,7 +434,7 @@ def wandb_examples_table(
         target = answer_payload(metadata, sample["intent"])
         row = prediction_rows[index] if prediction_rows is not None else {}
         prediction = row.get("prediction")
-        schema_exact = isinstance(prediction, dict) and set(prediction) == set(target)
+        schema_exact = schema_value_valid(prediction, target)
         answer_exact = isinstance(prediction, dict) and prediction == target
         onset_error = None
         if target.get("onset_ms") is not None and isinstance(prediction, dict):
@@ -363,9 +442,6 @@ def wandb_examples_table(
                 onset_error = abs(float(prediction.get("onset_ms")) - float(target["onset_ms"]))
             except (TypeError, ValueError):
                 pass
-        signal = sample["time_series"]
-        signal_values = signal.detach().float().cpu().numpy()
-        preview_scale = max(float(np.quantile(np.abs(signal_values), 0.995)), 1e-6)
         data.append(
             [
                 step,
@@ -373,28 +449,17 @@ def wandb_examples_table(
                 metadata["session_id"],
                 sample["intent"],
                 metadata["event_type"],
+                str(sample["post_prompt"]).strip(),
+                reasoning(sample["answer"]),
+                reasoning(row.get("output")),
                 json.dumps(target, sort_keys=True),
                 json.dumps(prediction, sort_keys=True) if isinstance(prediction, dict) else None,
                 schema_exact,
                 answer_exact,
                 onset_error,
+                row.get("retry_used"),
+                row.get("first_pass_output"),
                 row.get("output"),
-                sample["pre_prompt"],
-                json.dumps(sample["time_series_text"]),
-                str(sample["post_prompt"]).strip(),
-                wandb_module.Image(
-                    signal_preview(
-                        signal,
-                        onset_sample=metadata.get("onset_sample"),
-                        evidence_start=metadata.get("evidence_start_ms"),
-                        evidence_end=metadata.get("evidence_end_ms"),
-                    ),
-                    caption=(
-                        f"{sample['record_id']} ({metadata['event_type']}): "
-                        f"J1–J7 top-to-bottom, shared scale ±{preview_scale:.2f}; "
-                        "black=onset, gray=evidence bounds"
-                    ),
-                ),
             ]
         )
     return wandb_module.Table(columns=columns, data=data)
@@ -502,6 +567,24 @@ def generation_eval(
         )
     metrics["rationale_presence"] = (
         float(np.mean([bool(rationale) for rationale in rationale_texts])) if rows else 0.0
+    )
+    nonblank_rationales = [rationale for rationale in rationale_texts if rationale]
+    normalized_rationales = [
+        re.sub(
+            r"\b\d+(?:\.\d+)?\s*ms\b",
+            "# ms",
+            re.sub(r"\bJ[1-7]\b", "J#", rationale, flags=re.IGNORECASE),
+            flags=re.IGNORECASE,
+        )
+        for rationale in nonblank_rationales
+    ]
+    metrics["rationale_unique_count"] = len(set(nonblank_rationales))
+    metrics["rationale_unique_rate"] = (
+        len(set(nonblank_rationales)) / len(nonblank_rationales) if nonblank_rationales else 0.0
+    )
+    metrics["rationale_normalized_unique_count"] = len(set(normalized_rationales))
+    metrics["rationale_normalized_unique_rate"] = (
+        len(set(normalized_rationales)) / len(normalized_rationales) if normalized_rationales else 0.0
     )
     class_labels = ("free", "intentional", "accidental")
     metrics["rationale_premature_label_rate"] = (
@@ -714,6 +797,13 @@ def run(args: argparse.Namespace) -> None:
             min(len(train_dataset), int(config["training"]["max_examples"])),
             seed,
         )
+    if config.get("training", {}).get("joint_attribution_curriculum", False):
+        train_dataset = JointAttributionCurriculumDataset(
+            train_dataset,
+            seed=seed,
+            output_format=output_format,
+            eos_token=eos,
+        )
     probe_config = config["observability"].get("training_probe", {})
     probe_enabled = bool(probe_config.get("enabled", True))
     train_probe_loss_dataset: Dataset = Subset(train_dataset, [])
@@ -758,7 +848,7 @@ def run(args: argparse.Namespace) -> None:
     generation_dataset = (
         fixed_subset(validation_summary_dataset, generation_size, seed + 3)
         if args.smoke
-        else stratified_summary_subset(validation_summary_dataset, generation_size, seed + 3)
+        else stratified_grounding_subset(validation_summary_dataset, generation_size, seed + 3)
     )
     zero_signal_dataset: Dataset = ZeroSignalDataset(
         stratified_subset(
@@ -813,7 +903,11 @@ def run(args: argparse.Namespace) -> None:
         min(args.max_steps, epochs * steps_per_epoch) if args.max_steps else epochs * steps_per_epoch
     )
     optimizer = optimizer_for(model, config)
-    scheduler = scheduler_for(optimizer, total_steps)
+    scheduler = scheduler_for(
+        optimizer,
+        total_steps,
+        warmup_fraction=float(config.get("training", {}).get("warmup_fraction", 0.03)),
+    )
     parameter_inventory = {
         key: value for key, value in optimizer_group_stats(optimizer).items() if key.endswith("_parameters")
     }
@@ -842,6 +936,16 @@ def run(args: argparse.Namespace) -> None:
         "cuda": torch.version.cuda,
         "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "train_examples": len(train_dataset),
+        "train_source_examples": (
+            len(train_dataset.dataset)
+            if isinstance(train_dataset, JointAttributionCurriculumDataset)
+            else len(train_dataset)
+        ),
+        "train_views_per_source": (
+            len(JointAttributionCurriculumDataset.VIEWS)
+            if isinstance(train_dataset, JointAttributionCurriculumDataset)
+            else 1
+        ),
         "validation_examples": len(validation_dataset),
         "training_probe_examples": len(train_probe_loss_dataset),
         "training_probe_generation_examples": len(train_probe_generation_dataset),
@@ -865,6 +969,20 @@ def run(args: argparse.Namespace) -> None:
                 for index in range(len(generation_dataset))
             )
         ),
+        "generation_canary_joint_counts": dict(
+            Counter(
+                str(generation_dataset[index]["metadata"].get("strongest_joint") or "free")
+                for index in range(len(generation_dataset))
+            )
+        ),
+        "training_intent_counts": dict(Counter(str(row["intent"]) for row in selected_training_rows)),
+        "training_strongest_joint_counts": dict(
+            Counter(
+                str(row["target"].get("strongest_joint"))
+                for row in selected_training_rows
+                if row["intent"] == "strongest_joint" and row["target"].get("strongest_joint") is not None
+            )
+        ),
         "command": " ".join(os.sys.argv),
     }
     (run_root / "run_manifest.json").write_text(
@@ -879,7 +997,11 @@ def run(args: argparse.Namespace) -> None:
             wandb_run.log(
                 {
                     "trainer/global_step": 0,
-                    "data/training_manifest": wandb_manifest_table(wandb, selected_training_rows),
+                    "data/training_manifest": wandb_manifest_table(
+                        wandb,
+                        selected_training_rows,
+                        maximum=int(probe_config.get("manifest_table_rows", 256)),
+                    ),
                     "data/training_probe_examples": wandb_examples_table(
                         wandb,
                         train_probe_generation_dataset,
@@ -908,6 +1030,8 @@ def run(args: argparse.Namespace) -> None:
     deadline = start_time + float(config["max_wall_time_hours"]) * 3600
     global_step = 0
     best_validation = math.inf
+    best_grounding_score = -math.inf
+    best_grounding_step: int | None = None
     patience = 0
     stop_reason = "epochs_complete"
     validation_config = config["validation"]
@@ -916,7 +1040,7 @@ def run(args: argparse.Namespace) -> None:
     initial_train_probe_loss: float | None = None
 
     def validate(phase: str, epoch: int, step: int) -> tuple[float, bool]:
-        nonlocal best_validation, initial_train_probe_loss
+        nonlocal best_grounding_score, best_grounding_step, best_validation, initial_train_probe_loss
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         write_status(
@@ -1114,11 +1238,42 @@ def run(args: argparse.Namespace) -> None:
                 step=step,
                 **generation_metrics,
             )
+            selection_config = config.get("checkpoint_selection", {})
+            selection_enabled = bool(selection_config.get("enabled", False))
+            if selection_enabled:
+                selection = grounding_selection_result(generation_metrics, selection_config)
+                grounding_improved = (
+                    bool(selection["eligible"]) and float(selection["score"]) > best_grounding_score
+                )
+                if grounding_improved:
+                    best_grounding_score = float(selection["score"])
+                    best_grounding_step = step
+                    store_runtime_checkpoint(model, run_root / "best_grounding_model.pt")
+                emit(
+                    metrics_path,
+                    "grounding_checkpoint_selection",
+                    phase=phase,
+                    epoch=epoch,
+                    step=step,
+                    score=float(selection["score"]),
+                    eligible=bool(selection["eligible"]),
+                    improved=grounding_improved,
+                    best_score=(best_grounding_score if math.isfinite(best_grounding_score) else None),
+                )
             if wandb_run is not None:
                 wandb_run.log(
                     {
                         "trainer/global_step": step,
                         **{f"validation/{key}": value for key, value in generation_metrics.items()},
+                        **(
+                            {
+                                "validation/grounding_selection_score": selection["score"],
+                                "validation/grounding_selection_eligible": selection["eligible"],
+                                "validation/grounding_selection_improved": grounding_improved,
+                            }
+                            if selection_enabled
+                            else {}
+                        ),
                     }
                 )
                 import wandb
@@ -1130,7 +1285,7 @@ def run(args: argparse.Namespace) -> None:
                     step=step,
                     maximum=int(validation_config.get("examples_table_rows", 12)),
                 )
-                wandb_run.log({"trainer/global_step": step, "validation/samples": sample_table})
+                wandb_run.log({"trainer/global_step": step, "validation/reasoning_traces": sample_table})
             if len(zero_signal_dataset):
                 zero_metrics, zero_rows = generation_eval(
                     model,
@@ -1321,6 +1476,8 @@ def run(args: argparse.Namespace) -> None:
         stop_reason=stop_reason,
         global_step=global_step,
         best_validation_loss=best_validation,
+        best_grounding_score=(best_grounding_score if math.isfinite(best_grounding_score) else None),
+        best_grounding_step=best_grounding_step,
         elapsed_seconds=elapsed,
     )
     emit(
@@ -1329,6 +1486,8 @@ def run(args: argparse.Namespace) -> None:
         stop_reason=stop_reason,
         step=global_step,
         best_validation_loss=best_validation,
+        best_grounding_score=(best_grounding_score if math.isfinite(best_grounding_score) else None),
+        best_grounding_step=best_grounding_step,
         elapsed_seconds=elapsed,
     )
     if wandb_run is not None:
@@ -1338,6 +1497,7 @@ def run(args: argparse.Namespace) -> None:
             artifact = wandb.Artifact(f"{args.run_name}-adapter", type="model")
             for name in (
                 "best_model.pt",
+                "best_grounding_model.pt",
                 "run_manifest.json",
                 "training_selection_manifest.jsonl",
                 "training_probe_manifest.jsonl",
@@ -1353,6 +1513,10 @@ def run(args: argparse.Namespace) -> None:
                 "stop_reason": stop_reason,
                 "global_step": global_step,
                 "best_validation_loss": best_validation,
+                "best_grounding_score": (
+                    best_grounding_score if math.isfinite(best_grounding_score) else None
+                ),
+                "best_grounding_step": best_grounding_step,
                 "elapsed_seconds": elapsed,
             }
         )
