@@ -302,9 +302,9 @@ with `TRACE_DEVICE=cpu OMP_NUM_THREADS=4 MKL_NUM_THREADS=4` while the teammate's
 with OOM; CPU readiness and a real browser generation subsequently passed.
 Do not describe the current service as GPU inference or stop the training job.
 
-The corrected catalogue adds three different measured-motion recordings from
-batches 14 and 28. Fixtures are copied remotely and the new catalogue is staged as
-`inference/demo_cases.next.json`. Automatic approval review blocked activation and
-restart pending coordinated handoff. The active catalogue still contains four
-batch-41 near-duplicate motions; their original position assets remain compatible.
-See `docs/submission/UI_WALKTHROUGH.md` for the exact state and required verification.
+The active catalogue now includes three different measured-motion recordings from
+batches 14 and 28, replacing the batch-41 near-duplicates. On 13 September the user
+explicitly approved the CPU-only restart. The model returned ready with the same
+checkpoint/config, the browser displayed the new choices, and training PID 95923
+remained running. Rollback catalogue: `inference/demo_cases.before-motion-replacement.json`.
+See `docs/submission/UI_WALKTHROUGH.md` for navigation and validation details.

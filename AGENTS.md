@@ -273,11 +273,11 @@ recording, separate from the visual replay cursor. Legacy API `playheadSec` is i
 bounded analysis cutoff; exports distinguish `analysisHorizonSec`/`replayCursorSec`.
 No raw-window/model shape constraint is relaxed.
 
-Three measured-motion variants from batches 14/28 replace four near-identical
-batch-41 choices in the prepared catalogue. **Not yet active remotely:** approval
-review blocked the final catalogue switch/restart pending coordinated handoff.
-New files and `demo_cases.next.json` are staged. Old pose fixtures remain compatible
-with the active catalogue. See the current UI walkthrough before deployment.
+Three measured-motion variants from batches 14/28 now replace four near-identical
+batch-41 choices in the active private catalogue. The user explicitly approved the
+CPU-only restart; activation and browser navigation passed on 13 September. The
+same v5b training PID remained running. Old pose fixtures remain for rollback
+compatibility; the old catalogue is `demo_cases.before-motion-replacement.json`.
 The existing canary-v4 service is temporarily on CPU with four compute threads
 following GPU OOM during reload; a teammate's v5b training job occupies the GPU.
 Do not interrupt that training job or claim inference is currently on GPU.

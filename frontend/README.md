@@ -178,5 +178,5 @@ marker). **Replay interval · 0.5×** plays that context and stops at its end.
 Analysis of the completed recording is independent from the visual cursor;
 exports distinguish the analysis cutoff from that cursor. **Show onset in 3D**
 shows a valid generated contact onset and responding joint, never impact location.
-The additional motion catalogue and its pending deployment are documented in
+The active additional motion catalogue and deployment details are documented in
 [the walkthrough](../docs/submission/UI_WALKTHROUGH.md#deployment-handoff).

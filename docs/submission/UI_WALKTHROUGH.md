@@ -124,13 +124,13 @@ independent per-recording Jacobian checks are not claimed.
 
 ### Deployment handoff
 
-The replacement catalogue and three fixtures are staged on the private server,
-but the catalogue switch/restart was blocked by automatic approval review pending
-an explicit coordinated handoff. The active catalogue still contains the four
-batch-41 choices; their position fixtures remain supported for compatibility.
-Once approved, activate `inference/demo_cases.next.json` as `demo_cases.json` and
-restart only `trace-inference` with its existing canary-v4 config. Recheck readiness,
-six catalogue recordings including the original, and a real 1,024-sample request.
+The replacement catalogue is active after explicit user approval of the CPU-only
+restart on 13 September. The browser displays all three new motion choices; the
+first loads its own recorded articulation at 4.684 s, before its 5.084 s annotation.
+The same v5b training PID (95923) remained running across the restart. The previous
+catalogue is backed up as `inference/demo_cases.before-motion-replacement.json`.
+There are six distinct recordings including the original; collision/free share a
+recording. The earlier approval block has been resolved by the user's authorization.
 
 Inference is temporarily running on CPU (four OpenMP/MKL threads), using the same
 checkpoint and config. GPU reload failed because a concurrent v5b training job
@@ -145,5 +145,12 @@ returned accidental contact for the first collision example, with a generated
 312 ms onset; **Show onset in 3D** displayed 5.953 s and J4. This verifies the path,
 not accuracy or exact CPU/GPU output equivalence. On mobile the Robot tab uses the
 available space for articulation; telemetry remains directly in All 7 signals.
-The three replacement trajectories are data-validated locally; browser/inference
-verification against their remote catalogue remains pending the blocked deployment.
+The three replacement trajectories are data-validated locally and their catalogue
+is active remotely; browser navigation confirms the first uses its own position fixture.
+
+
+The post-activation CPU smoke on `04-22-15-33` completed with seven × 1,024 raw
+samples and the unchanged canary-v4 checkpoint/config. It predicted accidental
+contact, J1 strongest, onset 429 ms. The full request, stream and input receipt are
+in [motion activation receipt](demo/motion-activation.json). This is connection
+verification on a train recording, not an accuracy or CPU/GPU equivalence result.
