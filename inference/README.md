@@ -128,6 +128,19 @@ source inference/.venv/bin/activate
 TRACE_DEVICE=cuda python -m inference.server 2>&1 | tee inference/server.log
 ```
 
+To expose every authorized source recording through the same replay contract, mount
+the trusted extracted KUKA archive and pass its root explicitly:
+
+```bash
+TRACE_DEVICE=cuda python -m inference.server --raw-root /absolute/path/to/kuka/raw
+```
+
+The root must contain `<archive>/<recording-id>/JK_MsrExtTrq.mat` and the matching
+`JK_moments.mat`. At startup the adapter validates the original 1 kHz time axis,
+seven-channel shape, finite values, publisher marker bounds and file hashes. The
+frontend receives a 100 Hz overview, then requests an exact 1,024-sample raw window
+only for the selected analysis interval. It never resamples raw model input.
+
 Detach with Ctrl+B, then D. The server binds to **127.0.0.1:8000** by default. Keep
 it private; this development bridge is not an authenticated public API. It exposes
 readiness at `/api/health` and actual availability at `/api/models` while weights
@@ -171,6 +184,12 @@ Open Trace, keep the initial interval **[5.787, 6.811) seconds** with the playhe
 this service. Use **Refresh status** in Models after model loading finishes.
 The assistant's local numerical mode still works. Assistant orchestration, CNN,
 direct text LLM, ingestion and search are intentionally unavailable from this bridge.
+
+With `--raw-root`, the backend catalog also lists the validated full recordings.
+Open one, choose any publisher marker, and run the resulting 1.024-second interval.
+The UI loads that exact raw interval on demand and preserves its input receipt in
+the exported investigation. Publisher markers remain annotations and are never sent
+to the model.
 
 ## 5. Switch to the team's checkpoint
 

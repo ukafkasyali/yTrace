@@ -10,10 +10,11 @@ manual work. Reduced downtime and successful repairs are not measured outcomes.
 
 ## Highest-value sequence
 
-1. Finish full-recording raw access. PR #14 supplies the opt-in backend adapter;
-   the frontend still needs to request the selected raw window, validate it and
-   update its analysis eligibility. Prove a 7 × 1,024-sample request outside the
-   bundled excerpts. Keep GPU training independent of this integration.
+1. Deploy full-recording raw access. The backend adapter and frontend request path
+   are merged: a local integration run proved a seven-channel, 1,024-sample request
+   outside the bundled excerpts, including a matching input receipt. The private
+   GPU service still needs the trusted archive mounted with `--raw-root`, followed
+   by the canary smoke test. Keep GPU training independent of this integration.
 2. Build a retrospective incident inbox across available runs. Start with publisher
    markers and clearly labeled deterministic candidate windows, group similar
    signal patterns, and let the engineer inspect examples. A useful demo question

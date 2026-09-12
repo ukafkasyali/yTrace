@@ -142,9 +142,10 @@ geometry and global frame remain schematic. Torque alone does not reconstruct po
    weights are private on the VM, and the live service currently reports an unknown backbone revision.
 3. Improve model output reliability on validation, then reserve new recording groups for confirmation.
    The current test set has already been inspected; do not optimize against it and call it untouched.
-4. Expand raw-window access through the existing adapter before adding cross-run incident retrieval.
-5. Integrate the dataset-scout PR through its existing contracts, without duplicating sourcing or
-   the newly merged bounded documentation search. Add runtime RAG only for a demonstrated need.
+4. Deploy the merged full-recording raw adapter with an explicit trusted archive mount and repeat
+   the canary smoke test on one interval outside the bundled fixture.
+5. Build cross-run incident retrieval on the now-merged raw-window contract. Keep similarity a
+   measured signal-pattern comparison rather than a claim of shared physical cause.
 
 The submission index, two-minute demo, verification and limitations are in `docs/submission/`.
 Do not prioritize live telemetry, robot control, exact 3D reconstruction or more chat models.

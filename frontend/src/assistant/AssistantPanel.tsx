@@ -9,8 +9,8 @@ import type { DemoData, EvidenceLink, Interval } from '../types';
 import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 
-type Message = InvestigationAnswer & { id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
-type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
+type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
+type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
   return <div className="answer-brief">{blocks.map((block, index) => {
@@ -21,12 +21,13 @@ function AnswerText({ text }: { text: string }) {
       : <p key={`${heading}-${index}`}>{block.replace(/\n+/g, ' ')}</p>;
   })}</div>;
 }
-export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, onEvidence, onModelWindow, onRobotPrediction, onCompare }: Props) {
+export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data, datasetId, playhead, interval, services, registry, onEvidence, onModelWindow, onRobotPrediction, onCompare }: Props) {
   const [question, setQuestion] = useState('');
   const [mode, setMode] = useState<'local' | 'assistant'>('assistant');
   const availableThrough = data.recording.durationSeconds;
   const historical = interval.end <= availableThrough;
-  const windowIssue = useMemo(() => modelWindowIssue(data, interval, historical ? interval.end : 0), [data, interval, historical]);
+  const dataIssue = useMemo(() => modelWindowIssue(data, interval, historical ? interval.end : 0), [data, interval, historical]);
+  const windowIssue = rawLoading ? 'Loading 1,024 raw samples for this interval…' : rawError ?? dataIssue;
   const fitHorizon = Math.min(Math.floor(availableThrough * 1000) / 1000, data.detail.endSeconds);
   const fittedWindow = useMemo(() => fitModelWindow(data, interval, fitHorizon), [data, interval, fitHorizon]);
   const [exportStatus, setExportStatus] = useState('');
@@ -46,12 +47,12 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     return [{ channelId: e.window.channelIds[0], channelIds: e.window.channelIds, label: `Inspect ${e.window.channelIds.length} input channels`, interval: { start: e.window.startSec, end: e.window.endSec } }];
   }
   async function submit(prompt = question, runMode: 'local' | 'assistant' = mode) {
-    if (!prompt.trim() || busy || (runMode === 'assistant' && !assistantAvailable)) return;
+    if (!prompt.trim() || busy || (runMode === 'assistant' && (rawLoading || rawError)) || (runMode === 'assistant' && !assistantAvailable)) return;
     const snapshot = { ...interval }, horizon = Math.max(playhead, snapshot.end);
     if (runMode === 'assistant' && modelWindowIssue(data, snapshot, horizon)) return;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
-    setMessages(ms => [...ms, { id, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
+    setMessages(ms => [...ms, { id, telemetry: data, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
     setQuestion('');
     setBusy(true);
     try {
@@ -79,7 +80,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     } finally { if (active.current?.id === id) { active.current = null; setBusy(false); } }
   }
   function exportReport(message: Message) {
-    try { downloadInvestigationReport(data, datasetId, message); setExportStatus('Investigation report downloaded as JSON.'); }
+    try { downloadInvestigationReport(message.telemetry, datasetId, message); setExportStatus('Investigation report downloaded as JSON.'); }
     catch (error) { setExportStatus(error instanceof Error ? error.message : 'The report could not be exported.'); }
   }
   async function stop() {
@@ -91,7 +92,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span></header>
     <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={busy || !assistantAvailable || Boolean(windowIssue)} onClick={() => { setMode('assistant'); void submit('Analyze this robot telemetry window.', 'assistant'); }}>{busy ? 'Analyzing…' : 'Analyze interval'}</button></div>
     <button className="text-button compare-current" onClick={() => onCompare(interval)}>Compare with reference <ArrowUpRight size={12}/></button>
-    {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
+    {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{rawError && <button className="text-button" onClick={onRetryRaw}>Retry raw window</button>}{!rawLoading && !rawError && fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Turn a contact event into an investigation.</h3><p>Analyze the selected interval to compare a model interpretation with measured joint signals. Then inspect the evidence and save your findings.</p><p className="intro-limit">Recorded telemetry can suggest what to investigate. It cannot verify a physical cause.</p></div>}
       {messages.map(m => {

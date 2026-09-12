@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import http.client
 import json
 from pathlib import Path
@@ -8,6 +9,7 @@ import time
 import unittest
 
 from inference.server import DATASET_ID, MAX_BODY, envelope_indices, make_server
+from inference.raw_recordings import CHANNEL_IDS, RawRecordingCatalog
 
 
 class FakeRuntime:
@@ -32,6 +34,15 @@ class FakeRuntime:
         self.release.wait(3)
         if self.failure:
             raise RuntimeError("private runtime detail")
+        self.last_trace = {
+            "model": self.model_id,
+            "revision": self.revision,
+            "window": request["window"],
+            "samplesPerChannel": len(series[0]["values"]),
+            "inputSha256": hashlib.sha256(
+                json.dumps(series, sort_keys=True, allow_nan=False).encode()
+            ).hexdigest(),
+        }
         return 'Answer: {"contact":true}\nEvidence: generated test evidence.'
 
 
@@ -264,6 +275,89 @@ class ServerTests(unittest.TestCase):
             self.assertEqual([len(c["values"]) for c in signals["series"]], [1024] * 7)
             fingerprints.add(json.dumps(signals["series"]))
         self.assertEqual(len(fingerprints), 6)
+
+    def test_raw_root_serves_an_exact_window_beyond_replay_detail(self):
+        import numpy as np
+        from scipy.io import loadmat, savemat
+
+        root = Path(self.temp.name) / "raw"
+        run = root / "collision" / "full-recording"
+        run.mkdir(parents=True)
+        times = np.arange(0, 10, .001)
+        matrix = np.vstack([times, *[(index * times) for index in range(1, 8)]])
+        savemat(run / "JK_MsrExtTrq.mat", {"MsrExtTrq": matrix})
+        savemat(run / "JK_moments.mat", {"JK_moments": np.array([[6001]])})
+        self.server.shutdown()
+        self.server.server_close()
+        self.server = make_server(self.runtime, port=0, data_path=self.path, raw_root=root, load_runtime=False)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+        status, recordings = self.http("GET", f"/api/datasets/{DATASET_ID}/recordings")
+        self.assertEqual(status, 200)
+        self.assertIn("full-recording", [recording["id"] for recording in recordings])
+        status, events = self.http("GET", "/api/recordings/full-recording/events")
+        self.assertEqual(status, 200)
+        self.assertEqual(events[0]["startSec"], 6)
+        path = ("/api/recordings/full-recording/signals?channelIds=joint_1,joint_2,joint_3,joint_4,joint_5,joint_6,joint_7"
+                "&maxPoints=1024&startSec=6&endSec=7.024")
+        status, signals = self.http("GET", path)
+        self.assertEqual(status, 200)
+        self.assertEqual(signals["resolution"], "raw")
+        self.assertEqual([len(series["values"]) for series in signals["series"]], [1024] * 7)
+        expected = loadmat(run / "JK_MsrExtTrq.mat")["MsrExtTrq"]
+        self.assertEqual(signals["series"][3]["values"], expected[4, 6000:7024].tolist())
+
+        request = {"mode": "direct", "modelId": "opentslm", "question": "Describe torque changes",
+                   "playheadSec": 8, "window": {"datasetId": DATASET_ID, "recordingId": "full-recording",
+                   "startSec": 6, "endSec": 7.024, "channelIds": [f"joint_{index}" for index in range(1, 8)]}}
+        status, job = self.http("POST", "/api/queries", request)
+        self.assertEqual(status, 202, job)
+        self.events(job)
+        self.assertEqual(self.runtime.received[1][0]["values"], expected[1, 6000:7024].tolist())
+        overview = self.http("GET", path.replace("endSec=7.024", "endSec=9").replace("maxPoints=1024", "maxPoints=200000"))[1]
+        self.assertEqual(overview["resolution"], "display")
+        self.assertIn("100 Hz overview", overview["aggregation"])
+        torque_path = run / "JK_MsrExtTrq.mat"
+        torque_path.write_bytes(torque_path.read_bytes() + b"source mutation")
+        status, error = self.http("GET", path)
+        self.assertEqual(status, 422)
+        self.assertEqual(error["error"]["code"], "RAW_DATA_UNAVAILABLE")
+        self.assertNotIn(str(run), json.dumps(error))
+
+    def test_raw_root_rejects_gapped_source_at_startup(self):
+        import numpy as np
+        from scipy.io import savemat
+
+        root = Path(self.temp.name) / "gapped"
+        run = root / "collision" / "gapped-recording"
+        run.mkdir(parents=True)
+        times = np.arange(0, 2, .001)
+        times[900:] += .001
+        savemat(run / "JK_MsrExtTrq.mat", {"MsrExtTrq": np.vstack([times, *[times for _ in range(7)]])})
+        savemat(run / "JK_moments.mat", {"JK_moments": np.array([[1]])})
+        with self.assertRaisesRegex(ValueError, "missing/gapped/non-1kHz"):
+            make_server(self.runtime, port=0, data_path=self.path, raw_root=root, load_runtime=False)
+
+    def test_raw_window_accepts_decimal_boundaries_without_resampling(self):
+        import numpy as np
+        from scipy.io import savemat
+
+        root = Path(self.temp.name) / "decimal-boundaries"
+        run = root / "collision" / "decimal-recording"
+        run.mkdir(parents=True)
+        times = np.arange(0, 2, .001)
+        savemat(run / "JK_MsrExtTrq.mat", {"MsrExtTrq": np.vstack([times, *[times for _ in range(7)]])})
+        savemat(run / "JK_moments.mat", {"JK_moments": np.array([[1001]])})
+        recording = RawRecordingCatalog(root).recordings["decimal-recording"]
+
+        selected_times, rows = recording.raw_window(.009, 1.033, list(CHANNEL_IDS))
+        self.assertEqual(len(selected_times), 1024)
+        self.assertAlmostEqual(selected_times[0], .009)
+        self.assertAlmostEqual(selected_times[-1], 1.032)
+        self.assertEqual(rows[0], selected_times)
+        with self.assertRaisesRegex(ValueError, "does not cover"):
+            recording.raw_window(.0095, 1.0335, list(CHANNEL_IDS))
 
 
 if __name__ == "__main__":

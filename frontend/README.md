@@ -115,6 +115,13 @@ The private Nebius bridge and Vite proxy have been verified against the real dat
 endpoint: seven channels and exactly 1,024 raw samples per channel for the initial
 interval. The promoted canary-v4 checkpoint generates real answers through this
 path; ingestion/search capabilities are separate.
+
+When the inference bridge starts with `--raw-root`, Trace lists the validated full
+recordings as well as the bundled cases. Selecting a 1.024-second interval outside
+the initial detail automatically fetches seven ordered 1 kHz channels, checks the
+recording/window identity and cadence, and only then enables model analysis. Bundled
+cases keep their existing raw detail in memory. A failed or mismatched response is
+shown as unavailable raw input rather than silently falling back to overview data.
 See [inference setup](../inference/README.md) for authentication and resume steps.
 
 ## Design and ownership
