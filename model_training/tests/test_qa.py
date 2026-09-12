@@ -27,4 +27,5 @@ def test_dynamic_answer_precedes_evidence() -> None:
     assert target_text(metadata, "contact").startswith('Answer: {"contact":false}\nEvidence:')
     rationale_target = target_text(metadata, "contact", "rationale_then_answer")
     assert rationale_target.startswith("Rationale: Across J1–J7")
+    assert "free-motion" not in rationale_target
     assert rationale_target.endswith('Answer: {"contact":false}')

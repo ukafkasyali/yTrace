@@ -684,9 +684,21 @@ def run(args: argparse.Namespace) -> None:
         output_format=output_format,
     )
     if args.smoke:
-        train_dataset = fixed_subset(train_dataset, 32, seed)
-        validation_dataset = fixed_subset(validation_dataset, 32, seed + 1)
-        validation_summary_dataset = fixed_subset(validation_summary_dataset, 32, seed + 1)
+        fit_probe_config = config.get("fit_probe", {})
+        train_dataset = stratified_training_probe_subset(
+            train_dataset,
+            min(len(train_dataset), int(fit_probe_config.get("train_examples", 48))),
+            seed,
+        )
+        validation_examples = int(fit_probe_config.get("validation_examples", 48))
+        validation_dataset = fixed_subset(
+            validation_dataset, min(len(validation_dataset), validation_examples), seed + 1
+        )
+        validation_summary_dataset = stratified_summary_subset(
+            validation_summary_dataset,
+            min(len(validation_summary_dataset), validation_examples),
+            seed + 1,
+        )
     elif config.get("training", {}).get("max_examples"):
         train_dataset = fixed_subset(
             train_dataset,

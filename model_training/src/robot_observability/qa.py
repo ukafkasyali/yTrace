@@ -85,7 +85,7 @@ def evidence_sentence(metadata: dict[str, object]) -> str:
     if not metadata["contact"]:
         return (
             "Across J1–J7, no sustained torque disturbance crosses the threshold calibrated only "
-            "on training free-motion recordings, so no localized onset or responsible joint is supported."
+            "on training no-contact recordings, so no localized onset or responsible joint is supported."
         )
     scores = list(metadata["joint_scores"])
     ranked = sorted(zip(JOINT_NAMES, scores), key=lambda pair: -pair[1])

@@ -12,9 +12,33 @@ from robot_observability.train_opentslm import (
     optimizer_group_stats,
     optimizer_group_update_stats,
     signal_preview,
+    stratified_training_probe_subset,
     training_manifest_rows,
     wandb_manifest_table,
 )
+
+
+def test_training_probe_subset_balances_event_and_intent_groups() -> None:
+    rows = []
+    for event_type in ("free", "intentional_contact", "accidental_collision"):
+        for intent in ("contact", "semantics", "summary"):
+            for duplicate in range(5):
+                rows.append(
+                    {
+                        "metadata": {"event_type": event_type},
+                        "intent": intent,
+                        "duplicate": duplicate,
+                    }
+                )
+
+    subset = stratified_training_probe_subset(rows, 18, seed=7)
+    counts = {}
+    for sample in subset:
+        key = (sample["metadata"]["event_type"], sample["intent"])
+        counts[key] = counts.get(key, 0) + 1
+
+    assert len(counts) == 9
+    assert set(counts.values()) == {2}
 
 
 def test_mean_loss_is_weighted_by_supervised_tokens() -> None:

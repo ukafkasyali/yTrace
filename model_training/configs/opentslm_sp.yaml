@@ -22,9 +22,11 @@ lora:
   alpha: 32
   dropout: 0.0
 fit_probe:
+  train_examples: 48
+  validation_examples: 48
   batch_size: 3
   validation_batch_size: 4
-  epochs: 20
+  epochs: 40
   generation_at_start: false
 validation:
   at_start: true
