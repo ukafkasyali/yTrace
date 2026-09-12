@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, CircleX } from 'lucide-react';
-import { candidateIsEligibleForApproval } from '../services';
+import { candidateIsEligibleForApproval, candidateSuitabilityFactors, candidateSuitabilityLabel, candidateSuitabilityLevel } from '../services';
 import type { CandidateAssessment, DatasetCandidate, DatasetProfile, SourcingManifest, SourcingReview, SourcingRun } from '../services';
 import DecisionEvidence from './DecisionEvidence';
 import { friendlyRetrievalNote } from './retrievalNotes';
@@ -18,10 +18,12 @@ function CandidateSummary({ candidate, profile, assessment, isRecommendation }: 
   assessment: CandidateAssessment;
   isRecommendation: boolean;
 }) {
+  const suitability = candidateSuitabilityLevel(assessment);
+  const factors = candidateSuitabilityFactors(assessment);
   return <article className="scout-candidate">
     <div className="scout-candidate-heading">
       <div><p className="eyebrow">{isRecommendation ? 'Agent recommendation' : 'Selected for review'}</p><h3>{candidate.name}</h3></div>
-      <span className={`score-badge tier-${assessment.tier.toLowerCase()}`}>{assessment.totalScore}/100 · {assessment.tier.toLowerCase()}</span>
+      <span className={`suitability-badge suitability-${suitability.toLowerCase()}`}>{candidateSuitabilityLabel(assessment)}</span>
     </div>
     <a href={candidate.canonicalUrl} target="_blank" rel="noopener noreferrer">Open canonical source <ArrowUpRight size={13} aria-hidden="true" /></a>
     <dl className="scout-facts">
@@ -30,6 +32,10 @@ function CandidateSummary({ candidate, profile, assessment, isRecommendation }: 
       <div><dt>Evidence confidence</dt><dd>{assessment.evidenceConfidence.toLowerCase()}</dd></div>
       <div><dt>Recommendation confidence</dt><dd>{assessment.recommendationConfidence.toLowerCase()}</dd></div>
     </dl>
+    <section className="suitability-rationale" aria-label={`Why ${suitability.toLowerCase()} suitability`}>
+      <h4>Why {suitability.toLowerCase()} suitability</h4>
+      <ul>{factors.map(factor => <li key={`${factor.kind}-${factor.label}`} className={`factor-${factor.kind.toLowerCase()}`}><span>{factor.kind.toLowerCase()}</span><div><strong>{factor.label}</strong><small>{factor.explanation}</small></div></li>)}</ul>
+    </section>
     <div className="gate-list" aria-label="Hard gate results">{assessment.gates.map(gate => <div key={gate.gate} className={gate.passed ? 'gate-pass' : 'gate-fail'}>{gate.passed ? <Check size={13} /> : <CircleX size={13} />}<span><strong>{gate.gate.replaceAll('_', ' ')}</strong><small>{gate.reason}</small></span></div>)}</div>
     {assessment.conflicts.length > 0 && <div className="scout-warning"><AlertTriangle size={15} aria-hidden="true" /><div><strong>Conflicting evidence retained</strong>{assessment.conflicts.map(item => <p key={item}>{item}</p>)}</div></div>}
   </article>;
@@ -84,7 +90,7 @@ export default function ScoutReview({ run, busy, onReview, onUseSource }: Props)
           <label htmlFor={`approval-candidate-${run.runId}`}>Dataset to approve</label>
           <select id={`approval-candidate-${run.runId}`} value={selectedCandidateId} onChange={event => setSelectedCandidateId(event.target.value)} disabled={Boolean(busy) || eligible.length === 0}>
             {eligible.length === 0 && <option value="">No eligible datasets</option>}
-            {eligible.map(item => <option key={item.candidateId} value={item.candidateId}>{run.candidates.find(candidateItem => candidateItem.id === item.candidateId)?.name ?? item.candidateId} — {item.totalScore}/100{item.candidateId === run.recommendedCandidateId ? ' (agent recommendation)' : ''}</option>)}
+            {eligible.map(item => <option key={item.candidateId} value={item.candidateId}>{run.candidates.find(candidateItem => candidateItem.id === item.candidateId)?.name ?? item.candidateId} — {candidateSuitabilityLabel(item)}{item.candidateId === run.recommendedCandidateId ? ' (agent recommendation)' : ''}</option>)}
           </select>
           <small>Only datasets that pass every mandatory gate can be approved.</small>
           <button className="btn btn-primary" disabled={Boolean(busy) || !selectedCandidateId} onClick={() => onReview({ decision: 'APPROVE', candidateId: selectedCandidateId })}>{busy === 'APPROVE' ? 'Approving…' : 'Approve selected dataset'}</button>

@@ -1,10 +1,6 @@
 import { ArrowUpRight, Check, CircleX } from 'lucide-react';
-import { candidateIsEligibleForApproval, compareCandidateAssessments } from '../services';
-import type { EvidenceRecord, RefinementOutcome, SourcingRun } from '../services';
-
-function label(value: string) {
-  return value.replaceAll('_', ' ').toLowerCase();
-}
+import { candidateIsEligibleForApproval, candidateSuitabilityFactors, candidateSuitabilityLabel, candidateSuitabilityLevel, compareCandidateAssessments } from '../services';
+import type { CandidateAssessment, EvidenceRecord, RefinementOutcome, SourcingRun } from '../services';
 
 function evidenceRecords(run: SourcingRun, ids: string[], candidateId?: string) {
   const expected = new Set(ids);
@@ -49,19 +45,20 @@ function EvidenceLinks({ records, requirementLabel }: {
   </div>;
 }
 
-function decisionReason(run: SourcingRun, candidateId: string) {
-  if (run.excludedCandidateIds.includes(candidateId)) return 'Excluded by reviewer';
-  const assessment = run.assessments.find(item => item.candidateId === candidateId);
-  if (!assessment) return 'Not assessed';
-  const missing = assessment.missingRequirementIds
-    .map(id => run.requirements.find(item => item.id === id)?.label ?? id);
-  if (missing.length > 0) return `Missing: ${missing.join(', ')}`;
-  const failed = assessment.gates.filter(gate => !gate.passed).map(gate => label(gate.gate));
-  if (failed.length > 0) return `Failed hard gates: ${failed.join(', ')}`;
-  if (assessment.conflicts.length > 0) {
-    return `All gates pass; review conflicts in ${assessment.conflicts.map(label).join(', ')}`;
-  }
-  return 'All mandatory gates passed';
+function SuitabilityReasons({ run, assessment }: {
+  run: SourcingRun;
+  assessment: CandidateAssessment;
+}) {
+  const suitability = candidateSuitabilityLevel(assessment);
+  const factors = candidateSuitabilityFactors(assessment);
+  const visible = factors.slice(0, 2);
+  const remaining = factors.slice(2);
+  return <div className="ranking-rationale">
+    {run.excludedCandidateIds.includes(assessment.candidateId) && <strong>Excluded by reviewer</strong>}
+    <span>Why {suitability.toLowerCase()}</span>
+    <ul>{visible.map(factor => <li key={`${factor.kind}-${factor.label}`}><strong>{factor.label}</strong>: {factor.explanation}</li>)}</ul>
+    {remaining.length > 0 && <details><summary>{remaining.length} more factor{remaining.length === 1 ? '' : 's'}</summary><ul>{remaining.map(factor => <li key={`${factor.kind}-${factor.label}`}><strong>{factor.label}</strong>: {factor.explanation}</li>)}</ul></details>}
+  </div>;
 }
 
 function candidateName(run: SourcingRun, candidateId: string | null) {
@@ -108,7 +105,7 @@ function refinementMessage(run: SourcingRun, refinement: RefinementOutcome) {
   if (refinement.outcome === 'CANDIDATES_ADDED') {
     return <>{candidateCount} new candidate{candidateCount === 1 ? ' was' : 's were'} found, but no new native evidence cleared verification. <strong>{current} remains the recommendation</strong>.</>;
   }
-  return <>No new candidates or native evidence were found. <strong>{current} remains the recommendation</strong>; deterministic gates and scores therefore did not change.</>;
+  return <>No new candidates or native evidence were found. <strong>{current} remains the recommendation</strong>; deterministic gates and suitability classification therefore did not change.</>;
 }
 
 function RefinementResults({ run }: { run: SourcingRun }) {
@@ -162,7 +159,7 @@ export default function DecisionEvidence({
     <RefinementResults run={run} />
     <p className="decision-outcome">
       {recommended && recommendedAssessment
-        ? <><strong>Recommendation: {recommended.name}</strong> scored {recommendedAssessment.totalScore}/100 and passed every mandatory gate. Verify the linked evidence before approval.</>
+        ? <><strong>Recommendation: {recommended.name}</strong> has {candidateSuitabilityLabel(recommendedAssessment).toLowerCase()} and passed every mandatory gate. Verify the classification factors and linked evidence before approval.</>
         : eligibleAlternatives.length > 0
           ? <><strong>No agent recommendation.</strong> You may still approve one of the eligible shortlisted datasets.</>
           : <><strong>No eligible alternative is ready for approval.</strong> Continue refinement if another search remains.</>}
@@ -195,15 +192,15 @@ export default function DecisionEvidence({
     <h4>Dataset ranking</h4>
     <div className="table-scroll">
       <table className="data-table evidence-table">
-        <thead><tr><th>Candidate</th><th>Score</th><th>Hard gates</th><th>Decision reason</th></tr></thead>
+        <thead><tr><th>Candidate</th><th>Suitability</th><th>Hard gates</th><th>Why this level</th></tr></thead>
         <tbody>{ranked.length === 0 ? <tr><td colSpan={4}><span className="evidence-empty">No source was verified as a dataset artifact.</span></td></tr> : ranked.map(assessment => {
           const candidate = run.candidates.find(item => item.id === assessment.candidateId);
           const passed = assessment.gates.filter(gate => gate.passed).length;
           return <tr key={assessment.candidateId}>
             <td>{candidate ? <a href={candidate.canonicalUrl} target="_blank" rel="noopener noreferrer">{candidate.name} <ArrowUpRight size={11} aria-hidden="true" /></a> : assessment.candidateId}</td>
-            <td><strong>{assessment.totalScore}</strong>/100<small>{assessment.tier.toLowerCase()}</small></td>
+            <td><span className={`suitability-badge suitability-${candidateSuitabilityLevel(assessment).toLowerCase()}`}>{candidateSuitabilityLabel(assessment).replace(' suitability', '')}</span></td>
             <td>{passed}/{assessment.gates.length}</td>
-            <td>{decisionReason(run, assessment.candidateId)}</td>
+            <td><SuitabilityReasons run={run} assessment={assessment} /></td>
           </tr>;
         })}</tbody>
       </table>

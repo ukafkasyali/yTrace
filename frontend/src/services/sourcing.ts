@@ -90,6 +90,14 @@ export type EvidenceRecord = {
   note: string | null;
 };
 
+export type SuitabilityLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+export type SuitabilityFactor = {
+  kind: 'STRENGTH' | 'LIMITATION' | 'BLOCKER';
+  label: string;
+  explanation: string;
+  evidenceIds: string[];
+};
+
 export type CandidateAssessment = {
   candidateId: string;
   gates: { gate: string; passed: boolean; reason: string; evidenceIds: string[] }[];
@@ -104,11 +112,33 @@ export type CandidateAssessment = {
   };
   totalScore: number;
   tier: 'RECOMMEND' | 'SHORTLIST' | 'REJECT';
+  suitabilityLevel?: SuitabilityLevel | null;
+  suitabilityFactors?: SuitabilityFactor[];
   evidenceConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
   recommendationConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
   missingRequirementIds: string[];
   conflicts: string[];
 };
+
+export function candidateSuitabilityLevel(candidate: CandidateAssessment): SuitabilityLevel {
+  if (candidate.suitabilityLevel) return candidate.suitabilityLevel;
+  return ({ RECOMMEND: 'HIGH', SHORTLIST: 'MEDIUM', REJECT: 'LOW' } as const)[candidate.tier];
+}
+
+export function candidateSuitabilityLabel(candidate: CandidateAssessment) {
+  const level = candidateSuitabilityLevel(candidate).toLowerCase();
+  return `${level[0].toUpperCase()}${level.slice(1)} suitability`;
+}
+
+export function candidateSuitabilityFactors(candidate: CandidateAssessment): SuitabilityFactor[] {
+  if (candidate.suitabilityFactors?.length) return candidate.suitabilityFactors;
+  return candidate.gates.map(gate => ({
+    kind: gate.passed ? 'STRENGTH' : 'BLOCKER',
+    label: gate.gate.replaceAll('_', ' '),
+    explanation: gate.reason,
+    evidenceIds: gate.evidenceIds,
+  }));
+}
 
 export type SourcingManifest = {
   runId: string;
@@ -194,8 +224,9 @@ export function compareCandidateAssessments(
     candidate.gates.some(gate => gate.gate === 'domain' && !gate.passed);
   const domainDifference = Number(domainMismatch(left)) - Number(domainMismatch(right));
   if (domainDifference !== 0) return domainDifference;
-  const tierRank = { RECOMMEND: 0, SHORTLIST: 1, REJECT: 2 } as const;
-  return tierRank[left.tier] - tierRank[right.tier]
+  const levelRank = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
+  return levelRank[candidateSuitabilityLevel(left)]
+    - levelRank[candidateSuitabilityLevel(right)]
     || right.totalScore - left.totalScore
     || left.candidateId.localeCompare(right.candidateId);
 }
@@ -286,6 +317,18 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
       && item.gates.every(gate => isRecord(gate) && typeof gate.gate === 'string'
         && typeof gate.passed === 'boolean' && typeof gate.reason === 'string' && Array.isArray(gate.evidenceIds))
       && ['RECOMMEND', 'SHORTLIST', 'REJECT'].includes(item.tier as string)
+      && (item.suitabilityLevel === undefined || item.suitabilityLevel === null
+        || ['HIGH', 'MEDIUM', 'LOW'].includes(item.suitabilityLevel as string))
+      && (item.suitabilityLevel === undefined || item.suitabilityLevel === null
+        || item.suitabilityLevel === ({ RECOMMEND: 'HIGH', SHORTLIST: 'MEDIUM', REJECT: 'LOW' } as const)[item.tier as 'RECOMMEND' | 'SHORTLIST' | 'REJECT'])
+      && (item.suitabilityFactors === undefined || (Array.isArray(item.suitabilityFactors)
+        && item.suitabilityFactors.every(factor => isRecord(factor)
+          && ['STRENGTH', 'LIMITATION', 'BLOCKER'].includes(factor.kind as string)
+          && typeof factor.label === 'string' && typeof factor.explanation === 'string'
+          && Array.isArray(factor.evidenceIds)
+          && factor.evidenceIds.every(id => typeof id === 'string'))))
+      && (item.suitabilityLevel === undefined || item.suitabilityLevel === null
+        || (Array.isArray(item.suitabilityFactors) && item.suitabilityFactors.length > 0))
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.evidenceConfidence as string)
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.recommendationConfidence as string)
       && Array.isArray(item.conflicts) && Array.isArray(item.missingRequirementIds))

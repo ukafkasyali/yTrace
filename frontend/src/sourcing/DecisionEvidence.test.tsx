@@ -54,6 +54,11 @@ function runFixture(): SourcingRun {
       score: { taskFit: 35, trainingReadiness: 20, acquisitionIntegrity: 15, provenanceDocumentation: 10, integrationReadiness: 10, licenseClarity: 5, evidenceConsistency: 5 },
       totalScore: 100, tier: 'RECOMMEND', evidenceConfidence: 'HIGH',
       recommendationConfidence: 'HIGH', missingRequirementIds: [], conflicts: [],
+      suitabilityLevel: 'HIGH', suitabilityFactors: [{
+        kind: 'STRENGTH', label: 'Mandatory requirements',
+        explanation: 'All mandatory requirements are supported by native evidence.',
+        evidenceIds: ['ev_license'],
+      }],
     }],
     recommendedCandidateId: 'ds_9be731e6fb6b', gapQueriesUsed: 0, tavilyCreditsUsed: 6,
     approvedCandidateId: null, excludedCandidateIds: [], reviewFeedback: [], reviewIterationsUsed: 0,
@@ -72,7 +77,10 @@ describe('decision evidence', () => {
 
     expect(markup).toContain('Decision evidence');
     expect(markup).toContain('Recommendation: Robot joint torque measurements');
-    expect(markup).toContain('All mandatory gates passed');
+    expect(markup).toContain('High suitability');
+    expect(markup).toContain('Why high suitability');
+    expect(markup).toContain('All mandatory requirements are supported by native evidence.');
+    expect(markup).toContain('passed every mandatory gate');
     expect(markup).toContain('Dataset ranking');
     expect(markup).toContain('Found value');
     expect(markup).toContain('cc-by-4.0');
@@ -80,6 +88,7 @@ describe('decision evidence', () => {
     expect(markup).toContain('Open native source');
     expect(markup).not.toContain('MIT');
     expect(markup).not.toContain('# Dataset sourcing report');
+    expect(markup).not.toContain('/100');
   });
 
   it('keeps discovery guides out of dataset ranking while retaining their audit reason', () => {
@@ -96,6 +105,10 @@ describe('decision evidence', () => {
     });
     run.assessments.push({
       ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa', tier: 'REJECT', totalScore: 75,
+      suitabilityLevel: 'LOW', suitabilityFactors: [{
+        kind: 'BLOCKER', label: 'Dataset identity', explanation: 'Primary source is a guide',
+        evidenceIds: [],
+      }],
       score: { ...run.assessments[0].score, taskFit: 10, evidenceConsistency: 0 },
       gates: [{
         gate: 'dataset_identity', passed: false, reason: 'Primary source is a guide',
@@ -111,6 +124,20 @@ describe('decision evidence', () => {
     expect(ranking).not.toContain('Computer Vision Guide');
     expect(markup).toContain('Discovery leads excluded (1)');
     expect(markup).toContain('Primary source is a guide');
+  });
+
+  it('explains legacy assessments using their hard gates', () => {
+    const run = runFixture();
+    delete run.assessments[0].suitabilityLevel;
+    delete run.assessments[0].suitabilityFactors;
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('High suitability');
+    expect(markup).toContain('Why high suitability');
+    expect(markup).toContain('Primary source is a verified dataset artifact');
   });
 
   it('turns historical transport errors into actionable source coverage notes', () => {
@@ -216,6 +243,11 @@ describe('decision evidence', () => {
       ...run.assessments[0],
       tier: 'REJECT',
       totalScore: 60,
+      suitabilityLevel: 'LOW',
+      suitabilityFactors: [{
+        kind: 'BLOCKER', label: 'Explicit licence', explanation: 'No licence evidence',
+        evidenceIds: [],
+      }],
       gates: [{ gate: 'license', passed: false, reason: 'No licence evidence', evidenceIds: [] }],
       missingRequirementIds: ['req_license'],
     };
@@ -235,6 +267,11 @@ describe('decision evidence', () => {
     run.recommendedCandidateId = null;
     run.requirements[0].status = 'MISSING';
     run.assessments[0].tier = 'REJECT';
+    run.assessments[0].suitabilityLevel = 'LOW';
+    run.assessments[0].suitabilityFactors = [{
+      kind: 'BLOCKER', label: 'Explicit licence',
+      explanation: 'Mandatory requirement is unsupported by native evidence.', evidenceIds: [],
+    }];
     run.assessments[0].missingRequirementIds = ['req_license'];
 
     const markup = renderToStaticMarkup(<ScoutReview
@@ -259,6 +296,10 @@ describe('decision evidence', () => {
     run.assessments[0] = {
       ...run.assessments[0],
       tier: 'REJECT', totalScore: 83,
+      suitabilityLevel: 'LOW', suitabilityFactors: [{
+        kind: 'BLOCKER', label: 'Equipment or application domain',
+        explanation: 'Native sources do not match the requested domain', evidenceIds: [],
+      }],
       score: { ...run.assessments[0].score, taskFit: 18 },
       gates: [{ gate: 'domain', passed: false, reason: 'Native sources do not match the requested domain', evidenceIds: [] }],
       missingRequirementIds: ['req_domain'],
@@ -270,7 +311,13 @@ describe('decision evidence', () => {
     run.assessments.push({
       ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa', totalScore: 54,
       score: { taskFit: 18, trainingReadiness: 8, acquisitionIntegrity: 15, provenanceDocumentation: 10, integrationReadiness: 0, licenseClarity: 0, evidenceConsistency: 3 },
-      tier: 'REJECT', gates: [{ gate: 'domain', passed: true, reason: 'Native sources match the requested domain', evidenceIds: ['ev_cnc'] }],
+      tier: 'REJECT', suitabilityLevel: 'LOW', suitabilityFactors: [{
+        kind: 'BLOCKER', label: 'Task labels',
+        explanation: 'Mandatory requirement is unsupported by native evidence.', evidenceIds: [],
+      }, {
+        kind: 'BLOCKER', label: 'Schema documentation',
+        explanation: 'Mandatory requirement is unsupported by native evidence.', evidenceIds: [],
+      }], gates: [{ gate: 'domain', passed: true, reason: 'Native sources match the requested domain', evidenceIds: ['ev_cnc'] }],
       missingRequirementIds: ['req_task_labels', 'req_schema'],
     });
 
@@ -281,6 +328,6 @@ describe('decision evidence', () => {
     expect(markup.indexOf('CNC machining process monitoring')).toBeLessThan(
       markup.indexOf('Robot joint torque measurements'),
     );
-    expect(markup).toContain('Missing: Equipment or application domain');
+    expect(markup).toContain('Native sources do not match the requested domain');
   });
 });

@@ -20,5 +20,7 @@ describe('responsive layout contracts', () => {
     expect(styles).toContain('.evidence-table{min-width:720px}');
     expect(styles).toContain('.requirement-evidence-item{display:grid;grid-template-columns:minmax(90px,1fr) minmax(130px,1fr) auto');
     expect(styles).toContain('.evidence-table a{display:inline-flex;align-items:center;gap:4px;min-height:28px}');
+    expect(styles).toContain('.suitability-rationale ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))');
+    expect(styles).toContain('.suitability-rationale ul,.gate-list{grid-template-columns:1fr}');
   });
 });
