@@ -77,6 +77,7 @@ export default function ScoutReview({ run, busy, onReview, onUseSource }: Props)
         <div className="scout-approval-choice">
           <label htmlFor={`approval-candidate-${run.runId}`}>Dataset to approve</label>
           <select id={`approval-candidate-${run.runId}`} value={selectedCandidateId} onChange={event => setSelectedCandidateId(event.target.value)} disabled={Boolean(busy) || eligible.length === 0}>
+            {eligible.length === 0 && <option value="">No eligible datasets</option>}
             {eligible.map(item => <option key={item.candidateId} value={item.candidateId}>{run.candidates.find(candidateItem => candidateItem.id === item.candidateId)?.name ?? item.candidateId} — {item.totalScore}/100{item.candidateId === run.recommendedCandidateId ? ' (agent recommendation)' : ''}</option>)}
           </select>
           <small>Only datasets that pass every mandatory gate can be approved.</small>

@@ -111,4 +111,22 @@ describe('decision evidence', () => {
     expect(markup).toContain('What should the scout improve?');
     expect(markup).toContain('Reject and refine');
   });
+
+  it('keeps approval explicit when no candidate clears mandatory gates', () => {
+    const run = runFixture();
+    run.assessments[0] = {
+      ...run.assessments[0],
+      tier: 'REJECT',
+      totalScore: 60,
+      gates: [{ gate: 'license', passed: false, reason: 'No licence evidence', evidenceIds: [] }],
+      missingRequirementIds: ['req_license'],
+    };
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('No eligible datasets');
+    expect(markup).toContain('Only datasets that pass every mandatory gate can be approved.');
+  });
 });

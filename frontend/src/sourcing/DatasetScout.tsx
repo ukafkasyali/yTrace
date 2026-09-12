@@ -28,7 +28,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
         if (!alive) return;
         setRun(next); setError('');
         if (sourcingIsActive(next.status)) timer = setTimeout(poll, 1500);
-      } catch (reason) { if (alive) setError(errorText(reason)); }
+      } catch (reason) { if (alive) setError(`Could not load sourcing run: ${errorText(reason)}`); }
     };
     void poll();
     return () => { alive = false; clearTimeout(timer); };
@@ -43,7 +43,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
       const accepted = await services.startSourcingRun({ brief: normalized }, intent.current.key);
       intent.current = null;
       setRunId(accepted.runId); setResumeId(accepted.runId); setPollRevision(value => value + 1);
-    } catch (reason) { setError(errorText(reason)); }
+    } catch (reason) { setError(`Could not start evidence review: ${errorText(reason)}`); }
     finally { setBusy(''); }
   }
 
@@ -54,7 +54,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
       const next = await services.reviewSourcingRun(run.runId, reviewRequest);
       if (reviewRequest.decision === 'APPROVE') next.manifest = await services.getSourcingManifest(run.runId);
       setRun(next);
-    } catch (reason) { setError(errorText(reason)); }
+    } catch (reason) { setError(`Could not apply reviewer decision: ${errorText(reason)}`); }
     finally { setBusy(''); }
   }
 

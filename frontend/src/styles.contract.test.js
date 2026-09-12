@@ -12,4 +12,12 @@ describe('responsive layout contracts', () => {
       '.workspace-section dl.decision-metrics{grid-template-columns:1fr}',
     );
   });
+
+  it('styles actual data source result rows and scrollable evidence tables', () => {
+    expect(styles).toContain('.source-results{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:0;list-style:none}');
+    expect(styles).toContain('.source-results article,.source-results li,.model-result');
+    expect(styles).toContain('.table-scroll{max-width:100%;overflow:auto;scrollbar-gutter:stable}');
+    expect(styles).toContain('.evidence-table{min-width:560px}');
+    expect(styles).toContain('.evidence-table a,.evidence-links a{display:inline-flex;align-items:center;gap:4px;min-height:28px}');
+  });
 });

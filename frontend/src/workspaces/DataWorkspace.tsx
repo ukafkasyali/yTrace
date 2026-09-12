@@ -29,14 +29,14 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
     if (services.connected) services.listDatasets().then(items => {
       if (!alive) return;
       setDatasets(items); setDatasetId(current => items.some(item => item.id === current) ? current : items[0]?.id ?? '');
-    }).catch(reason => { if (alive) setError(errorText(reason)); });
+    }).catch(reason => { if (alive) setError(`Could not load backend catalog: ${errorText(reason)}`); });
     return () => { alive = false; };
   }, [services, catalogRevision]);
 
   useEffect(() => {
     let alive = true; setRecordings([]);
     if (services.connected && datasetId) services.listRecordings(datasetId).then(items => { if (alive) setRecordings(items); })
-      .catch(reason => { if (alive) setError(errorText(reason)); });
+      .catch(reason => { if (alive) setError(`Could not load recordings for this dataset: ${errorText(reason)}`); });
     return () => { alive = false; };
   }, [services, datasetId, catalogRevision]);
 
