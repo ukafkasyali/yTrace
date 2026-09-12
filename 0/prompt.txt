@@ -1,1 +1,1 @@
-Add a second demo file under the entire\_demo folder
+Can you commit my stage? Also make sure the entire checkpoint is processed correctly
