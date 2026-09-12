@@ -1,0 +1,384 @@
+"""Observable single-H100 OpenTSLM SoftPrompt fine-tuning loop."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import platform
+import random
+import time
+from contextlib import nullcontext
+from pathlib import Path
+
+import numpy as np
+import torch
+import yaml
+from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.tensorboard import SummaryWriter
+
+from robot_observability.constants import OPENTSLM_COMMIT, TIMENET_COMMIT
+from robot_observability.metrics import evaluate_rows, parse_answer
+from robot_observability.opentslm_dataset import RobotQADataset
+from robot_observability.qa import answer_payload
+
+
+def emit(path: Path, event: str, **fields: object) -> None:
+    payload = {"timestamp": time.time(), "event": event, **fields}
+    line = json.dumps(payload, sort_keys=True)
+    print(line, flush=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(line + "\n")
+
+
+def write_status(path: Path, **payload: object) -> None:
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def collate(batch: list[dict[str, object]]) -> list[dict[str, object]]:
+    return batch
+
+
+def fixed_subset(dataset: Dataset, size: int, seed: int) -> Dataset:
+    if size >= len(dataset):
+        return dataset
+    rng = np.random.default_rng(seed)
+    return Subset(dataset, sorted(rng.choice(len(dataset), size=size, replace=False).tolist()))
+
+
+def load_model(config: dict[str, object], device: str):
+    from opentslm import OpenTSLM
+    from opentslm.model.llm.OpenTSLMSP import OpenTSLMSP
+
+    warm_start = config.get("warm_start")
+    if warm_start:
+        return OpenTSLM.load_pretrained(str(warm_start), device=device, enable_lora=True)
+    model = OpenTSLMSP(llm_id=str(config["base_model"]), device=device)
+    lora = config["lora"]
+    model.enable_lora(
+        lora_r=int(lora["rank"]),
+        lora_alpha=int(lora["alpha"]),
+        lora_dropout=float(lora["dropout"]),
+    )
+    return model
+
+
+def optimizer_for(model, config: dict[str, object]) -> torch.optim.Optimizer:
+    rates = config["learning_rates"]
+    groups = [
+        {"params": [p for p in model.encoder.parameters() if p.requires_grad], "lr": float(rates["encoder"])},
+        {
+            "params": [p for p in model.projector.parameters() if p.requires_grad],
+            "lr": float(rates["projector"]),
+        },
+        {"params": model.get_lora_parameters(), "lr": float(rates["lora"])},
+    ]
+    return torch.optim.AdamW(groups, weight_decay=0.01)
+
+
+def scheduler_for(optimizer: torch.optim.Optimizer, total_steps: int, warmup_fraction: float = 0.03):
+    warmup = max(1, round(total_steps * warmup_fraction))
+
+    def factor(step: int) -> float:
+        if step < warmup:
+            return step / warmup
+        return max(0.0, (total_steps - step) / max(1, total_steps - warmup))
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, factor)
+
+
+@torch.no_grad()
+def mean_loss(model, loader: DataLoader, device_type: str) -> float:
+    model.eval()
+    losses = []
+    context = (
+        torch.autocast(device_type="cuda", dtype=torch.bfloat16) if device_type == "cuda" else nullcontext()
+    )
+    with context:
+        for batch in loader:
+            losses.append(float(model.compute_loss(batch).detach().cpu()))
+    return float(np.mean(losses)) if losses else math.nan
+
+
+@torch.no_grad()
+def generation_eval(
+    model, dataset: Dataset, output_path: Path, batch_size: int = 2
+) -> dict[str, float | int]:
+    model.eval()
+    rows = []
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate)
+    with output_path.open("w", encoding="utf-8") as handle:
+        for batch in loader:
+            outputs = model.generate(batch, max_new_tokens=180, do_sample=False)
+            for sample, output in zip(batch, outputs):
+                metadata = sample["metadata"]
+                row = {
+                    "record_id": sample["record_id"],
+                    "intent": sample["intent"],
+                    "target": answer_payload(metadata, sample["intent"]),
+                    "output": output,
+                    "prediction": parse_answer(output),
+                }
+                rows.append(row)
+                handle.write(json.dumps(row, sort_keys=True) + "\n")
+    return evaluate_rows(rows)
+
+
+def run(args: argparse.Namespace) -> None:
+    config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
+    run_root = args.output / args.run_name
+    run_root.mkdir(parents=True, exist_ok=False)
+    metrics_path = run_root / "metrics.jsonl"
+    status_path = run_root / "status.json"
+    writer = SummaryWriter(run_root / "tensorboard")
+    write_status(status_path, state="initializing", run_name=args.run_name)
+    wandb_run = None
+    wandb_config = config["observability"].get("wandb", {})
+    if wandb_config.get("enabled", False):
+        try:
+            import wandb
+
+            wandb_run = wandb.init(
+                project=str(wandb_config.get("project", "robot-observability")),
+                entity=os.environ.get("WANDB_ENTITY") or wandb_config.get("entity"),
+                name=args.run_name,
+                config=config,
+                dir=str(run_root),
+                tags=["opentslm", "robotics", "soft-prompt", "smoke" if args.smoke else "full"],
+            )
+        except Exception as error:  # noqa: BLE001 - observability must not abort training
+            emit(metrics_path, "wandb_unavailable", error=repr(error))
+
+    seed = int(args.seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device != "cuda" and not args.allow_cpu:
+        raise RuntimeError("CUDA is required unless --allow-cpu is explicitly supplied")
+    model = load_model(config, device)
+    eos = model.get_eos_token() or ""
+    train_dataset: Dataset = RobotQADataset(args.prepared_root, "train", eos_token=eos, seed=seed)
+    validation_dataset: Dataset = RobotQADataset(
+        args.prepared_root, "validation", mode="all_intents", eos_token=eos, seed=seed
+    )
+    if args.smoke:
+        train_dataset = fixed_subset(train_dataset, 32, seed)
+        validation_dataset = fixed_subset(validation_dataset, 32, seed + 1)
+    validation_loss_dataset = fixed_subset(
+        validation_dataset,
+        min(len(validation_dataset), int(config["validation"]["loss_subset"])),
+        seed + 2,
+    )
+    generation_dataset = fixed_subset(
+        validation_dataset,
+        min(len(validation_dataset), int(config["validation"]["generation_subset"])),
+        seed + 3,
+    )
+
+    batch_size = 1 if args.smoke else int(config["batch_size"])
+    accumulation = 1 if args.smoke else int(config["gradient_accumulation_steps"])
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate, num_workers=0
+    )
+    validation_loader = DataLoader(
+        validation_loss_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate, num_workers=0
+    )
+    epochs = 20 if args.smoke else int(config["epochs"])
+    steps_per_epoch = math.ceil(len(train_loader) / accumulation)
+    total_steps = (
+        min(args.max_steps, epochs * steps_per_epoch) if args.max_steps else epochs * steps_per_epoch
+    )
+    optimizer = optimizer_for(model, config)
+    scheduler = scheduler_for(optimizer, total_steps)
+
+    manifest = {
+        "run_name": args.run_name,
+        "config": config,
+        "seed": seed,
+        "smoke": args.smoke,
+        "prepared_root": str(args.prepared_root.resolve()),
+        "opentslm_commit": OPENTSLM_COMMIT,
+        "timenet_commit": TIMENET_COMMIT,
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "cuda": torch.version.cuda,
+        "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        "train_examples": len(train_dataset),
+        "validation_examples": len(validation_dataset),
+        "command": " ".join(os.sys.argv),
+    }
+    (run_root / "run_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    emit(metrics_path, "run_start", **manifest)
+
+    # Fail early on shape, checkpoint, and forward incompatibilities.
+    first_batch = next(iter(train_loader))
+    with torch.no_grad():
+        initial_loss = float(model.compute_loss(first_batch).detach().cpu())
+    emit(metrics_path, "forward_smoke", loss=initial_loss)
+
+    start_time = time.monotonic()
+    deadline = start_time + float(config["max_wall_time_hours"]) * 3600
+    global_step = 0
+    best_validation = math.inf
+    patience = 0
+    stop_reason = "epochs_complete"
+    optimizer.zero_grad(set_to_none=True)
+    write_status(status_path, state="training", global_step=0, best_validation_loss=None)
+
+    for epoch in range(epochs):
+        model.train()
+        epoch_losses = []
+        for batch_index, batch in enumerate(train_loader):
+            if time.monotonic() >= deadline:
+                stop_reason = "wall_time_limit"
+                break
+            loss = model.compute_loss(batch) / accumulation
+            loss.backward()
+            epoch_losses.append(float(loss.detach().cpu()) * accumulation)
+            should_step = (batch_index + 1) % accumulation == 0 or batch_index + 1 == len(train_loader)
+            if not should_step:
+                continue
+            grad_norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0).detach().cpu())
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad(set_to_none=True)
+            global_step += 1
+            if global_step % int(config["observability"]["log_every_steps"]) == 0 or global_step == 1:
+                elapsed = time.monotonic() - start_time
+                fields = {
+                    "epoch": epoch,
+                    "step": global_step,
+                    "loss": float(np.mean(epoch_losses[-max(1, accumulation) :])),
+                    "learning_rate": scheduler.get_last_lr()[0],
+                    "grad_norm": grad_norm,
+                    "elapsed_seconds": elapsed,
+                    "examples_per_second": (global_step * batch_size * accumulation) / max(elapsed, 1e-6),
+                    "gpu_allocated_gb": torch.cuda.memory_allocated() / 2**30
+                    if torch.cuda.is_available()
+                    else 0,
+                    "gpu_reserved_gb": torch.cuda.memory_reserved() / 2**30
+                    if torch.cuda.is_available()
+                    else 0,
+                }
+                emit(metrics_path, "train_step", **fields)
+                for key, value in fields.items():
+                    if isinstance(value, (int, float)):
+                        writer.add_scalar(f"train/{key}", value, global_step)
+                if wandb_run is not None:
+                    wandb_run.log({f"train/{key}": value for key, value in fields.items()}, step=global_step)
+                write_status(
+                    status_path,
+                    state="training",
+                    epoch=epoch,
+                    global_step=global_step,
+                    best_validation_loss=best_validation if math.isfinite(best_validation) else None,
+                    **{key: fields[key] for key in ("loss", "elapsed_seconds", "examples_per_second")},
+                )
+            if args.max_steps and global_step >= args.max_steps:
+                stop_reason = "max_steps"
+                break
+
+        validation_loss = mean_loss(model, validation_loader, "cuda" if device == "cuda" else "cpu")
+        emit(metrics_path, "validation_epoch", epoch=epoch, step=global_step, loss=validation_loss)
+        writer.add_scalar("validation/loss", validation_loss, global_step)
+        if wandb_run is not None:
+            wandb_run.log({"validation/loss": validation_loss, "epoch": epoch}, step=global_step)
+        model.store_to_file(str(run_root / "last_model.pt"))
+        if validation_loss < best_validation:
+            best_validation = validation_loss
+            patience = 0
+            model.store_to_file(str(run_root / "best_model.pt"))
+        else:
+            patience += 1
+        if args.smoke or epoch == epochs - 1 or patience >= int(config["early_stopping_patience"]):
+            generation_metrics = generation_eval(
+                model,
+                generation_dataset,
+                run_root / f"generation_epoch_{epoch:03d}.jsonl",
+                batch_size=batch_size,
+            )
+            emit(metrics_path, "generation_eval", epoch=epoch, step=global_step, **generation_metrics)
+            if wandb_run is not None:
+                wandb_run.log(
+                    {f"validation/{key}": value for key, value in generation_metrics.items()},
+                    step=global_step,
+                )
+        if patience >= int(config["early_stopping_patience"]):
+            stop_reason = "early_stopping"
+            break
+        if stop_reason != "epochs_complete":
+            break
+
+    elapsed = time.monotonic() - start_time
+    writer.close()
+    write_status(
+        status_path,
+        state="complete",
+        stop_reason=stop_reason,
+        global_step=global_step,
+        best_validation_loss=best_validation,
+        elapsed_seconds=elapsed,
+    )
+    emit(
+        metrics_path,
+        "run_complete",
+        stop_reason=stop_reason,
+        step=global_step,
+        best_validation_loss=best_validation,
+        elapsed_seconds=elapsed,
+    )
+    if wandb_run is not None:
+        if wandb_config.get("log_adapter_artifact", True):
+            import wandb
+
+            artifact = wandb.Artifact(f"{args.run_name}-adapter", type="model")
+            for name in ("best_model.pt", "run_manifest.json", "metrics.jsonl", "status.json"):
+                candidate = run_root / name
+                if candidate.exists():
+                    artifact.add_file(str(candidate))
+            wandb_run.log_artifact(artifact)
+        wandb_run.summary.update(
+            {
+                "stop_reason": stop_reason,
+                "global_step": global_step,
+                "best_validation_loss": best_validation,
+                "elapsed_seconds": elapsed,
+            }
+        )
+        wandb_run.finish()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=Path, default=Path("configs/opentslm_sp.yaml"))
+    parser.add_argument("--prepared-root", type=Path, default=Path("data/prepared/v1"))
+    parser.add_argument("--output", type=Path, default=Path("runs"))
+    parser.add_argument("--run-name", required=True)
+    parser.add_argument("--seed", type=int, default=20260912)
+    parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--allow-cpu", action="store_true")
+    args = parser.parse_args()
+    try:
+        run(args)
+    except Exception as error:
+        run_root = args.output / args.run_name
+        if run_root.exists():
+            write_status(
+                run_root / "status.json",
+                state="failed",
+                run_name=args.run_name,
+                error=repr(error),
+            )
+        raise
+
+
+if __name__ == "__main__":
+    main()

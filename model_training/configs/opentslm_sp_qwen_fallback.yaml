@@ -1,0 +1,33 @@
+architecture: soft_prompt
+base_model: Qwen/Qwen3-1.7B
+warm_start: null
+upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
+precision: bfloat16
+batch_size: 2
+gradient_accumulation_steps: 16
+epochs: 8
+early_stopping_patience: 3
+max_wall_time_hours: 9.5
+learning_rates:
+  encoder: 0.0002
+  projector: 0.0001
+  lora: 0.0002
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.0
+validation:
+  every_epoch: true
+  loss_subset: 1024
+  generation_subset: 256
+observability:
+  tensorboard: true
+  jsonl: true
+  log_every_steps: 10
+  sample_generations_every_steps: 250
+  gpu_metrics_every_seconds: 10
+  wandb:
+    enabled: true
+    project: robot-observability
+    entity: null
+    log_adapter_artifact: true
