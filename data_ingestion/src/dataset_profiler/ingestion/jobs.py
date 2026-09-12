@@ -18,6 +18,8 @@ def _to_camel(value: str) -> str:
 
 class IngestionState(StrEnum):
     QUEUED = "queued"
+    ACQUIRING = "acquiring"
+    INSPECTING = "inspecting"
     NEEDS_INPUT = "needs_input"
     FAILED = "failed"
     READY = "ready"
@@ -39,6 +41,21 @@ class IngestionJob(BaseModel):
     updated_at: datetime
 
 
+class AssetReceipt(BaseModel):
+    model_config = ConfigDict(alias_generator=_to_camel, populate_by_name=True, extra="forbid")
+
+    ingestion_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+    asset_id: str = Field(pattern=r"^asset_[a-f0-9]{16}$")
+    provider_locator: str
+    expected_size_bytes: int = Field(gt=0)
+    source_checksum_algorithm: str | None = None
+    source_checksum_value: str | None = None
+    observed_size_bytes: int = Field(gt=0)
+    content_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    content_key: str = Field(pattern=r"^sha256/[a-f0-9]{2}/[a-f0-9]{64}$")
+    acquired_at: datetime
+
+
 class IngestionJobConflict(ValueError):
     pass
 
@@ -52,6 +69,7 @@ class IngestionJobStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
         self.connection.row_factory = sqlite3.Row
+        self.connection.execute("PRAGMA foreign_keys=ON")
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.execute(
             """
@@ -67,6 +85,24 @@ class IngestionJobStore:
                 message TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS asset_receipts (
+                ingestion_id TEXT NOT NULL,
+                asset_id TEXT NOT NULL,
+                provider_locator TEXT NOT NULL,
+                expected_size_bytes INTEGER NOT NULL,
+                source_checksum_algorithm TEXT,
+                source_checksum_value TEXT,
+                observed_size_bytes INTEGER NOT NULL,
+                content_sha256 TEXT NOT NULL,
+                content_key TEXT NOT NULL,
+                acquired_at TEXT NOT NULL,
+                PRIMARY KEY (ingestion_id, asset_id),
+                FOREIGN KEY (ingestion_id) REFERENCES ingestion_jobs(ingestion_id)
             )
             """
         )
@@ -106,6 +142,115 @@ class IngestionJobStore:
         if row is None:
             raise IngestionJobNotFound("Ingestion job not found")
         return self._job(row)
+
+    @staticmethod
+    def _receipt(row: sqlite3.Row) -> AssetReceipt:
+        return AssetReceipt(
+            ingestion_id=row["ingestion_id"],
+            asset_id=row["asset_id"],
+            provider_locator=row["provider_locator"],
+            expected_size_bytes=row["expected_size_bytes"],
+            source_checksum_algorithm=row["source_checksum_algorithm"],
+            source_checksum_value=row["source_checksum_value"],
+            observed_size_bytes=row["observed_size_bytes"],
+            content_sha256=row["content_sha256"],
+            content_key=row["content_key"],
+            acquired_at=row["acquired_at"],
+        )
+
+    def list_receipts(self, ingestion_id: str) -> list[AssetReceipt]:
+        self.get(ingestion_id)
+        rows = self.connection.execute(
+            "SELECT * FROM asset_receipts WHERE ingestion_id = ? ORDER BY asset_id",
+            (ingestion_id,),
+        ).fetchall()
+        return [self._receipt(row) for row in rows]
+
+    def record_receipt(self, receipt: AssetReceipt) -> AssetReceipt:
+        values = (
+            receipt.ingestion_id,
+            receipt.asset_id,
+            receipt.provider_locator,
+            receipt.expected_size_bytes,
+            receipt.source_checksum_algorithm,
+            receipt.source_checksum_value,
+            receipt.observed_size_bytes,
+            receipt.content_sha256,
+            receipt.content_key,
+            receipt.acquired_at.isoformat(),
+        )
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                existing = self.connection.execute(
+                    "SELECT * FROM asset_receipts WHERE ingestion_id = ? AND asset_id = ?",
+                    (receipt.ingestion_id, receipt.asset_id),
+                ).fetchone()
+                if existing is not None:
+                    persisted = self._receipt(existing)
+                    if persisted != receipt:
+                        raise IngestionJobConflict("Asset already has a different acquisition receipt")
+                    self.connection.execute("COMMIT")
+                    return persisted
+                self.connection.execute(
+                    "INSERT INTO asset_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    values,
+                )
+                self.connection.execute("COMMIT")
+                return receipt
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
+    def claim_next_acquisition(self) -> IngestionJob | None:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.connection.execute(
+                    """
+                    SELECT * FROM ingestion_jobs
+                    WHERE state IN (?, ?)
+                    ORDER BY created_at, ingestion_id
+                    LIMIT 1
+                    """,
+                    (IngestionState.QUEUED.value, IngestionState.FAILED.value),
+                ).fetchone()
+                if row is None:
+                    self.connection.execute("COMMIT")
+                    return None
+                self.connection.execute(
+                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ? "
+                    "WHERE ingestion_id = ?",
+                    (
+                        IngestionState.ACQUIRING.value,
+                        "Acquiring approved assets",
+                        now,
+                        row["ingestion_id"],
+                    ),
+                )
+                self.connection.execute("COMMIT")
+                return self.get(row["ingestion_id"])
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
+    def set_state(
+        self,
+        ingestion_id: str,
+        state: IngestionState,
+        message: str,
+    ) -> IngestionJob:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            cursor = self.connection.execute(
+                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ? "
+                "WHERE ingestion_id = ?",
+                (state.value, message, now, ingestion_id),
+            )
+        if cursor.rowcount != 1:
+            raise IngestionJobNotFound("Ingestion job not found")
+        return self.get(ingestion_id)
 
     def get_or_create(
         self,

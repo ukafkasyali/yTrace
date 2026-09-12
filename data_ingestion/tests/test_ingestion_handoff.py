@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from dataset_profiler.ingestion import (
     AcquisitionError,
+    AssetReceipt,
     CreateIngestion,
     IngestionJobConflict,
     IngestionJobStore,
@@ -194,6 +196,49 @@ class IngestionJobStoreTests(unittest.TestCase):
 
         self.assertEqual(results[0][0].ingestion_id, results[1][0].ingestion_id)
         self.assertEqual(sorted(created for _, created in results), [False, True])
+
+    def test_claim_and_asset_receipt_survive_restart(self) -> None:
+        job, _ = self.store.get_or_create(**self.arguments)
+        claimed = self.store.claim_next_acquisition()
+        assert claimed is not None
+        self.assertEqual(claimed.ingestion_id, job.ingestion_id)
+        self.assertEqual(claimed.state, IngestionState.ACQUIRING)
+        self.assertIsNone(self.store.claim_next_acquisition())
+
+        receipt = AssetReceipt(
+            ingestion_id=job.ingestion_id,
+            asset_id="asset_0123456789abcdef",
+            provider_locator="zenodo:123:signals.csv",
+            expected_size_bytes=17,
+            source_checksum_algorithm="md5",
+            source_checksum_value="a" * 32,
+            observed_size_bytes=17,
+            content_sha256="b" * 64,
+            content_key=f"sha256/bb/{'b' * 64}",
+            acquired_at=datetime.now(UTC),
+        )
+        self.store.record_receipt(receipt)
+        self.store.close()
+        self.store = IngestionJobStore(Path(self.temporary.name) / "ingestions.sqlite3")
+
+        self.assertEqual(self.store.list_receipts(job.ingestion_id), [receipt])
+
+    def test_receipt_cannot_be_replaced(self) -> None:
+        job, _ = self.store.get_or_create(**self.arguments)
+        receipt = AssetReceipt(
+            ingestion_id=job.ingestion_id,
+            asset_id="asset_0123456789abcdef",
+            provider_locator="zenodo:123:signals.csv",
+            expected_size_bytes=17,
+            observed_size_bytes=17,
+            content_sha256="b" * 64,
+            content_key=f"sha256/bb/{'b' * 64}",
+            acquired_at=datetime.now(UTC),
+        )
+        self.store.record_receipt(receipt)
+
+        with self.assertRaises(IngestionJobConflict):
+            self.store.record_receipt(receipt.model_copy(update={"content_sha256": "c" * 64}))
 
 
 class FakeResolver:
