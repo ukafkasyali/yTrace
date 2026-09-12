@@ -154,3 +154,37 @@ samples and the unchanged canary-v4 checkpoint/config. It predicted accidental
 contact, J1 strongest, onset 429 ms. The full request, stream and input receipt are
 in [motion activation receipt](demo/motion-activation.json). This is connection
 verification on a train recording, not an accuracy or CPU/GPU equivalence result.
+
+## What changed? Incident/reference comparison
+
+1. Choose **Collision · reversed J3 motion** (`04-22-15-33`). Its incident window
+   is `[4.684,5.708)` seconds. Click **Compare with reference**, or the **Compare** tab.
+2. The suggested earlier reference is `[3.160,4.184)` in the same recording. It has
+   no nearby publisher annotation, but is not verified normal or phase-matched.
+   Both windows contain 1,024 raw samples per joint at 1 kHz. The browser showed J2
+   torque range changing from approximately **0.075 to 2.914 Nm**. This is a measured
+   difference, not a diagnosed fault or new model prediction.
+3. Use **Inspect joint** above the graph to inspect the shared-scale overlay, variability
+   and mean shift. **Inspect selected signal** opens its selected-window evidence.
+   Peak callouts point to original samples and show signed torque and recording time.
+   **All 7 joint measurements** expands the table. A peak is not a model onset.
+4. Expand **Change reference or compare another run**. Choose a recording and enter
+   its reference start, then **Compare windows**. Match motion phase, payload and
+   intended contact. The app enforces equal duration but cannot verify those conditions.
+5. Choose **Export comparison** to save source recording IDs, both intervals, sample
+   counts, all seven joints' metrics, annotations, method and investigation guidance.
+   This is separate from the model investigation export. To compare an older answer,
+   use **Compare this answer’s window** beneath it.
+
+If either window lacks raw coverage, both use overview samples and disclose missed
+peak risk. Browser verification compared the incident above with original recording
+`05-28-21-25` at `[1,2.024)`: both switched to 100 Hz (102 selected / 103 reference
+samples due to sampling-grid alignment). No resampling or mixed-resolution comparison
+is performed. Same-recording overlap is rejected with a visible explanation.
+
+Validation: 74 frontend tests and production build pass after integrating main's
+evidence-boundary and submission-pilot updates. Desktop and 390 px mobile
+browser checks covered reference editing, cross-recording loading, overlap rejection,
+joint overlays and report download, with no horizontal overflow. These checks establish
+working behavior, not measured debugging-time savings. Model training and inference
+configuration are unchanged; comparison runs as deterministic local calculations.

@@ -16,6 +16,11 @@ import traceback
 from urllib.parse import parse_qs, unquote, urlsplit
 import uuid
 
+try:
+    from .raw_recordings import CHANNEL_IDS, RawRecordingCatalog
+except ImportError:  # pragma: no cover - direct script execution
+    from raw_recordings import CHANNEL_IDS, RawRecordingCatalog
+
 DATASET_ID = "zenodo-21927431"
 MAX_BODY = 16_384
 TERMINAL = {"answer.completed", "query.error", "query.cancelled"}
@@ -164,12 +169,13 @@ class Job:
 
 
 class Bridge:
-    def __init__(self, runtime, data_path, catalog_path=None):
+    def __init__(self, runtime, data_path, catalog_path=None, raw_root=None):
         self.runtime = runtime
         raw = Path(data_path).read_bytes()
         self.data = json.loads(raw)
         validate_data(self.data)
         self.recordings = {self.data["recording"]["id"]: self.data}
+        self.raw_recordings = {}
         self.cases = []
         identity = hashlib.sha256(raw)
         if catalog_path is not None:
@@ -191,6 +197,13 @@ class Bridge:
                 self.validate_window({"datasetId": DATASET_ID, "recordingId": case["recordingId"],
                     "startSec": case["interval"]["start"], "endSec": case["interval"]["end"],
                     "channelIds": [f"joint_{i}" for i in range(1, 8)]}, raw_only=True)
+        if raw_root is not None:
+            raw_catalog = RawRecordingCatalog(raw_root)
+            self.raw_recordings = raw_catalog.recordings
+            # Source-backed recordings can extend a demo excerpt but must retain its
+            # stable recording ID and existing display/annotation contract.
+            identity.update("".join(sorted(record.torque_sha256 + record.marker_sha256
+                                            for record in self.raw_recordings.values())).encode())
         self.revision = identity.hexdigest()
         self.lock = threading.Lock()
         self.jobs = {}
@@ -219,33 +232,64 @@ class Bridge:
     def validate_window(self, window, raw_only=False):
         if not isinstance(window, dict):
             raise ApiError(400, "INVALID_WINDOW", "A telemetry window is required.")
-        if window.get("datasetId") != DATASET_ID or window.get("recordingId") not in self.recordings:
+        if (window.get("datasetId") != DATASET_ID or
+                window.get("recordingId") not in self.recordings and window.get("recordingId") not in self.raw_recordings):
             raise ApiError(404, "RECORDING_NOT_FOUND", "Unknown dataset or recording.")
-        data = self.recordings[window["recordingId"]]
+        data = self.recordings.get(window["recordingId"])
+        raw_recording = self.raw_recordings.get(window["recordingId"])
         start, end = window.get("startSec"), window.get("endSec")
-        duration = data["recording"]["durationSeconds"]
+        duration = raw_recording.duration_seconds if raw_recording else data["recording"]["durationSeconds"]
         if not finite(start) or not finite(end) or not 0 <= start < end <= duration:
             raise ApiError(400, "INVALID_WINDOW", "Choose a nonempty interval within the recording.")
         ids = window.get("channelIds")
-        known = {c["id"] for c in data["channels"]}
+        known = set(CHANNEL_IDS) if raw_recording else {c["id"] for c in data["channels"]}
         if not isinstance(ids, list) or not 1 <= len(ids) <= 7 or any(not isinstance(i, str) or i not in known for i in ids) or len(set(ids)) != len(ids):
             raise ApiError(400, "INVALID_CHANNELS", "Select one to seven distinct known channels.")
-        detail = data["detail"]
-        if raw_only and (start < detail["startSeconds"] or end > detail["endSeconds"]):
+        detail = data["detail"] if data else None
+        if raw_only and not raw_recording and (start < detail["startSeconds"] or end > detail["endSeconds"]):
             raise ApiError(422, "RAW_DATA_UNAVAILABLE", f"Inference requires raw samples within [{detail['startSeconds']:g}, {detail['endSeconds']:g}) seconds.")
         if raw_only:
-            if ids != [f"joint_{i}" for i in range(1, 8)]:
+            if ids != list(CHANNEL_IDS):
                 raise ApiError(422, "MODEL_INPUT_SHAPE", "OpenTSLM requires Joint 1 through Joint 7 in order.")
             if abs(end - start - 1.024) > 1e-8:
                 raise ApiError(422, "MODEL_INPUT_SHAPE", "Select exactly 1.024 seconds (1024 raw samples per joint).")
-            times = detail["times"][bisect.bisect_left(detail["times"], start):bisect.bisect_left(detail["times"], end)]
-            if (data["recording"]["sampleRateHz"] != 1000 or len(times) != 1024 or
+            try:
+                times = raw_recording.raw_window(start, end, ids)[0] if raw_recording else detail["times"][bisect.bisect_left(detail["times"], start):bisect.bisect_left(detail["times"], end)]
+            except ValueError as error:
+                raise ApiError(422, "RAW_DATA_UNAVAILABLE", "The requested source window is unavailable or gapped.") from error
+            if ((raw_recording is None and data["recording"]["sampleRateHz"] != 1000) or len(times) != 1024 or
                     any(abs(t - (start + i / 1000)) > 1e-8 for i, t in enumerate(times))):
                 raise ApiError(422, "MODEL_INPUT_SHAPE", "OpenTSLM requires 1024 contiguous raw samples at 1 kHz, aligned to the selected start.")
-        return {"datasetId": DATASET_ID, "recordingId": data["recording"]["id"],
+        return {"datasetId": DATASET_ID, "recordingId": window["recordingId"],
                 "startSec": start, "endSec": end, "channelIds": list(ids)}
 
     def signals(self, window, max_points=None):
+        raw_recording = self.raw_recordings.get(window["recordingId"])
+        if raw_recording:
+            try:
+                # Keep broad retrievals display-only, while allowing a caller to
+                # explicitly retrieve one model-sized source window at raw rate.
+                raw_requested = (window["endSec"] - window["startSec"] <= 1.024 + 1e-8 and
+                                 (max_points is None or max_points >= 1024))
+                if raw_requested:
+                    times, rows = raw_recording.raw_window(window["startSec"], window["endSec"], window["channelIds"])
+                else:
+                    times, rows = raw_recording.display_window(window["startSec"], window["endSec"], window["channelIds"])
+            except ValueError as error:
+                raise ApiError(422, "RAW_DATA_UNAVAILABLE", "The requested source window is unavailable or gapped.") from error
+            decimated = max_points is not None and len(times) > max_points
+            series = []
+            for channel_id, values in zip(window["channelIds"], rows):
+                indices = envelope_indices(values, max_points) if decimated else range(len(times))
+                series.append({"channelId": channel_id, "timeSec": [times[index] for index in indices],
+                               "values": [values[index] for index in indices]})
+            result = {"window": window, "series": series,
+                      "resolution": "raw" if raw_requested and not decimated else "display"}
+            if result["resolution"] == "display":
+                result["aggregation"] = "100 Hz overview subsampling; short peaks may be absent"
+                if decimated:
+                    result["aggregation"] += "; per-channel min/max display envelope"
+            return result
         data = self.recordings[window["recordingId"]]
         detail = data["detail"]
         raw = window["startSec"] >= detail["startSeconds"] and window["endSec"] <= detail["endSeconds"]
@@ -281,7 +325,10 @@ class Bridge:
             raise ApiError(400, "INVALID_QUERY", "Enter a question of one to 4000 characters.")
         window = self.validate_window(request.get("window"), raw_only=True)
         playhead = request.get("playheadSec")
-        if not finite(playhead) or not window["endSec"] <= playhead <= self.recordings[window["recordingId"]]["recording"]["durationSeconds"]:
+        duration = (self.raw_recordings[window["recordingId"]].duration_seconds
+                    if window["recordingId"] in self.raw_recordings
+                    else self.recordings[window["recordingId"]]["recording"]["durationSeconds"])
+        if not finite(playhead) or not window["endSec"] <= playhead <= duration:
             raise ApiError(400, "FUTURE_CONTEXT", "The query window must not extend beyond the playback cursor.")
         if not self.runtime.ready:
             raise ApiError(503, "MODEL_NOT_READY", "The model is loading or unavailable. Check service health.", True)
@@ -424,9 +471,22 @@ class Handler(BaseHTTPRequestHandler):
         elif len(route) == 3 and route[0] == "datasets" and route[2] == "recordings":
             if route[1] != DATASET_ID:
                 raise ApiError(404, "DATASET_NOT_FOUND", "Unknown dataset.")
-            self.json_response(200, [{"id": recording["id"], "datasetId": DATASET_ID, "name": recording["name"],
-                     "durationSec": recording["durationSeconds"], "channels": [{"id": c["id"], "name": c["name"],
-                     "unit": c["unit"], "sampleRateHz": recording["sampleRateHz"]} for c in item["channels"]]} for item in bridge.recordings.values() for recording in [item["recording"]]])
+            records = []
+            recording_ids = list(bridge.recordings) + sorted(set(bridge.raw_recordings) - set(bridge.recordings))
+            for recording_id in recording_ids:
+                source = bridge.raw_recordings.get(recording_id)
+                if source:
+                    recording = source.metadata()
+                    channels = [{"id": channel_id, "name": f"Joint {index}", "unit": "Nm", "sampleRateHz": 1000}
+                                for index, channel_id in enumerate(CHANNEL_IDS, 1)]
+                else:
+                    item = bridge.recordings[recording_id]
+                    recording = item["recording"]
+                    channels = [{"id": c["id"], "name": c["name"], "unit": c["unit"],
+                                 "sampleRateHz": recording["sampleRateHz"]} for c in item["channels"]]
+                records.append({"id": recording["id"], "datasetId": DATASET_ID, "name": recording["name"],
+                                "durationSec": recording["durationSeconds"], "channels": channels})
+            self.json_response(200, records)
         elif route == ["models"]:
             self.json_response(200, [{"id": "assistant", "label": "Telemetry assistant", "available": bool(bridge.runtime.ready),
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
@@ -435,18 +495,19 @@ class Handler(BaseHTTPRequestHandler):
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})}])
         elif len(route) == 3 and route[0] == "recordings":
-            if route[1] not in bridge.recordings:
+            if route[1] not in bridge.recordings and route[1] not in bridge.raw_recordings:
                 raise ApiError(404, "RECORDING_NOT_FOUND", "Unknown recording.")
-            data = bridge.recordings[route[1]]
-            recording = data["recording"]
+            source = bridge.raw_recordings.get(route[1])
             if route[2] == "replay":
-                self.json_response(200, data)
+                self.json_response(200, bridge.recordings.get(route[1]) or source.replay_data())
             elif route[2] == "events":
-                self.json_response(200, [{"id": e["id"], "recordingId": recording["id"], "startSec": e["timeSeconds"],
-                     "channelIds": [], "label": e["label"], "origin": "publisher_annotation", "source": e["source"]} for e in data["events"]])
+                data = bridge.recordings.get(route[1])
+                events = source.events() if source else data["events"]
+                self.json_response(200, [{"id": e["id"], "recordingId": route[1], "startSec": e["timeSeconds"],
+                     "channelIds": [], "label": e["label"], "origin": "publisher_annotation", "source": e["source"]} for e in events])
             elif route[2] == "signals":
                 try:
-                    window = {"datasetId": DATASET_ID, "recordingId": recording["id"],
+                    window = {"datasetId": DATASET_ID, "recordingId": route[1],
                               "startSec": float(query["startSec"][0]), "endSec": float(query["endSec"][0]),
                               "channelIds": query["channelIds"][0].split(",")}
                     max_points = int(query.get("maxPoints", ["2000"])[0])
@@ -493,9 +554,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
 
-def make_server(runtime, host="127.0.0.1", port=8000, data_path=None, load_runtime=True):
+def make_server(runtime, host="127.0.0.1", port=8000, data_path=None, raw_root=None, load_runtime=True):
     path = data_path or Path(__file__).resolve().parents[1] / "frontend/public/data/kuka-demo.json"
-    bridge = Bridge(runtime, path, Path(__file__).with_name("demo_cases.json") if data_path is None else None)
+    bridge = Bridge(runtime, path, Path(__file__).with_name("demo_cases.json") if data_path is None else None, raw_root)
     server = ThreadingHTTPServer((host, port), Handler)
     server.daemon_threads = True
     server.bridge = bridge
@@ -510,12 +571,13 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--data", type=Path)
+    parser.add_argument("--raw-root", type=Path, help="trusted local KUKA source root; never expose it through the API")
     args = parser.parse_args()
     try:
         from .runtime import Runtime
     except ImportError:
         from runtime import Runtime
-    server = make_server(Runtime(), host=args.host, port=args.port, data_path=args.data)
+    server = make_server(Runtime(), host=args.host, port=args.port, data_path=args.data, raw_root=args.raw_root)
     print(f"Inference bridge listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()

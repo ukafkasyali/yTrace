@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowLeft, Database, Pause, Play, Radio, RotateCcw, SkipBack, SkipForward, Waves } from 'lucide-react';
 import AssistantPanel from './assistant/AssistantPanel';
+import ComparisonPanel from './comparison/ComparisonPanel';
 import type { PredictionCue } from './assistant/predictionBrief';
 import { loadDemoData, selectWindow } from './lib/data';
 import { intervalLabel, timecode } from './lib/format';
 import RecordingContext from './recordings/RecordingContext';
-import { createMarkerAnalysis, type AutomaticAnalysisRequest } from './recordings/markerAnalysis';
+import { markerWindow } from './recordings/markerAnalysis';
 import { useModelRegistry } from './services/useModelRegistry';
+import { useRawWindow } from './lib/useRawWindow';
 import { useReplay } from './replay/useReplay';
 import { ApiError, createServices, type Recording } from './services';
 import SignalViewer from './signals/SignalViewer';
@@ -59,12 +61,14 @@ export default function App() {
   return <Workbench key={`${datasetId}:${data.recording.id}:${data.demoCase?.id ?? "default"}`} data={data} datasetId={datasetId} onOpenRecording={openRecording} cases={cases} onOpenCase={openCase} caseLoading={caseLoading} caseError={caseError}/>;
 }
 
-function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLoading, caseError }: { data: DemoData; datasetId: string; onOpenRecording: (recording: Recording) => Promise<void>; cases: DemoCase[]; onOpenCase: (id: string) => Promise<void>; caseLoading: boolean; caseError: string }) {
-  const replay = useReplay(data.recording.durationSeconds, data.demoCase?.interval.start ?? Math.min(5.787, data.recording.durationSeconds/3));
-  const [visualMode, setVisualMode] = useState<'robot' | 'signals' | 'markers'>('robot');
+function Workbench({ data: sourceData, datasetId, onOpenRecording, cases, onOpenCase, caseLoading, caseError }: { data: DemoData; datasetId: string; onOpenRecording: (recording: Recording) => Promise<void>; cases: DemoCase[]; onOpenCase: (id: string) => Promise<void>; caseLoading: boolean; caseError: string }) {
+  const replay = useReplay(sourceData.recording.durationSeconds, sourceData.demoCase?.interval.start ?? Math.min(5.787, sourceData.recording.durationSeconds/3));
+  const [visualMode, setVisualMode] = useState<'robot' | 'signals' | 'markers' | 'compare'>('robot');
   const [view, setView] = useState<'inspect' | 'data'>('inspect');
   const [mobile, setMobile] = useState<'signals' | 'assistant'>('signals');
-  const [interval, setInterval] = useState<Interval>(data.demoCase?.interval ?? { start: Math.min(5.787, data.recording.durationSeconds/3), end: Math.min(6.811, data.recording.durationSeconds) });
+  const [interval, setInterval] = useState<Interval>(sourceData.demoCase?.interval ?? { start: Math.min(5.787, sourceData.recording.durationSeconds/3), end: Math.min(6.811, sourceData.recording.durationSeconds) });
+  const rawWindow = useRawWindow(sourceData, datasetId, interval, services);
+  const data = rawWindow.data;
   const [following, setFollowing] = useState(false);
   const [zoom, setZoom] = useState(10);
   const [highlighted, setHighlighted] = useState<string[]>([]);
@@ -79,6 +83,9 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
     replay.seek(prediction.onsetSeconds); setFollowing(false); setHighlighted(prediction.channelId ? [prediction.channelId] : []);
     setView('inspect'); setMobile('signals'); setVisualMode('robot');
   }
+  function openComparison(window: Interval) {
+    replay.pause(); setReplayStop(undefined); setInterval({ ...window }); setVisualMode('compare'); setMobile('signals'); setView('inspect');
+  }
   function replayInterval() {
     replay.seek(interval.start); replay.setSpeed(.5); setReplayStop(interval.end); setFollowing(true); replay.toggle();
   }
@@ -86,8 +93,6 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   const [draftEnd, setDraftEnd] = useState(interval.end.toFixed(3));
   const [selectionError, setSelectionError] = useState('');
   const registry = useModelRegistry(services);
-  const [automaticAnalysis, setAutomaticAnalysis] = useState<AutomaticAnalysisRequest>();
-  const modelRevision = registry.models.find(model => model.id === 'assistant')?.revision;
   const availability = !services.connected ? 'Models not connected' : registry.loading ? 'Checking models…' : registry.error ? 'Model service unavailable' : registry.models.some(m => m.id === 'opentslm' && m.available) ? 'OpenTSLM connected' : 'Model unavailable';
   useEffect(() => { setDraftStart(interval.start.toFixed(3)); setDraftEnd(interval.end.toFixed(3)); }, [interval]);
   const previewChannels = useMemo(() => {
@@ -109,7 +114,17 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   function seek(value: number) {
     setReplayStop(undefined); replay.seek(value); setFollowing(true); setHighlighted([]); setSelectionError('');
   }
-  function marker(e: Marker) { setReplayStop(undefined); const analysis = createMarkerAnalysis(data, e, 0, modelRevision); replay.seek(analysis.interval.start); setInterval(analysis.interval); setAutomaticAnalysis(analysis); setVisualMode('robot'); setMobile('signals'); setFollowing(false); setHighlighted([]); setSelectionError(''); }
+  function marker(e: Marker) {
+    setReplayStop(undefined);
+    const context = markerWindow(e, data.recording.durationSeconds);
+    replay.seek(context.start);
+    setInterval(context);
+    setVisualMode('robot');
+    setMobile('signals');
+    setFollowing(false);
+    setHighlighted([]);
+    setSelectionError('');
+  }
   function navigateMarker(direction: number) {
     const target = direction > 0 ? data.events.find(e => e.timeSeconds > Math.max(interval.end, replay.playhead)) : [...data.events].reverse().find(e => e.timeSeconds < (effectiveInterval.start || replay.playhead));
     if (target) marker(target);
@@ -122,11 +137,12 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
         {(cases.length > 0 || caseError) && <div className="demo-cases"><label>Recording <select aria-label="Example case" disabled={caseLoading} value={data.demoCase?.id ?? ''} onChange={e => void onOpenCase(e.target.value)}><option value="" disabled>KUKA · original recording</option>{cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><details className="case-source"><summary>Source · {data.recording.id}</summary><p>{data.demoCase?.note ?? 'Original KUKA recording. Publisher markers are annotations, not verified contact onset. Raw model input is available from 4 to 9 seconds.'}</p></details>{(caseLoading || caseError) && <span role={caseError ? 'alert' : 'status'}>{caseLoading ? 'Loading raw telemetry…' : caseError}</span>}</div>}
         <div className="mobile-switch"><button className={mobile === 'signals' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('signals'); setVisualMode('signals'); }}>Replay</button><button className={mobile === 'assistant' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('assistant'); }}>Investigation</button></div>
         <div className={`inspect-grid mobile-${mobile}`} style={{ display: view === 'inspect' ? undefined : 'none' }}>
-          <div className="left-workspace"><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} automaticAnalysis={automaticAnalysis} onEvidence={evidence} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
+          <div className="left-workspace"><AssistantPanel rawLoading={rawWindow.loading} rawError={rawWindow.error} onRetryRaw={rawWindow.retry} registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onCompare={openComparison} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
           <div className={`visual-workspace visual-${visualMode}`}>
-            <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : 'Publisher markers'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
-            {visualMode !== 'signals' && <RecordingContext prediction={visiblePrediction} display={visualMode === 'robot' ? 'robot' : 'overview'} datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/>}
-            {visualMode !== 'markers' && <SignalViewer visibleChannelIds={visualMode === 'robot' ? previewChannels : undefined} data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>}
+            <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers', 'compare'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : mode === 'markers' ? 'Publisher markers' : 'Compare'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
+            {visualMode === 'compare' && <ComparisonPanel key={`${interval.start}:${interval.end}`} data={data} interval={interval} cases={cases} services={services} onEvidence={e => { evidence(e); replay.seek(e.interval.end); }}/> }
+            {(visualMode === 'robot' || visualMode === 'markers') && <RecordingContext prediction={visiblePrediction} display={visualMode === 'robot' ? 'robot' : 'overview'} datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/>}
+            {(visualMode === 'robot' || visualMode === 'signals') && <SignalViewer visibleChannelIds={visualMode === 'robot' ? previewChannels : undefined} data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>}
           </div>
         </div>
         {view === 'data' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><DataWorkspace services={services} data={data} onOpenRecording={onOpenRecording}/></div>}

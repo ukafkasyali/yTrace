@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 from dataset_profiler.evidence import DocumentationSource, EvidenceSession
-from dataset_profiler.semantic_agent import OpenAIChatClient, SemanticAgentError, generate_dataset_spec
+from dataset_profiler.semantic_agent import OpenAIChatClient, OpenAIResponsesClient, SemanticAgentError, generate_dataset_spec
 from dataset_profiler.semantic_agent.repair import run_repairs
 from dataset_profiler.semantic_agent.evaluation import compare_specs
 from dataset_profiler.semantic_agent.profile_io import read_dataset_profile
@@ -17,13 +17,20 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, default=Path("outputs"))
     parser.add_argument("--model", default="gpt-4.1-mini")
     parser.add_argument("--reasoning-effort")
+    parser.add_argument("--responses-api", action="store_true", help="Use official OpenAI Responses API")
+    parser.add_argument("--allow-reasoning-fallback", action="store_true")
+    parser.add_argument("--request-timeout", type=float, default=120)
+    parser.add_argument("--max-output-tokens", type=int, default=8192)
     parser.add_argument("--repair", action="store_true")
     parser.add_argument("--evaluate-kuka-part1", action="store_true")
     args = parser.parse_args()
     profile = read_dataset_profile(args.profile)
     docs = [DocumentationSource(f"doc-{index + 1}", path, path.name) for index, path in enumerate(args.documentation)]
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    client = OpenAIChatClient(args.model, reasoning_effort=args.reasoning_effort)
+    client = (OpenAIResponsesClient(args.model, reasoning_effort=args.reasoning_effort, allow_reasoning_fallback=args.allow_reasoning_fallback,
+                                    timeout=args.request_timeout, max_output_tokens=args.max_output_tokens,
+                                    diagnostic_logger=lambda event, fields: print(json.dumps({"event": event, **fields}), flush=True))
+              if args.responses_api else OpenAIChatClient(args.model, reasoning_effort=args.reasoning_effort))
     try:
         run = generate_dataset_spec(profile, EvidenceSession(profile, documentation_sources=docs), client)
     except SemanticAgentError as exc:

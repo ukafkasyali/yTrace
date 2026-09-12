@@ -28,6 +28,7 @@ class SemanticAgentTests(unittest.TestCase):
         run = SemanticAgent(client).run(self.profile, EvidenceSession(self.profile))
         call = run.trace["tool_calls"][0]
         self.assertEqual(call["name"], "dataset_summary")
+        self.assertEqual(call["call_id"], "call-1")
         self.assertEqual(len(call["returned_evidence_ids"]), 1)
         self.assertTrue(call["returned_evidence_ids"][0].startswith("ev_"))
         self.assertEqual(run.spec.schema_version, "0.1")

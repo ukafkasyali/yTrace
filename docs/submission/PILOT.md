@@ -1,6 +1,6 @@
 # Pilot: time to a correct investigation report
 
-Status: protocol prepared; no participants recruited, no results collected. This document must not be presented as user-study evidence.
+Status: protocol prepared; no participants recruited, no results collected. This document must not be presented as user-study evidence. The facilitator materials are in [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md); record observations only in `pilot-results.csv` using its documented columns.
 
 ## Decision
 
@@ -8,7 +8,7 @@ Does Trace's evidence-linked analysis and export help robotics engineers complet
 
 ## Protocol
 
-Recruit 3–5 robotics engineers for a formative pilot. Ask first how they investigate a recorded incident, which artifacts they hand off, and what information is usually missing. Do not solicit a positive testimonial or prime them with a claimed time saving.
+Recruit four robotics engineers for a formative pilot so each condition and case pairing can be counterbalanced. Ask first how they investigate a recorded incident, which artifacts they hand off, and what information is usually missing. Do not solicit a positive testimonial or prime them with a claimed time saving.
 
 Prepare six matched cases across collision, intentional contact and free motion. Use development/validation recordings; do not tune the model with final test answers. Keep source labels hidden during tasks. Give both conditions the same telemetry and documentation. Match case difficulty by duration and signal strength; each participant sees distinct cases in each condition. Counterbalance case assignment and condition order.
 
@@ -16,7 +16,7 @@ Condition A: synchronized charts and ordinary numerical tools, without generated
 
 Each task asks the participant to locate the event, state its class or abstain, identify strongest signal changes, and produce a short evidence-backed report. A reviewer blinded to condition scores against publisher labels for class/onset and separately against deterministic measurements for joint quantities. Do not score a physical root-cause diagnosis: no such ground truth exists.
 
-Record condition, order, case ID, elapsed seconds, completion, class correctness, onset error, measurement correctness, unsupported claims, tool failures and qualitative comments in `pilot-results.csv`. Use anonymous participant IDs and do not put personal information in the repository.
+Record condition, order, case ID, elapsed seconds, completion, class correctness, onset error, measurement correctness, unsupported claims, tool failures and qualitative comments in `pilot-results.csv`. Use anonymous participant IDs and do not put personal information in the repository. The runbook defines the observation start/stop rule, scoring rubric and a six-case manifest before the first participant.
 
 ## Analysis and decision rule
 

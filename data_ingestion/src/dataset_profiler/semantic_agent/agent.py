@@ -50,12 +50,26 @@ class SemanticAgent:
         self.client, self.max_turns = client, max_turns
 
     def run(self, profile: DatasetProfile, session: EvidenceSession, *, user_context: str | None = None) -> SemanticAgentRun:
+        if hasattr(self.client, "reset"): self.client.reset()
         messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
         if user_context:
             messages.append({"role": "user", "content": user_context})
-        trace: dict[str, Any] = {"run_id": str(uuid4()), "started_at": datetime.now(UTC).isoformat(), "dataset_id": profile.dataset_id, "provider": self.client.provider, "model": self.client.model, "base_url": getattr(self.client, "base_url", None), "reasoning_effort": getattr(self.client, "reasoning_effort", None), "tool_calls": [], "raw_structured_output": None, "parsed_candidate": None, "failure": None}
+        trace: dict[str, Any] = {"run_id": str(uuid4()), "started_at": datetime.now(UTC).isoformat(), "dataset_id": profile.dataset_id, "provider": self.client.provider, "model": self.client.model, "base_url": getattr(self.client, "base_url", None), "reasoning_effort": getattr(self.client, "reasoning_effort", None), "tool_calls": [], "responses": [], "response_ids": [], "raw_structured_output": None, "parsed_candidate": None, "failure": None}
         for _ in range(self.max_turns):
-            response = self.client.complete(messages, TOOLS, dataset_spec_json_schema())
+            try:
+                response = self.client.complete(messages, TOOLS, dataset_spec_json_schema())
+            except Exception as exc:
+                trace["failure"] = {"kind": "client", "exception_type": type(exc).__name__, "message": str(exc)}
+                if hasattr(exc, "payload"):
+                    payload = exc.payload
+                    trace["failure"].update({key: payload.get(key) for key in ("id", "status", "error", "incomplete_details")})
+                    trace["failure"]["output_item_types"] = [item.get("type") for item in payload.get("output", [])]
+                trace["effective_reasoning_effort"] = getattr(self.client, "effective_reasoning_effort", None)
+                trace["reasoning_fallback_reason"] = getattr(self.client, "fallback_reason", None)
+                raise SemanticAgentError(f"Model request failed: {exc}", trace) from exc
+            if response.get("response_id"): trace["response_ids"].append(response["response_id"])
+            if response.get("response_id"):
+                trace["responses"].append({key: response.get(key) for key in ("response_id", "status", "error", "incomplete_details", "output_item_types")})
             if response.get("usage"): trace.setdefault("usage", []).append(response["usage"])
             calls = response.get("tool_calls", [])
             if calls:
@@ -63,7 +77,7 @@ class SemanticAgent:
                 for call in calls:
                     result = _dispatch(session, call["name"], call.get("arguments", {}))
                     rendered = _result_dict(result)
-                    trace["tool_calls"].append({"name": call["name"], "arguments": call.get("arguments", {}), "returned_evidence_ids": _evidence_ids(result), "result": rendered})
+                    trace["tool_calls"].append({"name": call["name"], "arguments": call.get("arguments", {}), "call_id": call.get("call_id", call["id"]), "item_id": call.get("item_id"), "returned_evidence_ids": _evidence_ids(result), "result": rendered})
                     messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(rendered)})
                 continue
             raw = response.get("content")
@@ -74,6 +88,7 @@ class SemanticAgent:
                 raise SemanticAgentError(f"Model returned invalid DatasetSpec: {exc}", trace) from exc
             trace["parsed_candidate"] = spec.to_dict()
             trace["effective_reasoning_effort"] = getattr(self.client, "effective_reasoning_effort", None)
+            trace["reasoning_fallback_reason"] = getattr(self.client, "fallback_reason", None)
             return SemanticAgentRun(spec, trace)
         trace["failure"] = {"kind": "turn_limit", "message": f"Exceeded {self.max_turns} turns"}
         raise SemanticAgentError(trace["failure"]["message"], trace)
