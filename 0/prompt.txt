@@ -1,1 +1,13 @@
 create an model_training folder and copy \\wsl.localhost\Ubuntu\root\projects\model_training\challenge_description.md under it and create a commit and push it using entire.io, already configured here
+
+---
+
+ok now I need to have my github identity of atakan-topaloglu, I can login however you want or need.
+
+---
+
+my username is https://github.com/atakan-topaloglu and I want commits to be authored by that.
+
+---
+
+I can login if needed. I want my profile picture etc to appear, I want the commit from directly my account, not from root. We are in wsl
