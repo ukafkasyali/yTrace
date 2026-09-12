@@ -1,9 +1,1 @@
-I think connection may be interrupted, check everything
-
----
-
-use learnings from this round and add the training observability instrumentation. Currently I cant see training examples in wandb, maybe the training loss dropped too fast. Maybe we cant fit to training examples either. For the next run, we need it
-
----
-
 if you already didnt create, create the other baselines as well (qwen3 with plots without training for example)
