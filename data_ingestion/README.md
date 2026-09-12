@@ -38,6 +38,58 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 
 The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dataset_profile.json), and the observed facts, interpretations, and unresolved questions are documented in [docs/KUKA_BATCH_01_INSPECTION.md](docs/KUKA_BATCH_01_INSPECTION.md).
 
+## Declarative semantic specs
+
+`dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and
+`validate_dataset_spec(profile, spec)`. Validation returns a structured `ValidationResult`; ordinary
+unsupported or inconsistent claims are reported as stable issue codes rather than exceptions. The
+canonical KUKA Part I / Batch 01 mapping is the packaged
+[`kuka_collision_part1.json`](src/dataset_profiler/semantic_spec/specs/kuka_collision_part1.json)
+artifact and can be loaded with `load_kuka_collision_part1_spec()`. It describes semantics only and
+does not drive or duplicate the trusted KUKA parser/connector implementation.
+
+## Bounded Evidence API
+
+`EvidenceSession(profile)` exposes deterministic `dataset_summary()`, `variable_schema(name)`,
+`signal_statistics(name)`, and `metadata_summary()` queries without exposing absolute source paths or
+full arrays.
+Every successful query returns a structured `Evidence` object with a deterministic evidence ID;
+normal failures return a structured `EvidenceError`. Per-query limits and cumulative session budgets
+are configured with `EvidenceLimits` and `EvidenceBudget`.
+
+Source excerpts are disabled by default. A trusted host can opt in with
+`EvidenceSession(profile, allow_bounded_source_excerpts=True)`. The caller still supplies only a
+profiled run ID, variable, start, length, and channel indices. The implementation resolves the
+profile-owned source internally and enforces sample, channel, query, excerpt-query, returned-value,
+and serialized-response limits.
+
+Defaults are 32 samples and 8 channels per excerpt, 16 per-channel statistic entries, 50 metadata
+entries per collection, and 32 KiB per serialized response. A session permits 32 total queries,
+4 successful excerpt queries, and 256 returned excerpt values by default.
+
+Trusted hosts can also register Markdown and UTF-8 text documentation explicitly. Search callers
+receive logical source IDs and bounded excerpts, never document paths or semantic mappings:
+
+```python
+from dataset_profiler.evidence import DocumentationSource, EvidenceSession
+
+session = EvidenceSession(
+    profile,
+    documentation_sources=[
+        DocumentationSource("dataset-readme", "/trusted/dataset/README.md", "Dataset README"),
+    ],
+)
+sources = session.documentation_sources()
+matches = session.documentation_search("signal name", max_results=3)
+```
+
+Documents are read once at session construction and identified by a content hash in evidence
+identity. Search is deterministic, case-insensitive, and line based, with exact-case matches ranked
+first. Defaults allow 16 registered sources of at most 1 MiB each, 5 results, 800 characters per
+excerpt, 3,200 excerpt characters per search, 8 documentation searches, and 12,000 returned
+documentation characters per session. Unsupported, malformed, missing, and unavailable sources use
+structured statuses or `EvidenceError` responses.
+
 ## KUKA Part I to TimeF
 
 The connector is owned by this package under `dataset_profiler.timenet.kuka_collision`. Its dataset
@@ -110,3 +162,4 @@ and Part II remain separate datasets:
 ```
 
 The resulting dataset versions are written below the registry as `kuka/collision-part1` and
+`kuka/contact-part2`, respectively. The existing per-part build scripts remain available.
