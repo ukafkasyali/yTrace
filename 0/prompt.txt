@@ -1,0 +1,5 @@
+pull everything from main
+
+---
+
+create an model_training folder and copy \\wsl.localhost\Ubuntu\root\projects\model_training\challenge_description.md under it and create a commit and push it using entire.io, already configured here
