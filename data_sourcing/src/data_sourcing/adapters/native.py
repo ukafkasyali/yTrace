@@ -121,6 +121,9 @@ def build_verified_candidate(
     sample_rates: list[float] = []
     channel_counts: list[int] = []
     schema_documented = False
+    has_native_archive = any(
+        document.source_kind is not SourceKind.GITHUB for document in documents
+    )
 
     for document in documents:
         text = document.text.casefold()
@@ -155,7 +158,12 @@ def build_verified_candidate(
 
         evidence.append(_evidence(candidate.id, document, "revision", document.revision))
         if document.license_id:
-            evidence.append(_evidence(candidate.id, document, "license", document.license_id))
+            license_claim = (
+                "code_license"
+                if document.source_kind is SourceKind.GITHUB and has_native_archive
+                else "license"
+            )
+            evidence.append(_evidence(candidate.id, document, license_claim, document.license_id))
         if document_extensions:
             evidence.append(
                 _evidence(
@@ -303,28 +311,32 @@ class NativeVerifier:
             for item in json.loads(fixture_path.read_text(encoding="utf-8"))
         ]
 
-    def _get_json(self, url: str, headers: dict[str, str] | None = None) -> dict:
+    def _get_bytes(self, url: str, headers: dict[str, str] | None = None) -> bytes:
         validate_source_url(url)
         if self.validate_dns:
             resolve_public_host(urlsplit(url).hostname or "")
-        response = self.client.get(url, headers=headers)
-        response.raise_for_status()
-        if len(response.content) > self.settings.max_source_response_bytes:
-            raise SourceUnavailable("Native source response exceeded the configured size limit")
-        payload = response.json()
+        with self.client.stream("GET", url, headers=headers) as response:
+            response.raise_for_status()
+            declared_length = response.headers.get("Content-Length")
+            if declared_length and int(declared_length) > self.settings.max_source_response_bytes:
+                raise SourceUnavailable("Native source response exceeded the configured size limit")
+            content = bytearray()
+            for chunk in response.iter_bytes():
+                content.extend(chunk)
+                if len(content) > self.settings.max_source_response_bytes:
+                    raise SourceUnavailable(
+                        "Native source response exceeded the configured size limit"
+                    )
+        return bytes(content)
+
+    def _get_json(self, url: str, headers: dict[str, str] | None = None) -> dict:
+        payload = json.loads(self._get_bytes(url, headers))
         if not isinstance(payload, dict):
             raise SourceUnavailable("Native source returned an unexpected JSON shape")
         return payload
 
     def _get_text(self, url: str, headers: dict[str, str] | None = None) -> str:
-        validate_source_url(url)
-        if self.validate_dns:
-            resolve_public_host(urlsplit(url).hostname or "")
-        response = self.client.get(url, headers=headers)
-        response.raise_for_status()
-        if len(response.content) > self.settings.max_source_response_bytes:
-            raise SourceUnavailable("Native source response exceeded the configured size limit")
-        return response.text
+        return self._get_bytes(url, headers).decode("utf-8", errors="replace")
 
     def _live_documents(self, candidate: DatasetCandidate) -> list[NativeDocument]:
         queued = [str(candidate.canonical_url), *(str(url) for url in candidate.related_urls)]

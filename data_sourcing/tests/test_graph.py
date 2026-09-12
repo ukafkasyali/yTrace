@@ -4,9 +4,16 @@ from uuid import uuid4
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import Command
 
+from data_sourcing.adapters.discovery import SearchBatch
 from data_sourcing.config import Settings
 from data_sourcing.graph import DatasetScoutGraph, initial_state
-from data_sourcing.models import CreateSourcingRun, RunStatus
+from data_sourcing.models import (
+    CreateSourcingRun,
+    ExecutionMode,
+    RunStatus,
+    SearchHypothesis,
+    SearchResult,
+)
 
 
 def build_graph() -> tuple[DatasetScoutGraph, sqlite3.Connection]:
@@ -92,5 +99,92 @@ def test_unknown_task_labels_are_mandatory_input_not_vacuous_success() -> None:
         item for item in result["requirements"] if item["id"] == "req_task_labels"
     )
     assert task_requirement["status"] == "MISSING"
+    scout.close()
+    connection.close()
+
+
+def test_mixed_live_and_cached_discovery_is_marked_partial() -> None:
+    class SequencedSearch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.calls += 1
+            return SearchBatch(
+                results=[
+                    SearchResult(
+                        title=f"Result {self.calls}",
+                        url=f"https://zenodo.org/records/{self.calls}",
+                        query=query,
+                    )
+                ],
+                credits_used=2 if self.calls == 1 else 0,
+                execution_mode=(ExecutionMode.LIVE if self.calls == 1 else ExecutionMode.CACHED),
+                warnings=[] if self.calls == 1 else ["cache fallback"],
+            )
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    search = SequencedSearch()
+    scout = DatasetScoutGraph(Settings(_env_file=None), saver, search=search)
+    state = initial_state(
+        str(uuid4()),
+        CreateSourcingRun(brief="Find robot collision telemetry from public datasets."),
+        allow_cached_demo=True,
+    )
+    hypotheses = [
+        SearchHypothesis(id="hyp_one", rationale="first", query="robot collision one"),
+        SearchHypothesis(id="hyp_two", rationale="second", query="robot collision two"),
+    ]
+    state["hypotheses"] = [item.model_dump(mode="json") for item in hypotheses]
+
+    update = scout._perform_searches(state, hypotheses)
+
+    assert update["execution_mode"] == ExecutionMode.PARTIAL.value
+    assert "cache fallback" in update["errors"]
+    scout.close()
+    connection.close()
+
+
+def test_query_budget_is_three_initial_plus_two_gap_searches() -> None:
+    class EmptySearch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.calls += 1
+            return SearchBatch(
+                results=[],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    search = EmptySearch()
+    scout = DatasetScoutGraph(Settings(_env_file=None), saver, search=search)
+    run_id = str(uuid4())
+
+    result = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief="Find public robot collision torque time-series datasets for training."
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    assert search.calls == 5
+    assert result["tavily_credits_used"] == 10
+    assert result["gap_queries_used"] == 2
+    assert result["status"] == RunStatus.NEEDS_INPUT.value
     scout.close()
     connection.close()

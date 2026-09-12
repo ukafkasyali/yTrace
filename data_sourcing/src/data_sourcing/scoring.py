@@ -50,6 +50,13 @@ def requirement_is_evidenced(
     profile: DatasetProfile,
     evidence: list[EvidenceRecord],
 ) -> bool:
+    claim = requirement_claim_key(requirement)
+    return requirement_is_met(requirement, profile) and bool(
+        claim and _evidence_for(evidence, profile.candidate_id, claim)
+    )
+
+
+def requirement_claim_key(requirement: ResearchRequirement) -> str | None:
     claim_by_category = {
         RequirementCategory.TASK_LABELS: "labels",
         RequirementCategory.SAMPLING_RATE: "sample_rate_hz",
@@ -59,10 +66,7 @@ def requirement_is_evidenced(
         RequirementCategory.SCHEMA: "schema",
         RequirementCategory.ACQUISITION: "total_size_bytes",
     }
-    claim = claim_by_category.get(requirement.category)
-    return requirement_is_met(requirement, profile) and bool(
-        claim and _evidence_for(evidence, profile.candidate_id, claim)
-    )
+    return claim_by_category.get(requirement.category)
 
 
 def requirement_is_met(requirement: ResearchRequirement, profile: DatasetProfile) -> bool:

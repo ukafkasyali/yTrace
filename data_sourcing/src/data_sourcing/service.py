@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from typing import Any
 from uuid import uuid4
 
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -9,8 +10,19 @@ from langgraph.types import Command
 
 from data_sourcing.config import Settings
 from data_sourcing.graph import DatasetScoutGraph, initial_state
-from data_sourcing.models import ApprovalDecision, ApprovalRequest, CreateSourcingRun, RunStatus
-from data_sourcing.storage import ArtifactStore, IdempotencyConflict, IdempotencyStore
+from data_sourcing.models import (
+    ApprovalDecision,
+    ApprovalRequest,
+    CreateSourcingRun,
+    RunStatus,
+    SourcingRun,
+)
+from data_sourcing.storage import (
+    ArtifactStore,
+    IdempotencyConflict,
+    IdempotencyStore,
+    InvalidIdempotencyKey,
+)
 
 _DEMO_REPOSITORY = "github.com/zhang-zengjie/robot-raw-collision-signals"
 
@@ -43,6 +55,22 @@ class SourcingService:
     def _config(run_id: str) -> dict:
         return {"configurable": {"thread_id": run_id}}
 
+    def _stream_graph(self, graph_input: Any, run_id: str) -> SourcingRun:
+        latest = None
+        for state in self.scout.graph.stream(
+            graph_input,
+            self._config(run_id),
+            stream_mode="values",
+        ):
+            if state.get("run_id"):
+                latest = self.artifacts.persist(state)
+        if latest is None:
+            snapshot = self.scout.graph.get_state(self._config(run_id))
+            if not snapshot.values:
+                raise RuntimeError("Graph produced no checkpointed state")
+            latest = self.artifacts.persist(dict(snapshot.values))
+        return latest
+
     def create_run(
         self,
         request: CreateSourcingRun,
@@ -69,18 +97,25 @@ class SourcingService:
         )
         try:
             with self._graph_lock:
-                result = self.scout.graph.invoke(state, self._config(run_id))
+                self._stream_graph(state, run_id)
         except Exception as exc:  # Boundary: persist a safe failure instead of exposing internals.
-            state["status"] = RunStatus.FAILED.value
-            state["errors"] = [f"Sourcing workflow failed: {type(exc).__name__}"]
-            state["report_markdown"] = (
+            try:
+                snapshot = self.scout.graph.get_state(self._config(run_id))
+                failed_state = dict(snapshot.values) if snapshot.values else state
+            except Exception:
+                failed_state = state
+            failed_state["status"] = RunStatus.FAILED.value
+            failed_state["errors"] = [
+                *failed_state.get("errors", []),
+                f"Sourcing workflow failed: {type(exc).__name__}",
+            ]
+            failed_state["report_markdown"] = (
                 "# Dataset sourcing failed\n\nRetry the run or inspect server logs.\n"
             )
-            self.artifacts.persist(state)
+            self.artifacts.persist(failed_state)
             return
-        self.artifacts.persist(result)
 
-    def approve(self, run_id: str, approval: ApprovalRequest):
+    def approve(self, run_id: str, approval: ApprovalRequest) -> SourcingRun:
         run = self.artifacts.read_run(run_id)
         if run.status is not RunStatus.AWAITING_APPROVAL:
             if (
@@ -90,15 +125,24 @@ class SourcingService:
             ):
                 return run
             raise RunConflict("Run is not awaiting approval")
+        if (
+            approval.decision is ApprovalDecision.APPROVE
+            and approval.candidate_id != run.recommended_candidate_id
+        ):
+            raise RunConflict("Approved candidate must match the current recommendation")
         try:
             with self._graph_lock:
-                result = self.scout.graph.invoke(
+                return self._stream_graph(
                     Command(resume=approval.model_dump(mode="json", by_alias=True)),
-                    self._config(run_id),
+                    run_id,
                 )
         except Exception as exc:
             raise RunConflict(f"Approval could not be applied: {type(exc).__name__}") from exc
-        return self.artifacts.persist(result)
 
 
-__all__ = ["IdempotencyConflict", "RunConflict", "SourcingService"]
+__all__ = [
+    "IdempotencyConflict",
+    "InvalidIdempotencyKey",
+    "RunConflict",
+    "SourcingService",
+]

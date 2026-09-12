@@ -1,6 +1,8 @@
 import httpx
+import pytest
 
 from data_sourcing.adapters import NativeVerifier, TavilySearchAdapter, canonicalize_results
+from data_sourcing.adapters.discovery import SourceUnavailable
 from data_sourcing.config import Settings
 from data_sourcing.models import DatasetCandidate, ExecutionMode, SearchResult, SourceKind
 from data_sourcing.scoring import detect_conflicts
@@ -92,6 +94,19 @@ def test_canonicalization_groups_repo_and_linked_records() -> None:
         "https://zenodo.org/records/123",
         "https://zenodo.org/records/456",
     }
+
+
+def test_canonicalization_caps_deep_candidates_at_eight() -> None:
+    results = [
+        SearchResult(
+            title=f"Dataset {index}",
+            url=f"https://zenodo.org/records/{index}",
+            score=0.5,
+        )
+        for index in range(1, 11)
+    ]
+
+    assert len(canonicalize_results(results, limit=8)) == 8
 
 
 def test_native_fixture_retains_batch_contradiction_and_coverage_limits() -> None:
@@ -233,3 +248,22 @@ def test_hugging_face_native_adapter_contract() -> None:
     assert verified.profile.revision == "HUGGING_FACE:def456"
     assert verified.profile.license_id == "apache-2.0"
     assert verified.profile.file_extensions == [".parquet"]
+
+
+def test_native_adapter_stops_stream_over_size_limit() -> None:
+    verifier = NativeVerifier(
+        settings(max_source_response_bytes=10_000),
+        httpx.Client(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, content=b"x" * 10_001))
+        ),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_444444444444",
+        name="Oversized source",
+        canonical_url="https://zenodo.org/records/123",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    with pytest.raises(SourceUnavailable, match="size limit"):
+        verifier.verify(candidate)

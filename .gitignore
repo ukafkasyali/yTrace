@@ -10,5 +10,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.coverage
 .venv/
 data_sourcing/var/

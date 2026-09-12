@@ -179,3 +179,27 @@ def test_profile_facts_without_evidence_cannot_be_scored_as_ready() -> None:
 
     assert assessment.tier is CandidateTier.REJECT
     assert assessment.total_score == 0
+
+
+def test_missing_license_and_unusable_files_fail_hard_gates() -> None:
+    dataset_profile = profile().model_copy(
+        update={"license_id": None, "has_time_series_files": False}
+    )
+    evidence_records = [
+        item
+        for item in complete_evidence(dataset_profile.candidate_id)
+        if item.claim_key != "license"
+    ]
+
+    assessment = assess_candidate(
+        dataset_profile,
+        [
+            requirement(RequirementCategory.LICENSE),
+            requirement(RequirementCategory.MODALITY),
+        ],
+        evidence_records,
+    )
+
+    failed = {gate.gate for gate in assessment.gates if not gate.passed}
+    assert {"license", "time_series_files"}.issubset(failed)
+    assert assessment.tier is CandidateTier.REJECT

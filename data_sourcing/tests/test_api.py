@@ -28,6 +28,12 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         assert run.json()["status"] == "AWAITING_APPROVAL"
         candidate_id = run.json()["recommendedCandidateId"]
 
+        wrong_approval = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "APPROVE", "candidateId": "ds_000000000000"},
+        )
+        assert wrong_approval.status_code == 409
+
         report = client.get(f"/api/sourcing-runs/{run_id}/report")
         assert report.status_code == 200
         assert "batch_count" in report.text
@@ -80,9 +86,16 @@ def test_api_returns_consistent_validation_and_not_found_errors(tmp_path: Path) 
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:
         invalid = client.post("/api/sourcing-runs", json={"brief": "short"})
+        invalid_key = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "bad key"},
+            json={"brief": BRIEF},
+        )
         missing = client.get("/api/sourcing-runs/00000000-0000-0000-0000-000000000000")
 
         assert invalid.status_code == 422
         assert invalid.json()["error"]["code"] == "INVALID_REQUEST"
+        assert invalid_key.status_code == 422
+        assert invalid_key.json()["error"]["code"] == "INVALID_IDEMPOTENCY_KEY"
         assert missing.status_code == 404
         assert missing.json()["error"]["code"] == "RUN_NOT_FOUND"

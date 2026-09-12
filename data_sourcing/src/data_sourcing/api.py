@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -17,8 +18,15 @@ from data_sourcing.models import (
     SourcingManifest,
     SourcingRun,
 )
-from data_sourcing.service import IdempotencyConflict, RunConflict, SourcingService
+from data_sourcing.service import (
+    IdempotencyConflict,
+    InvalidIdempotencyKey,
+    RunConflict,
+    SourcingService,
+)
 from data_sourcing.storage import ArtifactUnavailable, RunNotFound
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _error(status: int, code: str, message: str, *, details=None) -> JSONResponse:
@@ -75,9 +83,18 @@ def create_app(
     async def idempotency_conflict(_: Request, exc: IdempotencyConflict) -> JSONResponse:
         return _error(409, "IDEMPOTENCY_CONFLICT", str(exc))
 
+    @app.exception_handler(InvalidIdempotencyKey)
+    async def invalid_idempotency_key(_: Request, exc: InvalidIdempotencyKey) -> JSONResponse:
+        return _error(422, "INVALID_IDEMPOTENCY_KEY", str(exc))
+
     @app.exception_handler(RunConflict)
     async def run_conflict(_: Request, exc: RunConflict) -> JSONResponse:
         return _error(409, "RUN_CONFLICT", str(exc))
+
+    @app.exception_handler(Exception)
+    async def unhandled_error(_: Request, exc: Exception) -> JSONResponse:
+        LOGGER.exception("Unhandled dataset sourcing API error", exc_info=exc)
+        return _error(500, "INTERNAL_ERROR", "An unexpected server error occurred")
 
     @app.post("/api/sourcing-runs", response_model=RunAccepted, status_code=202)
     def create_sourcing_run(

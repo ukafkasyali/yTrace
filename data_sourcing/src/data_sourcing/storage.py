@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -26,6 +27,10 @@ class ArtifactUnavailable(LookupError):
 
 
 class IdempotencyConflict(ValueError):
+    pass
+
+
+class InvalidIdempotencyKey(ValueError):
     pass
 
 
@@ -133,19 +138,29 @@ class IdempotencyStore:
             )
             """
         )
+        self._lock = threading.RLock()
 
     def close(self) -> None:
         self.connection.close()
 
     def claim(self, key: str, request: CreateSourcingRun, proposed_run_id: str) -> tuple[str, bool]:
         if not key or len(key) > 200 or any(ord(character) < 33 for character in key):
-            raise ValueError("Idempotency-Key must contain 1–200 visible characters")
+            raise InvalidIdempotencyKey("Idempotency-Key must contain 1–200 visible characters")
         canonical = json.dumps(
             request.model_dump(mode="json", by_alias=True),
             sort_keys=True,
             separators=(",", ":"),
         )
         request_hash = hashlib.sha256(canonical.encode()).hexdigest()
+        with self._lock:
+            return self._claim_locked(key, request_hash, proposed_run_id)
+
+    def _claim_locked(
+        self,
+        key: str,
+        request_hash: str,
+        proposed_run_id: str,
+    ) -> tuple[str, bool]:
         self.connection.execute("BEGIN IMMEDIATE")
         try:
             existing = self.connection.execute(

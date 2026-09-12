@@ -93,8 +93,14 @@ class RequirementPlanner:
         model_draft = self._model_draft(request)
         if model_draft is None:
             return fallback
+        model_labels = [
+            label
+            for label in model_draft.task_labels
+            if label != "internal mechanical fault"
+            or "internal mechanical fault" in fallback.task_labels
+        ]
         return PlanningDraft(
-            task_labels=_unique([*fallback.task_labels, *model_draft.task_labels]),
+            task_labels=_unique([*fallback.task_labels, *model_labels]),
             minimum_sample_rate_hz=(
                 fallback.minimum_sample_rate_hz or model_draft.minimum_sample_rate_hz
             ),
@@ -103,7 +109,13 @@ class RequirementPlanner:
         )
 
     def requirements(self, request: CreateSourcingRun) -> list[ResearchRequirement]:
-        draft = self.draft(request)
+        return self.requirements_from_draft(request, self.draft(request))
+
+    def requirements_from_draft(
+        self,
+        request: CreateSourcingRun,
+        draft: PlanningDraft,
+    ) -> list[ResearchRequirement]:
         requirements = [
             ResearchRequirement(
                 id="req_provenance",
@@ -165,7 +177,9 @@ class RequirementPlanner:
         return requirements
 
     def hypotheses(self, request: CreateSourcingRun) -> list[SearchHypothesis]:
-        draft = self.draft(request)
+        return self.hypotheses_from_draft(self.draft(request))
+
+    def hypotheses_from_draft(self, draft: PlanningDraft) -> list[SearchHypothesis]:
         vocabulary = " ".join(draft.search_terms[:8]) or "robot telemetry collision dataset"
         return [
             SearchHypothesis(

@@ -1,6 +1,11 @@
 from data_sourcing.config import Settings
 from data_sourcing.models import CreateSourcingRun, RequirementCategory
-from data_sourcing.planning import RequirementPlanner, deterministic_draft, make_gap_hypothesis
+from data_sourcing.planning import (
+    PlanningDraft,
+    RequirementPlanner,
+    deterministic_draft,
+    make_gap_hypothesis,
+)
 
 
 def request(brief: str) -> CreateSourcingRun:
@@ -52,3 +57,17 @@ def test_gap_hypothesis_is_bounded_and_marks_itself() -> None:
     assert hypothesis.id == "hyp_gap_1"
     assert hypothesis.is_gap_query is True
     assert len(hypothesis.query) <= 400
+
+
+def test_model_cannot_infer_internal_fault_from_collision_brief(monkeypatch) -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    monkeypatch.setattr(
+        planner,
+        "_model_draft",
+        lambda _: PlanningDraft(task_labels=["collision", "internal mechanical fault"]),
+    )
+
+    draft = planner.draft(request("Find robot collision telemetry for contact observability."))
+
+    assert "collision" in draft.task_labels
+    assert "internal mechanical fault" not in draft.task_labels

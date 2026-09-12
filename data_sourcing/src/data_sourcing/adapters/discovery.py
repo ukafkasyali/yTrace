@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Protocol
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,6 +21,13 @@ class SearchBatch(BaseModel):
     results: list[SearchResult]
     credits_used: int = Field(ge=0)
     execution_mode: ExecutionMode
+    warnings: list[str] = Field(default_factory=list)
+
+
+class SearchAdapter(Protocol):
+    def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch: ...
+
+    def close(self) -> None: ...
 
 
 class _TavilyResult(BaseModel):
@@ -58,12 +66,16 @@ class TavilySearchAdapter:
                 and "robot" in query.casefold()
                 and "collision" in query.casefold()
             ):
-                return self._cached_batch(query)
+                return self._cached_batch(
+                    query,
+                    "Tavily is not configured; exact demo cache used",
+                )
             raise SourceUnavailable("Tavily is not configured and no exact demo cache applies")
         if self.settings.tavily_base_url.rstrip("/") != "https://api.tavily.com":
             raise SourceUnavailable("Tavily base URL must be https://api.tavily.com")
         try:
-            response = self.client.post(
+            with self.client.stream(
+                "POST",
                 "https://api.tavily.com/search",
                 headers={
                     "Authorization": f"Bearer {self.settings.tavily_api_key.get_secret_value()}"
@@ -76,15 +88,23 @@ class TavilySearchAdapter:
                     "include_domains": ["github.com", "zenodo.org", "huggingface.co"],
                     "safe_search": True,
                 },
-            )
-            response.raise_for_status()
+            ) as response:
+                response.raise_for_status()
+                raw = bytearray()
+                for chunk in response.iter_bytes():
+                    raw.extend(chunk)
+                    if len(raw) > self.settings.max_source_response_bytes:
+                        raise SourceUnavailable(
+                            "Tavily response exceeded the configured size limit"
+                        )
         except httpx.HTTPError:
             if allow_cached_demo:
-                return self._cached_batch(query)
+                return self._cached_batch(
+                    query,
+                    "Live Tavily request failed; exact demo cache used",
+                )
             raise
-        if len(response.content) > self.settings.max_source_response_bytes:
-            raise SourceUnavailable("Tavily response exceeded the configured size limit")
-        payload = _TavilyResponse.model_validate(response.json())
+        payload = _TavilyResponse.model_validate_json(raw)
         credits = payload.usage.get("credits", 2)
         return SearchBatch(
             results=[
@@ -102,11 +122,12 @@ class TavilySearchAdapter:
         )
 
     @staticmethod
-    def _cached_batch(query: str) -> SearchBatch:
+    def _cached_batch(query: str, warning: str) -> SearchBatch:
         fixture_path = Path(__file__).parent.parent / "fixtures" / "robot_collision_search.json"
         records = json.loads(fixture_path.read_text(encoding="utf-8"))
         return SearchBatch(
             results=[SearchResult.model_validate(record | {"query": query}) for record in records],
             credits_used=0,
             execution_mode=ExecutionMode.CACHED,
+            warnings=[warning],
         )

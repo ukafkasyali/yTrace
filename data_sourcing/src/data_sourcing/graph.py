@@ -9,7 +9,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from data_sourcing.adapters import NativeVerifier, TavilySearchAdapter, canonicalize_results
-from data_sourcing.adapters.discovery import SourceUnavailable
+from data_sourcing.adapters.discovery import SearchAdapter, SourceUnavailable
 from data_sourcing.config import Settings
 from data_sourcing.models import (
     ApprovalDecision,
@@ -30,10 +30,11 @@ from data_sourcing.models import (
     SourcingManifest,
     VerificationStatus,
 )
-from data_sourcing.planning import RequirementPlanner, make_gap_hypothesis
+from data_sourcing.planning import PlanningDraft, RequirementPlanner, make_gap_hypothesis
 from data_sourcing.scoring import (
     apply_recommendation_confidence,
     assess_candidate,
+    requirement_claim_key,
     requirement_is_evidenced,
 )
 
@@ -60,6 +61,7 @@ class SourcingState(TypedDict, total=False):
     started_at: float
     allow_cached_demo: bool
     approval_decision: str | None
+    planning_draft: dict[str, Any]
 
 
 def initial_state(
@@ -90,6 +92,7 @@ def initial_state(
         "started_at": time.time(),
         "allow_cached_demo": allow_cached_demo,
         "approval_decision": None,
+        "planning_draft": {},
     }
 
 
@@ -110,7 +113,7 @@ class DatasetScoutGraph:
         settings: Settings,
         checkpointer: Any,
         *,
-        search: TavilySearchAdapter | None = None,
+        search: SearchAdapter | None = None,
         verifier: NativeVerifier | None = None,
     ):
         self.settings = settings
@@ -164,14 +167,18 @@ class DatasetScoutGraph:
         return time.time() - state["started_at"] >= self.settings.run_timeout_seconds
 
     def requirements(self, state: SourcingState) -> dict[str, Any]:
-        requirements = self.planner.requirements(_request(state))
+        request = _request(state)
+        draft = self.planner.draft(request)
+        requirements = self.planner.requirements_from_draft(request, draft)
         return {
             "status": RunStatus.PLANNING.value,
             "requirements": _json_list(requirements),
+            "planning_draft": draft.model_dump(mode="json"),
         }
 
     def hypotheses(self, state: SourcingState) -> dict[str, Any]:
-        hypotheses = self.planner.hypotheses(_request(state))[: self.settings.initial_query_limit]
+        draft = PlanningDraft.model_validate(state["planning_draft"])
+        hypotheses = self.planner.hypotheses_from_draft(draft)[: self.settings.initial_query_limit]
         return {"hypotheses": _json_list(hypotheses)}
 
     def _perform_searches(
@@ -197,12 +204,18 @@ class DatasetScoutGraph:
                 hypothesis.status = HypothesisStatus.EXHAUSTED
                 continue
             credits += batch.credits_used
+            had_results = bool(results)
             results.extend(batch.results)
             hypothesis.status = HypothesisStatus.SEARCHED
             if batch.execution_mode is ExecutionMode.CACHED:
-                mode = ExecutionMode.CACHED
+                mode = (
+                    ExecutionMode.PARTIAL
+                    if had_results and mode is ExecutionMode.LIVE
+                    else ExecutionMode.CACHED
+                )
             elif mode is ExecutionMode.CACHED:
                 mode = ExecutionMode.PARTIAL
+            errors.extend(batch.warnings)
         all_hypotheses = [SearchHypothesis.model_validate(item) for item in state["hypotheses"]]
         by_id = {item.id: item for item in all_hypotheses}
         by_id.update({item.id: item for item in hypotheses})
@@ -212,7 +225,7 @@ class DatasetScoutGraph:
             "search_results": _json_list(results),
             "tavily_credits_used": credits,
             "execution_mode": mode.value,
-            "errors": errors,
+            "errors": list(dict.fromkeys(errors)),
         }
 
     def discovery(self, state: SourcingState) -> dict[str, Any]:
@@ -256,7 +269,7 @@ class DatasetScoutGraph:
             "status": RunStatus.VERIFYING.value,
             "profiles": _json_list(list(known_profiles.values())),
             "evidence": _json_list(list(deduplicated_evidence.values())),
-            "errors": errors,
+            "errors": list(dict.fromkeys(errors)),
         }
 
     def coverage_assessment(self, state: SourcingState) -> dict[str, Any]:
@@ -273,8 +286,11 @@ class DatasetScoutGraph:
                 VerificationStatus.VERIFIED if supporting_profiles else VerificationStatus.MISSING
             )
             candidate_ids = {profile.candidate_id for profile in supporting_profiles}
+            claim = requirement_claim_key(requirement)
             requirement.evidence_ids = [
-                item.id for item in evidence if item.candidate_id in candidate_ids
+                item.id
+                for item in evidence
+                if item.candidate_id in candidate_ids and item.claim_key == claim
             ]
         return {
             "status": RunStatus.ASSESSING.value,
@@ -393,7 +409,7 @@ class DatasetScoutGraph:
         if not records:
             return f"{claim}: no evidence records found"
         return (
-            f"{claim}: {observations}. Ranking uses {records[0].observed_value} from "
+            f"{claim}: {observations}. Resolution uses {records[0].observed_value} from "
             f"{records[0].source_kind.value}; all observations remain in evidence.jsonl."
         )
 

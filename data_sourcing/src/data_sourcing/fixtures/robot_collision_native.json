@@ -25,7 +25,7 @@
     "license_id": "cc-by-4.0",
     "text": "206 accidental collision sequences of raw torque sensor signals sampled at 1 kHz for all seven joints. Data are stored in MATLAB (.mat) format and archived as time-series batches. Dataset structure and units are documented.",
     "files": [
-      {"name": "collision-batches-01-42.tar.zst", "size": 8750000000},
+      {"name": "collision-batches-01-42.tar.zst", "size": 8975703735},
       {"name": "ReadMe.md", "size": 2831}
     ],
     "related_urls": ["https://github.com/zhang-zengjie/robot-raw-collision-signals"],
@@ -39,7 +39,7 @@
     "license_id": "cc-by-4.0",
     "text": "239 intentional contact sequences of raw torque sensor signals sampled at 1 kHz for all seven joints. Data are stored in MATLAB (.mat) format and archived as time-series batches. Dataset structure and units are documented.",
     "files": [
-      {"name": "contact-batches-01-48.tar.zst", "size": 9000000000},
+      {"name": "contact-batches-01-48.tar.zst", "size": 9070414245},
       {"name": "ReadMe.md", "size": 2840}
     ],
     "related_urls": ["https://github.com/zhang-zengjie/robot-raw-collision-signals"],
