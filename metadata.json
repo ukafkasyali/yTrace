@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BXT4HVJK8E2ACDPZ22NYFB",
+  "strategy": "manual-commit",
+  "branch": "baseline-comparison",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "model_training/README.md",
+    "model_training/configs/cnn_1d.yaml",
+    "model_training/docs/baseline_comparison.md",
+    "model_training/docs/design.md",
+    "model_training/docs/runbook.md",
+    "model_training/pyproject.toml",
+    "model_training/scripts/compare_models.py",
+    "model_training/scripts/eval_plot_vlm.py",
+    "model_training/scripts/run_one_shot_when_gpu_free.sh",
+    "model_training/scripts/train_cnn.py",
+    "model_training/src/robot_observability/cnn_baseline.py",
+    "model_training/src/robot_observability/plot_baseline.py",
+    "model_training/tests/test_cnn_baseline.py",
+    "model_training/tests/test_plot_baseline.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 209854,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 18096243,
+    "output_tokens": 60646,
+    "api_call_count": 131
+  }
+}
