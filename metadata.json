@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BP57V3PGXYG0DZQHEHC800",
+  "strategy": "manual-commit",
+  "branch": "codex/robot-observability-training",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "data_ingestion/src/dataset_profiler/audit/__init__.py",
+    "data_ingestion/src/dataset_profiler/io/__init__.py",
+    "data_ingestion/src/dataset_profiler/visualization/__init__.py",
+    "model_training/README.md",
+    "model_training/configs/data_timef.yaml",
+    "model_training/src/robot_observability/cli.py",
+    "model_training/src/robot_observability/data/prepare.py",
+    "model_training/src/robot_observability/data/raw.py",
+    "model_training/src/robot_observability/data/splits.py",
+    "model_training/src/robot_observability/data/timef.py",
+    "model_training/src/robot_observability/train_opentslm.py",
+    "model_training/tests/test_timef_adapter.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 98908,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3697792,
+    "output_tokens": 18620,
+    "api_call_count": 38
+  }
+}
