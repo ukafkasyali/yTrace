@@ -1,0 +1,88 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BESM3SFVX7EBXQNP5WX6HF",
+  "session_id": "01a095fb-716e-72e3-8aed-c8e8389065f4",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T18:41:44.492996Z",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_sourcing/README.md",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/src/data_sourcing/service.py",
+    "data_sourcing/src/data_sourcing/storage.py",
+    "data_sourcing/tests/test_api.py",
+    "data_sourcing/tests/test_graph.py",
+    "docs/DATA_SOURCING_API.md",
+    "frontend/src/services/index.test.ts",
+    "frontend/src/services/sourcing.ts",
+    "frontend/src/sourcing/DecisionEvidence.test.tsx",
+    "frontend/src/sourcing/DecisionEvidence.tsx",
+    "frontend/src/sourcing/ScoutReview.tsx",
+    "frontend/src/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "a1528c849b3a",
+  "checkpoint_transcript_start": 5748,
+  "transcript_lines_at_start": 5748,
+  "compact_transcript_start": 739,
+  "token_usage": {
+    "input_tokens": 141478,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 7048765,
+    "output_tokens": 24153,
+    "api_call_count": 67
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T18:41:43.472445Z",
+    "agent_lines": 11,
+    "agent_removed": 18,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 39,
+    "total_committed": 11,
+    "total_lines_changed": 68,
+    "agent_percentage": 42.64705882352941,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 164,
+      "user_lines_removed": 39,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "data_sourcing/src/data_sourcing/graph.py": 66,
+        "data_sourcing/src/data_sourcing/models.py": 3,
+        "data_sourcing/src/data_sourcing/service.py": 9,
+        "data_sourcing/src/data_sourcing/storage.py": 1,
+        "data_sourcing/tests/test_api.py": 13,
+        "data_sourcing/tests/test_graph.py": 12,
+        "frontend/src/services/index.test.ts": 1,
+        "frontend/src/services/sourcing.ts": 8,
+        "frontend/src/sourcing/DecisionEvidence.test.tsx": 32,
+        "frontend/src/sourcing/DecisionEvidence.tsx": 15,
+        "frontend/src/sourcing/ScoutReview.tsx": 3,
+        "frontend/src/styles.css": 1
+      },
+      "user_removed_per_file": {
+        "data_sourcing/src/data_sourcing/graph.py": 8,
+        "data_sourcing/src/data_sourcing/service.py": 1,
+        "data_sourcing/tests/test_api.py": 4,
+        "data_sourcing/tests/test_graph.py": 17,
+        "frontend/src/services/index.test.ts": 1,
+        "frontend/src/services/sourcing.ts": 3,
+        "frontend/src/sourcing/DecisionEvidence.test.tsx": 1,
+        "frontend/src/sourcing/DecisionEvidence.tsx": 2,
+        "frontend/src/sourcing/ScoutReview.tsx": 1,
+        "frontend/src/styles.css": 1
+      }
+    }
+  ]
+}
