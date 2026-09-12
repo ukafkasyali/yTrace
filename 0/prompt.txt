@@ -1,0 +1,11 @@
+Let's plan the integration of data sourcing into data ingestion. I developed the data sourcing module but data ingestion was developed by my teammate.
+
+---
+
+I would like the "Generic ingestion of every GitHub, Zenodo, or Hugging Face dataset found by the scout." to be in scope. We can handle a few of commonly used dataset file types.
+
+Also I would like to store and display data sources approved by the user after sourcing. These approved ones can then be ingested by the user on demand.
+
+---
+
+Overall looks good but no need for persisted sources to be ingested repeatedly.
