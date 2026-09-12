@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BWZ5K28F6CGNTEB0SG0QR9",
+  "strategy": "manual-commit",
+  "branch": "codex/investigation-evidence-boundaries",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/investigationReport.test.ts",
+    "frontend/src/assistant/investigationReport.ts",
+    "frontend/src/recordings/markerAnalysis.test.ts",
+    "frontend/src/recordings/markerAnalysis.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 76110,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1923874,
+    "output_tokens": 3091,
+    "api_call_count": 38
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BWZ5K28F6CGNTEB0SG0QR9",
+  "session_id": "01a097a4-e68d-7451-b439-224653056c4c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:49:20.76765Z",
+  "branch": "codex/investigation-evidence-boundaries",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/investigationReport.test.ts",
+    "frontend/src/assistant/investigationReport.ts",
+    "frontend/src/recordings/markerAnalysis.test.ts",
+    "frontend/src/recordings/markerAnalysis.ts"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-luna",
+  "turn_id": "5c576d4eae1e",
+  "checkpoint_transcript_start": 842,
+  "transcript_lines_at_start": 842,
+  "compact_transcript_start": 107,
+  "token_usage": {
+    "input_tokens": 76110,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1923874,
+    "output_tokens": 3091,
+    "api_call_count": 38
+  },
+  "session_metrics": {
+    "turn_count": 14
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:49:20.582863Z",
+    "agent_lines": 97,
+    "agent_removed": 103,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 97,
+    "total_lines_changed": 200,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
