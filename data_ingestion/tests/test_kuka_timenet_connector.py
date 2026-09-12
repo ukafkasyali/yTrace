@@ -6,7 +6,7 @@ from timenet.connectors import BaseConnector
 from timenet.reader import TimeFReader
 from timenet.registry import DatasetVersion
 
-from dataset_profiler.timenet import build_kuka_collision_part1
+from dataset_profiler.timenet import build_kuka_collision_part1, build_kuka_timef_dataset
 from dataset_profiler.timenet.kuka_collision import KukaCollisionPart1Connector, KukaRunRef
 
 
@@ -100,3 +100,23 @@ def test_direct_integration_round_trip(tmp_path):
     assert len([a for a in record.annotations if a.key == "collision"]) == 3
     assert next(a.value for a in record.annotations if a.key == "source_run_id") == ref.source_run_id
     np.testing.assert_array_equal(record.time_series[0].to_numpy(), np.arange(5, dtype=np.float64))
+
+
+def test_unified_builder_selects_part1_identity(tmp_path):
+    ref = _source(tmp_path / "source")
+    version_dir = build_kuka_timef_dataset(
+        "kuka/collision-part1", ref.run_dir.parent.parent, tmp_path / "registry"
+    )
+    with TimeFReader(DatasetVersion.open_local(version_dir)) as reader:
+        restored = reader.read()
+    assert restored.metadata.dataset_id == "kuka/collision-part1"
+
+
+def test_unified_builder_rejects_unknown_identity(tmp_path):
+    try:
+        build_kuka_timef_dataset("kuka/not-a-part", tmp_path, tmp_path / "registry")
+    except ValueError as error:
+        assert "kuka/collision-part1" in str(error)
+        assert "kuka/contact-part2" in str(error)
+    else:
+        raise AssertionError("unsupported dataset identity was accepted")
