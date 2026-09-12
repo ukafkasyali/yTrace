@@ -1,0 +1,52 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BS999NQWTEJAV3VF0Q8RDY",
+  "strategy": "manual-commit",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "AGENTS.md",
+    "docs/FRONTEND_INTEGRATION.md",
+    "docs/submission/UI_WALKTHROUGH.md",
+    "docs/submission/demo/collision-case.json",
+    "docs/submission/demo/free-case.json",
+    "docs/submission/demo/intentional-case.json",
+    "frontend/README.md",
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/lib/data.ts",
+    "frontend/src/lib/modelWindow.test.ts",
+    "frontend/src/lib/modelWindow.ts",
+    "frontend/src/recordings/markerAnalysis.test.ts",
+    "frontend/src/recordings/markerAnalysis.ts",
+    "frontend/src/services/index.ts",
+    "frontend/src/styles.css",
+    "frontend/src/types.ts",
+    "inference/README.md",
+    "inference/build_demo_cases.py",
+    "inference/demo_cases.json",
+    "inference/demo_data/03-15-12-53.json.gz",
+    "inference/demo_data/03-22-11-18.json.gz",
+    "inference/runtime.py",
+    "inference/server.py",
+    "inference/smoke.py",
+    "inference/test_runtime.py",
+    "inference/test_server.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 370666,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 6190679,
+    "output_tokens": 25795,
+    "api_call_count": 56
+  }
+}
