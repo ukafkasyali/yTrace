@@ -83,19 +83,34 @@ def answer_payload(metadata: dict[str, object], intent: Intent) -> dict[str, obj
 
 def evidence_sentence(metadata: dict[str, object]) -> str:
     if not metadata["contact"]:
-        return "No sustained joint disturbance crosses the threshold calibrated on train-only free motion."
+        return (
+            "Across J1–J7, no sustained torque disturbance crosses the threshold calibrated only "
+            "on training free-motion recordings, so no localized onset or responsible joint is supported."
+        )
     scores = list(metadata["joint_scores"])
     ranked = sorted(zip(JOINT_NAMES, scores), key=lambda pair: -pair[1])
-    top = ", ".join(f"{joint}={score:.2f}" for joint, score in ranked[:3])
+    affected = list(metadata["affected_joints"])
+    affected_text = ", ".join(affected) if affected else "no additional joints"
     return (
-        f"The manual event marker is at {metadata['onset_sample']} ms; calibrated top joint scores are {top}. "
-        f"Sustained evidence spans {metadata['evidence_start_ms']}–{metadata['evidence_end_ms']} ms."
+        f"A sustained torque excursion begins near {metadata['onset_sample']} ms and its strongest "
+        f"evidence spans {metadata['evidence_start_ms']}–{metadata['evidence_end_ms']} ms; "
+        f"{ranked[0][0]} has the largest normalized disturbance, with threshold-crossing support "
+        f"from {affected_text}."
     )
 
 
-def target_text(metadata: dict[str, object], intent: Intent) -> str:
+def target_text(
+    metadata: dict[str, object],
+    intent: Intent,
+    output_format: str = "answer_then_evidence",
+) -> str:
     payload = json.dumps(answer_payload(metadata, intent), separators=(",", ":"), sort_keys=True)
-    return f"Answer: {payload}\nEvidence: {evidence_sentence(metadata)}"
+    rationale = evidence_sentence(metadata)
+    if output_format == "answer_then_evidence":
+        return f"Answer: {payload}\nEvidence: {rationale}"
+    if output_format == "rationale_then_answer":
+        return f"Rationale: {rationale}\nAnswer: {payload}"
+    raise ValueError(f"Unknown output format: {output_format}")
 
 
 def channel_descriptions(metadata: dict[str, object]) -> list[str]:

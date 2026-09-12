@@ -10,9 +10,7 @@ import torch
 
 
 def _cpu_state(module: torch.nn.Module) -> OrderedDict[str, torch.Tensor]:
-    return OrderedDict(
-        (name, value.detach().cpu().clone()) for name, value in module.state_dict().items()
-    )
+    return OrderedDict((name, value.detach().cpu().clone()) for name, value in module.state_dict().items())
 
 
 def runtime_checkpoint(model: object) -> dict[str, object]:

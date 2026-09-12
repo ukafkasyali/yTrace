@@ -4,9 +4,11 @@ This package prepares raw KUKA LWR4+ external-joint-torque recordings and fine-t
 OpenTSLM model to answer natural-language questions about contact, event semantics, affected joints,
 and event timing. It is the data/training half of the Foxglove-like observability demo.
 
-The design is intentionally extensible: raw-source readers produce canonical window records, while
-the TimeNet connector, model adapters, baselines, prompts, and UI payload consume that common
-contract. A new robot dataset should add a reader and mapping rather than fork the training loop.
+The canonical path is **raw source -> TimeNet connector -> TimeF dataset -> training-window
+adapter -> model**. TimeF records preserve complete recordings, signal metadata, units, and event
+provenance. The adapter validates that contract and materializes memory-mapped windows once so GPU
+training does not repeatedly decode Parquet. A new robot dataset should add a TimeNet connector and
+mapping rather than fork the training loop.
 
 ## Audited submission comparison
 
@@ -51,16 +53,40 @@ uv venv
 uv pip install -e '.[train,dev,timenet]'
 
 robot-observe download --output data/raw
-robot-observe prepare --config configs/data.yaml
-robot-observe baseline --prepared-root data/prepared/v1 --output-root artifacts/baseline/v1
+PYTHONPATH=../data_ingestion/src python ../data_ingestion/scripts/build_kuka_timef_dataset.py \
+  data/raw/collision artifacts/timef-raw --part part1
+PYTHONPATH=../data_ingestion/src python ../data_ingestion/scripts/build_kuka_timef_dataset.py \
+  data/raw/contact artifacts/timef-raw --part part2
 
-python scripts/build_timef.py --registry artifacts/timef-registry --cache data/raw
+robot-observe prepare-timef --config configs/data_timef.yaml \
+  --timef-version artifacts/timef-raw/kuka/collision-part1/1.0.0 \
+  --timef-version artifacts/timef-raw/kuka/contact-part2/1.0.0
+robot-observe baseline --prepared-root data/prepared/timef-v1 \
+  --output-root artifacts/baseline/signal-features-512 --limit 512
+
 python -m robot_observability.train_opentslm \
-  --prepared-root data/prepared/v1 \
+  --prepared-root data/prepared/timef-v1 \
   --run-name llama-har-sp-smoke \
   --smoke --max-steps 200
 ```
 
 Every expensive operation is resumable or refuses to overwrite prior artifacts. Training emits an
 atomic `status.json`, append-only `metrics.jsonl`, TensorBoard events, generated validation samples,
-W&B prediction tables, real-versus-zero-signal canaries, and `best_model.pt`/`last_model.pt` adapters.
+W&B prediction tables with seven-channel signal previews, real-versus-zero-signal canaries, and
+`best_model.pt`/`last_model.pt` adapters. Every run also keeps a fixed, class-balanced probe from the
+actual training subset. Its teacher-forced loss, decoded task metrics, exact-answer fit, matched-prompt
+validation gap, and zero-signal response are tracked separately so a rapid token-loss drop cannot be
+mistaken for task learning.
+
+Run the capacity/fit check before another expensive run:
+
+```bash
+python -m robot_observability.train_opentslm \
+  --prepared-root data/prepared/timef-v1 \
+  --run-name llama-har-sp-fit-probe \
+  --smoke --max-steps 320
+python scripts/report_fit_probe.py --run-dir runs/llama-har-sp-fit-probe
+```
+
+Use `--strict` on the reporter only when it should block the next launch. Its thresholds are diagnostic
+defaults, not benchmark acceptance criteria.

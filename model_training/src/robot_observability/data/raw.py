@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 
 import numpy as np
 from scipy.io import loadmat
@@ -17,6 +17,13 @@ from scipy.io import loadmat
 from robot_observability.constants import N_JOINTS
 
 EventType = Literal["accidental", "intentional"]
+
+
+class SessionRef(Protocol):
+    """Minimum recording identity required by the window preparation pipeline."""
+
+    session_id: str
+    event_type: EventType
 
 
 @dataclass(frozen=True)
@@ -30,7 +37,7 @@ class RawSessionRef:
 
 @dataclass(frozen=True)
 class RawSession:
-    ref: RawSessionRef
+    ref: SessionRef
     timestamps_s: np.ndarray
     torque_nm: np.ndarray
     event_samples: np.ndarray

@@ -2,9 +2,12 @@ architecture: soft_prompt
 base_model: meta-llama/Llama-3.2-1B
 warm_start: OpenTSLM/llama-3.2-1b-har-sp
 upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
+targets:
+  format: rationale_then_answer
+  rationale_source: deterministic_signal_pseudolabels_v1
 precision: bfloat16
-batch_size: 2
-gradient_accumulation_steps: 8
+batch_size: 4
+gradient_accumulation_steps: 4
 epochs: 3
 early_stopping_patience: 3
 max_wall_time_hours: 3.0
@@ -18,6 +21,10 @@ lora:
   rank: 16
   alpha: 32
   dropout: 0.0
+fit_probe:
+  batch_size: 4
+  validation_batch_size: 4
+  epochs: 20
 validation:
   at_start: true
   every_steps: 50
@@ -26,12 +33,23 @@ validation:
   loss_subset: 128
   generation_subset: 48
   zero_signal_subset: 12
+  examples_table_rows: 12
 observability:
   tensorboard: true
   jsonl: true
   log_every_steps: 10
   sample_generations_every_steps: 250
   gpu_metrics_every_seconds: 10
+  training_probe:
+    enabled: true
+    every_steps: 100
+    generation_every_steps: 250
+    loss_subset: 64
+    generation_subset: 48
+    zero_signal_subset: 12
+    matched_validation_subset: 64
+    dataset_table_rows: 48
+    examples_table_rows: 48
   wandb:
     enabled: true
     project: robot-observability

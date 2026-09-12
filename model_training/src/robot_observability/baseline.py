@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 
 import joblib
@@ -98,8 +100,42 @@ def evidence_from_prediction(
     }
 
 
-def run_baseline(prepared_root: Path, output_root: Path) -> dict[str, float | int]:
-    output_root.mkdir(parents=True, exist_ok=True)
+def _fixed_indices(length: int, limit: int | None, seed: int) -> list[int]:
+    if limit is None or limit >= length:
+        return list(range(length))
+    if limit <= 0:
+        raise ValueError("limit must be positive")
+    return sorted(np.random.default_rng(seed).choice(length, size=limit, replace=False).tolist())
+
+
+def _mode(values: list[object]) -> object:
+    return Counter(values).most_common(1)[0][0]
+
+
+def trivial_train_prior_prediction(train: PreparedSplit) -> dict[str, object]:
+    metadata = [row for _, row in train]
+    event_type = str(_mode([row["event_type"] for row in metadata]))
+    contact_rows = [row for row in metadata if row["contact"]]
+    return {
+        "contact": event_type != "free",
+        "event_type": event_type,
+        "onset_ms": round(float(np.median([row["onset_sample"] for row in contact_rows]))),
+        "strongest_joint": str(_mode([row["strongest_joint"] for row in contact_rows])),
+        "affected_joints": list(_mode([tuple(row["affected_joints"]) for row in contact_rows])),
+        "evidence_start_ms": round(float(np.median([row["evidence_start_ms"] for row in contact_rows]))),
+        "evidence_end_ms": round(float(np.median([row["evidence_end_ms"] for row in contact_rows]))),
+    }
+
+
+def run_baseline(
+    prepared_root: Path,
+    output_root: Path,
+    *,
+    limit: int | None = 512,
+    selection_seed: int = 20260912,
+    wandb_project: str | None = None,
+) -> dict[str, object]:
+    output_root.mkdir(parents=True, exist_ok=False)
     train = PreparedSplit(prepared_root, "train")
     test = PreparedSplit(prepared_root, "test")
     train_x = np.stack([extract_features(signal) for signal, _ in train])
@@ -113,10 +149,12 @@ def run_baseline(prepared_root: Path, output_root: Path) -> dict[str, float | in
     normalization = json.loads((prepared_root / "normalization.json").read_text(encoding="utf-8"))
     affected_thresholds = np.asarray(normalization["affected_joint_train_free_q99"], dtype=np.float32)
 
+    selected_indices = _fixed_indices(len(test), limit, selection_seed)
     rows = []
     output_path = output_root / "test_predictions.jsonl"
     with output_path.open("w", encoding="utf-8") as handle:
-        for signal, metadata in test:
+        for index in selected_indices:
+            signal, metadata = test[index]
             semantics = str(classifier.predict(extract_features(signal)[None])[0])
             onset = detect_onset(signal, threshold) if semantics != "free" else None
             evidence = evidence_from_prediction(signal, onset, affected_thresholds)
@@ -135,11 +173,74 @@ def run_baseline(prepared_root: Path, output_root: Path) -> dict[str, float | in
             rows.append(row)
             handle.write(json.dumps(row, sort_keys=True) + "\n")
 
-    metrics = evaluate_rows(rows)
-    metrics["contact_threshold"] = threshold
-    metrics["split_unit"] = "recording_session"
+    metrics: dict[str, object] = {
+        "benchmark": "deterministic_signal_features",
+        "training_performed": True,
+        "train_examples": len(train),
+        "test_examples": len(rows),
+        "selection_seed": selection_seed,
+        "contact_threshold": threshold,
+        "split_unit": "recording_session",
+        **evaluate_rows(rows),
+    }
+    trivial_prediction = trivial_train_prior_prediction(train)
+    trivial_rows = [{"target": row["target"], "prediction": trivial_prediction} for row in rows]
+    trivial_metrics: dict[str, object] = {
+        "benchmark": "train_prior_constant",
+        "training_performed": False,
+        "prediction": trivial_prediction,
+        **evaluate_rows(trivial_rows),
+    }
     (output_root / "metrics.json").write_text(
         json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     joblib.dump(classifier, output_root / "semantics_classifier.joblib")
+    (output_root / "trivial_metrics.json").write_text(
+        json.dumps(trivial_metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    records_path = prepared_root / "test" / "records.jsonl"
+    records_hash = hashlib.sha256(records_path.read_bytes()).hexdigest()
+    manifest = {
+        "split": "test",
+        "selection": "NumPy PCG64 fixed random subset without replacement; sorted dataset indices",
+        "selection_seed": selection_seed,
+        "requested_samples": limit,
+        "actual_samples": len(rows),
+        "prepared_records_sha256": records_hash,
+        "record_ids": [row["record_id"] for row in rows],
+    }
+    (output_root / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    if wandb_project:
+        import wandb
+
+        run = wandb.init(
+            project=wandb_project,
+            name=output_root.name,
+            config=manifest,
+            tags=["baseline", "deterministic", "signal-features", "test-only"],
+        )
+        run.log(
+            {
+                **{f"test/{key}": value for key, value in metrics.items() if isinstance(value, int | float)},
+                **{
+                    f"trivial/{key}": value
+                    for key, value in trivial_metrics.items()
+                    if isinstance(value, int | float)
+                },
+            }
+        )
+        table = wandb.Table(columns=["record_id", "target", "prediction"])
+        for row in rows[:48]:
+            table.add_data(
+                row["record_id"],
+                json.dumps(row["target"], sort_keys=True),
+                json.dumps(row["prediction"], sort_keys=True),
+            )
+        run.log({"test/examples": table})
+        artifact = wandb.Artifact(f"{output_root.name}-results", type="evaluation")
+        artifact.add_dir(str(output_root))
+        run.log_artifact(artifact)
+        run.finish()
     return metrics
