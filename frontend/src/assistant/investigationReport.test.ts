@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInvestigationReport, type InvestigationAnswer } from './investigationReport';
+import { buildInvestigationReport, renderInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
 import type { DemoData } from '../types';
 
 const channels = Array.from({ length: 7 }, (_, i) => ({ id: `joint_${i + 1}`, name: `Joint ${i + 1}`, unit: 'Nm', values: [1, -3, 2] }));
@@ -68,5 +68,17 @@ describe('investigation export', () => {
       },
     });
     expect(report.limitations.join(' ')).toContain('does not match this recording and selected interval');
+  });
+  it('renders a readable Markdown handoff without collapsing evidence sources', () => {
+    const report = buildInvestigationReport(data, 'dataset', answer);
+    const markdown = renderInvestigationMarkdown(report);
+    expect(markdown).toContain('# Trace incident investigation');
+    expect(markdown).toContain('## Interpretation');
+    expect(markdown).toContain('## Measured torque');
+    expect(markdown).toContain('| Joint 1 | 5.000 Nm | -3.000 Nm | 1.001 s |');
+    expect(markdown).toContain('## Publisher annotations');
+    expect(markdown).toContain('Marker');
+    expect(markdown).toContain('## Evidence and provenance');
+    expect(markdown).toContain('## Limitations');
   });
 });
