@@ -1,15 +1,1 @@
-# Files pasted by the user:
-
-## "We are continuing the trustworthy autonomous time-series dataset onboarding pro…": /home/ugur/.codex/attachments/9035e9dc-2a36-41b0-a0ac-916c1613b220/pasted-text.txt
-
-Pasted text contains the user's request.
-
-## My request:
-
----
-
-yes i consent
-
----
-
-yes
+Can you do a pr here? just push, you dont have github cli here
