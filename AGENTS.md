@@ -223,20 +223,27 @@ jitter. This coordinating task owns `frontend/`, its position export scripts and
 fixtures, and `docs/submission/UI_WALKTHROUGH.md` until its handoff. Other agents
 may review those areas read-only; do not independently redesign them.
 
-At this update, frontend work is **uncommitted and unfinished**, not verified for
-release. The following findings and changes must not be mistaken for shipped work:
+Frontend completion update (13 September): the coordinating task has implemented
+and browser-verified the following behavior; use the working tree/PR for exact SHA:
 
-- The robot loader was hardcoded to `05-28-21-25`; the new examples fell back to a
-  fixed pose. Their local source PosMsr files exist, exactly match torque timestamps,
-  and pass finite-angle/joint-limit checks. New exports reuse the original reference
-  mapping and explicitly do not claim per-recording Jacobian verification.
-- Browser reproduction measured a 34 px chat shift as input-repair controls appeared
-  during playback. The analysis interval followed the continuously moving playhead.
-  The fix separates the investigation interval from visual playback and limits
-  conversation scrolling to new turns, not each streamed update.
-- The redesign makes Robot / All 7 signals / Publisher markers direct views, puts
-  a compact prediction before measured evidence, and keeps technical receipts in
-  details. Layout, browser validation and regression checks remain to be finished.
+- Robot / All 7 signals / Publisher markers are direct views. The robot is shown
+  by default, with two largest-range traces beneath it and joint focus on click.
+- The original robot loader was hardcoded to `05-28-21-25`. Added examples now use
+  their own PosMsr fixtures. Source timestamps exactly match torque; finite-angle
+  and joint-limit checks pass. The reference-mapping convention is reused, with
+  `mappingVerified: false` and explicit absence of per-recording Jacobian checks.
+  Missing recordings retain a fixed-pose fallback. Final partial samples hold only
+  through the documented recording end.
+- Replay advances the visual cursor and recorded articulation, while the analysis
+  interval stays fixed. **Select at cursor** explicitly chooses a new model window.
+  Chat only scrolls for a new turn, not streamed updates. Browser testing observed
+  stable chat geometry during playback after reproducing the previous 34 px shift.
+- **Analyze interval** is the main action. Compact model predictions precede measured
+  torque; full responses, raw generations, tool logs and receipts remain in details.
+  Invalid/inconsistent fields fall back to the full response, never invented repairs.
+- 44 frontend tests and production build pass; desktop/mobile browser checks include
+  live collision/intentional inference, robot motion, and evidence navigation.
+  The deployment checkpoint and archived benchmark results are unchanged.
 
 Independent work can proceed in model reliability, raw-data adapter coverage, and
 submission/business evidence. Do not tune on the already-inspected test examples.

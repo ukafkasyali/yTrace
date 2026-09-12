@@ -1,3 +1,5 @@
+import collisionPositions from '../../public/robot/kuka/positions-03-15-12-53.json';
+import intentionalPositions from '../../public/robot/kuka/positions-03-22-11-18.json';
 import { describe, expect, it } from 'vitest';
 import { positionAtPlayhead, torqueAtPlayhead, validatePositions, type PositionData } from './telemetry';
 import { validateGeometry, validPose } from './scene';
@@ -77,5 +79,32 @@ describe('measured robot articulation', () => {
     validateGeometry(geometry);
     expect(validPose(geometry, [0, 0, 0, 0, 0, 0, NaN])).toBe(false);
     expect(validPose(geometry, [0, 5, 0, 0, 0, 0, 0])).toBe(false);
+  });
+});
+
+describe('per-recording example positions', () => {
+  it('routes distinct recordings to their own measured angles with disclosed mapping scope', async () => {
+    const { positionFixture } = await import('./telemetry');
+    const fixtures: Record<string, PositionData> = { '03-15-12-53': collisionPositions as PositionData, '03-22-11-18': intentionalPositions as PositionData };
+    validateGeometry(geometry);
+    for (const id of ['03-15-12-53', '03-22-11-18']) {
+      const path = positionFixture(id)!;
+      expect(path).toContain(id);
+      const positions = fixtures[id];
+      expect(() => validatePositions(positions, id)).not.toThrow();
+      expect(positions.validation.mappingVerified).toBe(false);
+      expect(positionAtPlayhead(positions, id, positions.endSeconds!)?.time).toBe(positions.times.at(-1));
+      expect(positionAtPlayhead(positions, id, positions.endSeconds! + .001)).toBeNull();
+      expect(positions.validation.conventionReference).toBe('05-28-21-25');
+      const first = positionAtPlayhead(positions, id, 6)!;
+      const later = positionAtPlayhead(positions, id, 60)!;
+      expect(first.radians).not.toEqual(later.radians);
+      expect(validPose(geometry, first.radians)).toBe(true);
+      expect(positionAtPlayhead(positions, '05-28-21-25', 6)).toBeNull();
+      const unverified = structuredClone(positions);
+      unverified.validation.timestampsExactlyMatchTorque = false;
+      expect(() => validatePositions(unverified, id)).toThrow();
+    }
+    expect(positionFixture('unknown')).toBeUndefined();
   });
 });

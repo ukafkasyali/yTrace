@@ -116,29 +116,40 @@ Each completed assistant or local analysis has an **Export investigation** butto
 a JSON report with the snapshotted recording/window, publisher annotations, all seven sampled
 channel measurements, answer, evidence links and available model revision/input receipt. Exports
 retain the original answer interval even after replay moves. Reduced overview measurements are
-labeled explicitly. Local analysis is selected initially so numerical tools work without a model.
+labeled explicitly. Choose **Measurements only** to use numerical tools without a model.
 
 See the [verified browser export](../docs/submission/demo/investigation-example.json) and
 [two-minute demo](../docs/submission/DEMO.md).
 
-## Three-case walkthrough and exact model input
+## Investigation and replay
 
-Choose **Example → Collision**, **Intentional contact**, or **Normal / free motion**,
-then **Run OpenTSLM**. On mobile, switch to **Assistant** first. Cases load raw
-telemetry from the backend, with a fixed 1.024-second selection. **Show recording
-context** reveals publisher markers and torque ranges on desktop; collapsing it
-leaves space for the interpretation. Signals remain visible alongside it.
+Choose a recording example, then **Analyze interval**. **Robot** is visible by
+default, with the two largest-range joint signals in the selected interval beneath
+it; selecting a robot joint focuses that trace. **All 7 signals** and **Publisher
+markers** are direct views, not hidden inside the chat. On mobile, **Replay** and
+**Investigation** switch between the visual workbench and the answer.
 
-The readiness line checks all seven joints in order, exactly 1,024 contiguous raw
-samples at 1 kHz, and the replay boundary. Other selections remain usable for local
-calculations; **Use 1.024 s window** fits a valid raw interval when possible.
-Open **Model input receipt** under an answer for its checkpoint, input SHA-256,
-samplesPerChannel, normalization and exact interval. The full checkpoint SHA is
-matched before the UI calls a model canary-v4. **Inspect 7 input channels** returns
-to the answer's interval; **Export investigation** saves its evidence.
+Playback moves the robot and visual cursor without changing the investigation
+interval or scrolling the answer. **Select at cursor** explicitly selects the last
+1.024 seconds; selecting a marker or dragging a signal also changes the interval.
+An older answer and its export retain the original input regardless of current
+selection. The model is run only on user action, not automatically on page load.
 
-The backend catalogue adds `[0,8)` raw excerpts for two original recordings.
-Collision/free use training recording `03-15-12-53`; intentional contact uses test
-recording `03-22-11-18`. These fixed illustrative cases do not constitute a new
-accuracy benchmark. No annotation or case title is sent into the model prompt.
-See [the walkthrough and recorded responses](../docs/submission/UI_WALKTHROUGH.md).
+The answer leads with a compact generated interpretation, then measured torque.
+**Inspect 7 input channels** opens the full signal view at that answer's interval.
+**Model & input details** contains the full answer, raw generation, exact checkpoint,
+1,024-sample receipt and tool steps. **Export investigation** retains all evidence.
+Unsupported or inconsistent model fields fall back to the full response rather
+than being converted into a cleaner-looking prediction.
+
+Seven canonical joints, exactly 1,024 contiguous raw 1-kHz samples and the historical
+replay boundary are still enforced. **Use 1.024 s window** repairs a selection when
+raw coverage and history permit. **Measurements only** supports other intervals;
+**Model + measurements** runs the deployed OpenTSLM service. Both API modes share
+one checkpoint; the header reports OpenTSLM connected rather than two models.
+
+Original recording `05-28-21-25` has raw detail in `[4,9)`. The backend examples add
+`[0,8)` detail for collision/free recording `03-15-12-53` (train split) and intentional
+recording `03-22-11-18` (test split). These fixed examples are not a new benchmark.
+Each now has its own recorded position fixture; see the position-validation report
+for the distinction between the original Jacobian check and reference-mapped examples.

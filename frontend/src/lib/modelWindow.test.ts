@@ -24,3 +24,14 @@ describe('model input window', () => {
     expect(checkpointLabel(`checkpoint-sha256:${'a'.repeat(64)}`)).toBe('Checkpoint aaaaaaaa');
   });
 });
+
+describe('replay sampling boundaries', () => {
+  it('fits consistently behind fractional playback cursors without rounding into the future', () => {
+    for (const cursor of [7.0001, 7.0004, 7.0006, 7.0009, 7.0011]) {
+      const fitted = fitModelWindow(data, { start: 8, end: 9 }, cursor)!;
+      expect(fitted).toBeDefined();
+      expect(fitted.end).toBeLessThanOrEqual(cursor);
+      expect(modelWindowIssue(data, fitted, cursor)).toBeUndefined();
+    }
+  });
+});

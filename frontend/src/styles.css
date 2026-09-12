@@ -201,38 +201,119 @@ input,textarea{caret-color:var(--accent)}
 .assistant-capability{color:var(--quiet);font-size:10px}
 .report-export{margin-top:12px;gap:6px}.report-status{margin:0;padding:8px 16px;color:var(--text);font-size:12px;border-top:1px solid var(--line)}
 
-/* Raw-input readiness and reproducible examples share the workbench vocabulary. */
-.demo-cases { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.demo-cases label { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.demo-cases select { max-width: 100%; padding: 6px 8px; background: var(--panel); color: inherit; border: 1px solid var(--line); border-radius: 4px; }
-.demo-cases > span { flex: 1; min-width: 160px; font-size: 12px; color: var(--quiet); }
-.model-input-status { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.model-input-status > div { flex: 1 1 180px; display: grid; gap: 4px; font-size: 12px; }
-.model-input-status span { color: var(--quiet); }
-.model-input-status .btn { min-height: 34px; }
-.input-receipt { margin-top: 12px; font-size: 12px; overflow-wrap: anywhere; }
-.input-receipt summary { cursor: pointer; }
-.input-receipt pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; max-height: 220px; overflow-y: auto; }
-@media (max-width: 700px) {
-  .demo-cases { padding: 8px 12px; gap: 6px; }
-  .demo-cases select { font-size: 16px; }
-  .demo-cases > span { flex-basis: 100%; font-size: 12px; }
-}
-.context-toggle { flex-shrink: 0; width: 100%; min-height: 38px; padding: 8px 18px; border-bottom: 1px solid var(--line); text-align: left; }
-.model-input-status { flex-shrink: 0; }
-.demo-cases { flex-shrink: 0; }
-@media (min-width: 851px) {
-  .context-collapsed .recording-context { display: none; }
-  .context-expanded { overflow-y: auto; }
-  .context-expanded .assistant-panel { min-height: 400px; }
+
+/* Investigation-first layout: stable analysis alongside recorded motion. */
+.app-shell { min-height: 640px; }
+.app-header { height: 60px; padding-inline: 24px; }
+.main-workspace { overflow: hidden; }
+.demo-cases { display: flex; align-items: center; flex-shrink: 0; min-height: 64px; gap: 18px; padding: 12px 24px; border-bottom: 1px solid var(--line); background: #191d1f; }
+.demo-cases label { display: flex; align-items: center; gap: 12px; color: var(--quiet); }
+.demo-cases select { padding: 7px 10px; min-width: 218px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+.case-source { position: relative; color: var(--quiet); font-size: 12px; margin-left: auto; }
+.case-source summary { cursor: pointer; padding: 6px 0; }
+.case-source p { position: absolute; z-index: 30; right: 0; top: 32px; width: min(360px, 85vw); padding: 16px; background: var(--raised); border: 1px solid var(--line); line-height: 1.7; color: var(--text); }
+.inspect-grid { grid-template-columns: minmax(360px, .85fr) minmax(480px, 1.25fr); }
+.left-workspace { min-width: 0; overflow: hidden; }
+.visual-workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--panel); overflow: hidden; }
+.visual-tabs { display: flex; gap: 24px; padding: 0 22px; height: 48px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
+.visual-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 0 1px; color: var(--quiet); }
+.visual-tabs button[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.visual-workspace .recording-context { height: auto; min-height: 180px; flex: 1.2 1 0; }
+.visual-workspace .signals-panel { height: auto; min-height: 200px; flex: 1 1 0; }
+.visual-markers .recording-context { flex: 1; }
+.visual-signals .signals-panel { flex: 1; min-height: 0; }
+.visual-workspace .signal-strip { min-height: 0; }
+.visual-workspace .recording-title { padding-block: 18px; }
+.visual-workspace .explorer-body { padding-bottom: 20px; }
+.visual-workspace .event-browser { width: 180px; }
+.visual-workspace .panel-heading { height: 38px; }
+.visual-workspace .robot-marker-note { display: none; }
+.robot-caption { padding-inline: 20px; }
+.robot-footer { padding-inline: 20px; }
+.robot-joints p { display: none; }
+.robot-content { min-height: 0; }
+.assistant-panel > .panel-heading { height: 48px; padding-inline: 24px; }
+.assistant-capability { font-size: 12px; color: var(--quiet); }
+.model-input-status { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.model-input-status > div { display: grid; gap: 5px; }
+.model-input-status strong { font-size: 14px; font-weight: 500; }
+.model-input-status span { font-size: 12px; color: var(--quiet); }
+.model-input-status .btn { min-height: 38px; padding-inline: 14px; }
+.input-guidance { padding: 10px 24px; flex-shrink: 0; color: var(--quiet); font-size: 12px; }
+.conversation { padding: 24px; overflow-anchor: none; overscroll-behavior: contain; }
+.conversation-intro { padding-block: 24px; max-width: 44ch; }
+.conversation-intro > svg { color: var(--accent); margin-bottom: 20px; }
+.conversation-intro h3 { font-size: 24px; line-height: 1.3; font-weight: 450; text-wrap: balance; }
+.conversation-intro > p { display: block; margin-top: 16px; font-size: 14px; line-height: 1.8; }
+.conversation-intro .intro-limit { font-size: 12px; margin-top: 24px; }
+.conversation-turn { margin-bottom: 28px; }
+.user-question { padding-bottom: 14px; margin-bottom: 22px; }
+.user-question p { font-size: 14px; font-weight: 500; }
+.user-question small { font-size: 11px; }
+.assistant-answer { display: block; }
+.prediction-summary h3 { font-size: 23px; line-height: 1.35; font-weight: 500; letter-spacing: -.02em; }
+.prediction-facts { display: grid; gap: 6px; margin-top: 16px; color: var(--quiet); font-size: 13px; }
+.prediction-facts strong { color: var(--text); font-weight: 500; }
+.assistant-answer .prediction-caution { font-size: 12px; color: var(--quiet); line-height: 1.6; margin-top: 14px; }
+.measured-summary { margin-top: 28px; }
+.measured-summary h3 { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+.measured-summary p { color: #c5ced1; }
+.answer-brief section { border: 0; padding: 0; margin-top: 20px; }
+.answer-brief h3 { text-transform: none; letter-spacing: 0; }
+.evidence-links { margin-top: 18px; }
+.evidence-links button { min-height: 34px; }
+.input-receipt { margin-top: 18px; font-size: 12px; color: var(--quiet); overflow-wrap: anywhere; }
+.input-receipt summary { cursor: pointer; padding-block: 5px; }
+.input-receipt pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow-y: auto; font-size: 11px; }
+.input-receipt > p { margin-block: 10px; font-size: 12px; }
+.report-export { margin-top: 8px; }
+.composer { margin: 10px 24px 20px; border-color: var(--line); background: #202628; }
+.composer textarea { min-height: 44px; height: 44px; font-size: 14px; padding-top: 12px; }
+.composer .mode-select select { font-size: 12px; }
+.selection-footer { height: 38px; flex-shrink: 0; }
+.selection-footer > .text-button { margin-left: auto; }
+@media (min-width: 851px) and (max-width: 1100px) {
+  .inspect-grid { grid-template-columns: minmax(350px, .9fr) minmax(400px, 1.1fr); }
+  .model-input-status, .assistant-panel > .panel-heading, .conversation { padding-inline: 18px; }
+  .composer { margin-inline: 18px; }
 }
 @media (max-width: 850px) {
-  .context-toggle { display: none; }
-  .app-shell { height: 100dvh; min-height: 0; overflow: hidden; }
+  .app-shell { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: 115px; }
+  .app-header { height: 54px; padding-inline: 14px; }
   .app-body { min-height: 0; }
-  .inspect-grid { min-height: 0; }
+  .demo-cases { min-height: 60px; padding: 9px 14px; gap: 8px; flex-wrap: wrap; }
+  .demo-cases label { gap: 8px; font-size: 12px; }
+  .demo-cases select { min-width: 0; max-width: 230px; font-size: 16px; padding: 6px; }
+  .case-source { margin-left: 0; font-size: 11px; }
+  .case-source p { left: 0; right: auto; }
+  .inspect-grid { min-height: 0; overflow: hidden; }
+  .mobile-signals .left-workspace, .mobile-assistant .visual-workspace { display: none; }
   .mobile-assistant .left-workspace { height: 100%; min-height: 0; flex: 1; }
-  .mobile-assistant .assistant-panel { height: auto; min-height: 0; }
-  .mobile-signals { overflow-y: auto; }
-  .mobile-signals .left-workspace, .mobile-signals .signals-panel { flex-shrink: 0; }
+  .mobile-assistant .assistant-panel { height: auto; min-height: 0; flex: 1; }
+  .visual-workspace { height: 100%; flex: 1; }
+  .visual-workspace .recording-context { display: flex; min-height: 160px; flex: 1.2 1 0; }
+  .visual-workspace .signals-panel { display: flex; min-height: 160px; flex: 1 1 0; }
+  .visual-tabs { height: 42px; padding-inline: 16px; gap: 20px; font-size: 12px; }
+  .visual-signals .signals-panel { min-height: 0; }
+  .visual-signals .signal-strips { overflow-y: auto; }
+  .visual-signals .signal-strip { min-height: 56px; }
+  .visual-workspace .event-browser { width: 135px; }
+  .robot-caption { padding-inline: 12px; height: 38px; }
+  .robot-footer { padding-inline: 12px; font-size: 10px; }
+  .robot-joints { padding-top: 4px; }
+  .robot-joints button { height: 23px; }
+  .assistant-panel > .panel-heading { height: 42px; padding-inline: 18px; }
+  .model-input-status { padding: 14px 18px; gap: 8px; }
+  .model-input-status strong { font-size: 13px; }
+  .model-input-status span { font-size: 11px; }
+  .model-input-status .btn { font-size: 12px; }
+  .conversation { padding: 20px 18px; }
+  .conversation-intro { padding-block: 10px; }
+  .conversation-intro h3, .prediction-summary h3 { font-size: 22px; }
+  .conversation-intro > p { font-size: 14px; }
+  .composer { margin: 8px 14px 14px; }
+  .composer textarea { font-size: 16px; }
+  .selection-footer { height: 38px; }
+  .selection-footer .text-button { font-size: 10px; }
+  .transport { bottom: 38px; }
 }

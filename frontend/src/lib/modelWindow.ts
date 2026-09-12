@@ -15,7 +15,7 @@ export function modelWindowIssue(data: DemoData, interval: Interval, playhead: n
 
 export function fitModelWindow(data: DemoData, interval: Interval, playhead: number): Interval | undefined {
   const first = data.detail.times[0];
-  const lastEnd = Math.min(data.detail.endSeconds, playhead);
+  const lastEnd = Math.floor(Math.min(data.detail.endSeconds, playhead) * 1000 + 1e-8) / 1000;
   if (first === undefined || lastEnd - first < 1.024 - 1e-8) return;
   const start = Math.round(Math.max(first, Math.min(interval.start, lastEnd - 1.024)) * 1000) / 1000;
   const next = { start, end: Math.round((start + 1.024) * 1000) / 1000 };

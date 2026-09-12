@@ -4,22 +4,25 @@ Verified on 12 September 2026 through Vite at `http://127.0.0.1:5174/`, the loca
 SSH tunnel, and the private Nebius inference bridge. This is a replay walkthrough,
 not an additional accuracy benchmark.
 
-1. Open Trace. Under **Example**, choose **Collision**. On a phone-sized screen,
-   switch from **Signals** to **Assistant**.
-2. Above the question box, check **canary-v4 · 8ff63b84** and
-   **Ready: 7 joints × 1,024 raw samples · 1 kHz**. The selection is set automatically.
-3. Click **Run OpenTSLM**. Read **Measured in this selected window** for calculations,
-   then **OpenTSLM interpretation** for the generated prediction. The source note
-   at the top describes publisher metadata; it is not a model answer.
-4. Scroll within the answer and open **Model input receipt**. Confirm
-   `samplesPerChannel: 1024`, seven `channelIds`, `normalization: train_robust`,
-   the selected interval, and the checkpoint SHA below. The receipt belongs to
-   that completed answer even if the selection changes later.
-5. Click **Inspect 7 input channels** to select and highlight its original input.
-   Use **Show recording context · annotations & ranges** for the marker and measured
-   joint ranges. **Export investigation** saves the answer and its evidence as JSON.
-6. Repeat for **Intentional contact** and **Normal / free motion**. Each uses its own
-   raw samples. Switching cases starts a fresh investigation; export first to keep it.
+1. Open Trace and choose **Recording → Collision**. On mobile use **Replay** for
+   the robot and plots, or **Investigation** for the answer.
+2. **Robot** is shown immediately, with two torque traces below. **All 7 signals**
+   opens the full signal view; **Publisher markers** opens annotations and ranges.
+   The two default traces have the largest measured ranges in the investigation
+   interval. Clicking a robot joint focuses its trace.
+3. Under **Event investigation**, check the selected interval and **canary-v4**, then
+   click **Analyze interval**. No model query runs automatically on page load.
+4. Read the compact generated prediction first and **Measured torque** beneath it.
+   They remain different sources. **Model & input details** retains the full model
+   response, raw generation, tool steps and the **1,024-sample input receipt**.
+5. Click **Inspect 7 input channels** to return to the answer's exact input window.
+   **Export investigation** saves the answer, annotations, calculations and receipt.
+6. Press **Play replay**. Recorded articulation and plots advance, while the answer
+   and investigation interval stay fixed. **Select at cursor** explicitly changes
+   the investigation to the last 1.024 seconds. Selecting a marker or dragging the
+   plot also changes the interval. Earlier answers retain their own evidence.
+7. Repeat with **Intentional contact** and **Normal / free motion**. Switching cases
+   starts a fresh investigation; export first to retain the previous one.
 
 | Example | Recording / split | Raw interval (seconds) | Observed canary-v4 output | Receipt |
 |---|---|---|---|---|
@@ -37,9 +40,9 @@ config:4dbdd82f5ff7
 ```
 
 To understand the input constraint on desktop, select the free-motion case, change
-**to** from `2.024` to `2.000`, and click **Apply**. **Run OpenTSLM** becomes disabled
+**to** from `2.024` to `2.000`, and click **Apply**. **Analyze interval** becomes disabled
 with a specific explanation. Click **Use 1.024 s window** to restore valid input.
-**Local analysis** still supports other historical selections and performs only
+**Measurements only** still supports other historical selections and performs only
 numerical calculations. The API separately rejects wrong channel order, channel
 subsets, wrong window lengths, missing samples, non-1-kHz cadence, and future input.
 
@@ -56,9 +59,24 @@ Source SHA-256 identities and the selection policy are in
 values, with no resampling or decimal rounding. Case titles and annotations are
 excluded from model requests.
 
-Verification: 40 frontend tests, 25 inference tests, production frontend build,
-three real UI generations and matching CLI smoke results through `/api`. Desktop
-1280×800 and mobile 390×844 layouts checked in the in-app browser. Invalid selection,
-one-click repair, evidence navigation, and receipt expansion verified. Mobile is
-viewport emulation, not a physical-device test. The existing optional robot-renderer
-bundle-size warning remains.
+Verification update, 13 September 2026: 44 frontend tests and production build pass.
+New tests cover per-recording position routing, motion changes, end-of-recording hold,
+reference-mapping disclosure, malformed prediction fallback and fractional-cursor input
+fitting. Real model answers still pass through the existing private canary-v4 service.
+Collision and intentional outputs were verified again in the simplified UI.
+
+Browser reproduction before the fix measured a 34 px chat shift (conversation top
+310→344 px) as input-repair controls appeared. After separating selection and replay,
+a playthrough kept the investigation at [5.496,6.520), conversation top at 257 px,
+height at 335 px and scroll offset at 0. The collision robot was visually observed
+moving from upright to folded as replay advanced from about 7 to 25 seconds.
+Desktop 1280×800 and mobile 390×844 views were checked with computer use. Mobile is
+viewport emulation, not a physical-device test. The optional 3D bundle retains Vite's
+existing size warning.
+
+The original pose fixture has an independent numerical Jacobian check. The two added
+recordings use their own measured angles with timestamp and joint-limit checks, and
+reuse the original mapping convention. Their missing per-recording Jacobian validation
+is explicitly disclosed in metadata and the robot view; body/world geometry remains
+schematic. Playback holds the last available angle sample through the final partial
+100 Hz interval, never beyond the source recording boundary.
