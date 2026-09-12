@@ -11,6 +11,9 @@ from data_sourcing.graph import DatasetScoutGraph, _markdown_text, initial_state
 from data_sourcing.models import (
     CreateSourcingRun,
     ExecutionMode,
+    RequirementCategory,
+    RequirementDefinition,
+    RequirementPriority,
     RunStatus,
     SearchHypothesis,
     SearchResult,
@@ -150,6 +153,7 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
     )
 
     assert completed["status"] == RunStatus.APPROVED.value
+    assert completed["feedback_allowed"] is False
     assert completed["manifest"]["candidate_id"] == paused["recommended_candidate_id"]
     assert any("batch_count" in item for item in completed["manifest"]["limitations"])
     scout.close()
@@ -185,7 +189,8 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
         config,
     )
 
-    assert refined["status"] == RunStatus.AWAITING_APPROVAL.value
+    assert refined["status"] == RunStatus.NEEDS_INPUT.value
+    assert refined["feedback_allowed"] is True
     assert refined["review_iterations_used"] == 1
     assert refined["review_feedback"] == [
         "Prioritize datasets that include free-motion baseline recordings."
@@ -224,6 +229,7 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
     )
     assert second_refinement["status"] == RunStatus.NEEDS_INPUT.value
     assert second_refinement["review_iterations_used"] == 2
+    assert second_refinement["feedback_allowed"] is False
     scout.close()
     connection.close()
 
@@ -460,6 +466,54 @@ def test_unresolved_free_motion_label_uses_two_gap_queries_and_abstains() -> Non
     assert len(result["hypotheses"]) == 5
     assert result["recommended_candidate_id"] is None
     assert "req_task_labels" in result["report_markdown"]
+    scout.close()
+    connection.close()
+
+
+def test_needs_input_pauses_for_feedback_and_resumes_refinement() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    config = {"configurable": {"thread_id": run_id}}
+    request = CreateSourcingRun(
+        brief=(
+            "Find robot collision data with a requirement absent from the cached fixture at "
+            "https://github.com/zhang-zengjie/robot-raw-collision-signals"
+        ),
+        requirements=[
+            RequirementDefinition(
+                id="req_custom_unavailable",
+                label="Includes maintenance work-order IDs",
+                description="Custom requirement verified from native sources.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.OTHER,
+                expected_values=["Includes maintenance work-order IDs"],
+            )
+        ],
+    )
+
+    paused = scout.graph.invoke(
+        initial_state(run_id, request, allow_cached_demo=True),
+        config,
+    )
+
+    assert paused["status"] == RunStatus.NEEDS_INPUT.value
+    assert paused["feedback_allowed"] is True
+    assert scout.graph.get_state(config).next == ("approval",)
+
+    refined = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Search specifically for maintenance work-order identifiers.",
+            }
+        ),
+        config,
+    )
+
+    assert refined["review_iterations_used"] == 1
+    assert refined["review_feedback"] == [
+        "Search specifically for maintenance work-order identifiers."
+    ]
     scout.close()
     connection.close()
 

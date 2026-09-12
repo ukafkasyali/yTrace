@@ -32,9 +32,11 @@ add up to ten custom natural-language requirements.
 }
 ```
 
-The response is a list of typed requirement definitions. Canonical provenance and usable
-time-series files have `isSystemRequired: true`; clients may display them but cannot disable or
-replace them. Custom text is represented as category `OTHER` and defaults to `MUST`.
+The response is a list of typed requirement definitions. Canonical provenance has
+`isSystemRequired: true`; clients may display it but cannot disable or replace it. Usable
+time-series files defaults to `MUST` but is configurable, so reviewers may make it preferred or
+disable it when sourcing non-time-series datasets. Custom text is represented as category `OTHER`
+and defaults to `MUST`.
 
 ### `POST /api/sourcing-runs`
 
@@ -90,6 +92,8 @@ candidate and evidence IDs, the recommendation before and after rescoring, and o
 `RECOMMENDATION_CHANGED`, `RECOMMENDATION_WITHHELD`, `EVIDENCE_EXPANDED`, `CANDIDATES_ADDED`,
 or `NO_CHANGE`. `excludedCandidateIds` records reviewer exclusions separately from deterministic
 assessment results so clients can show the full audit trail without offering excluded choices.
+`feedbackAllowed` tells clients whether the current durable checkpoint can accept another bounded
+reviewer-directed search. It may be true for either `AWAITING_APPROVAL` or `NEEDS_INPUT`.
 
 Candidates also expose additive source-exploration fields: `sourceRole` is `DISCOVERY_LEAD` or
 `DATASET_ARTIFACT`, `discoveryDepth` is zero to two, and `discoveredFromCandidateId` identifies the
@@ -128,6 +132,12 @@ auditability, but cannot be recommended or approved later in the run. Attempts t
 return `409 RUN_CONFLICT`. Up to two reviewer refinements are allowed, subject to the original
 time and Tavily-credit budgets. Repeating the same successful approval is safe; other
 terminal-state approvals also return `409 RUN_CONFLICT`.
+
+When a run is `NEEDS_INPUT` and `feedbackAllowed` is true, the same endpoint accepts
+`{"decision":"REJECT","note":"Search specifically for ..."}` without a `candidateId`. The run is
+already paused at a LangGraph interrupt, so this resumes the same thread and preserves all prior
+evidence. If `feedbackAllowed` is false, the time, credit or two-refinement bound is exhausted and
+the reviewer must start a new run.
 
 Reviewer feedback directs the next discovery query; it does not silently alter mandatory gates or
 the deterministic score weights. Newly discovered candidates are considered before previously
@@ -177,7 +187,7 @@ ninety seconds of active research time. The scout may inspect up to sixteen disc
 at most two native-link hops. Time spent waiting for human review does not consume the active
 research clock. Tavily advanced search costs two credits per query, so reviewer refinements use
 only the credits remaining after initial and gap searches. Mandatory gates always include
-source-local dataset identity, canonical provenance and usable time-series files. Licence, task
+source-local dataset identity and canonical provenance. Usable time-series files, licence, task
 labels, schema, acquisition, domain and other configurable checks become mandatory only when
 their confirmed priority is `MUST`. Dataset identity first
 requires a direct, non-empty supported data or archive file on the candidate's own native source.

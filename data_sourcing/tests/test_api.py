@@ -203,6 +203,47 @@ def test_rejection_requires_feedback_before_refining(tmp_path: Path) -> None:
         assert rejection.json()["error"]["code"] == "INVALID_REQUEST"
 
 
+def test_needs_input_accepts_feedback_without_a_candidate(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        created = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "needs-input-feedback"},
+            json={
+                "brief": BRIEF,
+                "requirements": [
+                    {
+                        "id": "req_custom_work_orders",
+                        "label": "Maintenance work-order IDs",
+                        "description": "Links signals to maintenance work orders.",
+                        "priority": "MUST",
+                        "category": "OTHER",
+                        "expectedValues": ["Includes maintenance work-order IDs"],
+                    }
+                ],
+            },
+        )
+        run_id = created.json()["runId"]
+        paused = client.get(f"/api/sourcing-runs/{run_id}").json()
+
+        assert paused["status"] == "NEEDS_INPUT"
+        assert paused["feedbackAllowed"] is True
+
+        refined = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={
+                "decision": "REJECT",
+                "note": "Search specifically for datasets linked to maintenance work orders.",
+            },
+        )
+
+        assert refined.status_code == 200
+        assert refined.json()["reviewIterationsUsed"] == 1
+        assert refined.json()["reviewFeedback"] == [
+            "Search specifically for datasets linked to maintenance work orders."
+        ]
+
+
 def test_refinement_response_persists_an_explicit_decision_delta(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:

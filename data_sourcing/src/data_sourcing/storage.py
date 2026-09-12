@@ -86,6 +86,7 @@ class ArtifactStore:
             excluded_candidate_ids=state.get("excluded_candidate_ids", []),
             review_feedback=state.get("review_feedback", []),
             review_iterations_used=state.get("review_iterations_used", 0),
+            feedback_allowed=state.get("feedback_allowed", False),
             refinement_outcomes=state.get("refinement_outcomes", []),
             gap_queries_used=state.get("gap_queries_used", 0),
             tavily_credits_used=state.get("tavily_credits_used", 0),

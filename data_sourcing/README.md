@@ -9,9 +9,10 @@ ingestion team.
 
 Before starting a run, the frontend previews a research contract. Reviewers can keep an inferred
 requirement mandatory, make it preferred, disable it, or add a natural-language rule such as
-"Contains at least 200 labelled collision events." Canonical provenance and usable time-series
-files remain fixed integrity checks. Custom rules fail closed: they count as supported only when
-the configured model identifies a verbatim quote in a fetched native source.
+"Contains at least 200 labelled collision events." Canonical provenance remains a fixed integrity
+check; usable time-series files defaults to mandatory but can be preferred or disabled. Custom
+rules fail closed: they count as supported only when the configured model identifies a verbatim
+quote in a fetched native source.
 
 ## Development
 
@@ -68,6 +69,11 @@ changed. The rejected candidate is retained in the evidence and ranking audit, b
 from subsequent recommendation and approval choices. If no eligible replacement is found, the
 agent withholds its recommendation instead of selecting the rejected candidate again. Feedback
 guides discovery but does not rewrite hard gates or score weights.
+
+If no dataset is eligible, the run pauses as `NEEDS_INPUT` while a refinement remains. The UI then
+shows a feedback field even though there is no candidate to reject; submitting it resumes the same
+durable graph thread. Once the credit, time or two-refinement limit is exhausted, the UI explains
+that a new run is required.
 
 The planner treats an explicitly named equipment or application domain as a mandatory
 requirement. Native verification records matched terms in each profile's `domains` field and

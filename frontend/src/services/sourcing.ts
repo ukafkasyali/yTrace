@@ -159,6 +159,7 @@ export type SourcingRun = {
   excludedCandidateIds: string[];
   reviewFeedback: string[];
   reviewIterationsUsed: number;
+  feedbackAllowed?: boolean;
   refinementOutcomes: RefinementOutcome[];
   gapQueriesUsed: number;
   tavilyCreditsUsed: number;
@@ -295,6 +296,7 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
     && run.reviewFeedback.every(item => typeof item === 'string')
     && Number.isInteger(run.reviewIterationsUsed) && (run.reviewIterationsUsed as number) >= 0
     && (run.reviewIterationsUsed as number) <= 2
+    && (run.feedbackAllowed === undefined || typeof run.feedbackAllowed === 'boolean')
     && Array.isArray(run.refinementOutcomes) && run.refinementOutcomes.length <= 2
     && run.refinementOutcomes.every(item => isRecord(item)
       && Number.isInteger(item.iteration) && (item.iteration as number) >= 1

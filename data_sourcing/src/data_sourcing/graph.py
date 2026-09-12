@@ -95,6 +95,7 @@ class SourcingState(TypedDict, total=False):
     approval_decision: str | None
     review_feedback: list[str]
     review_iterations_used: int
+    feedback_allowed: bool
     refinement_outcomes: list[dict[str, Any]]
     pending_refinement: dict[str, Any] | None
     active_research_seconds: float
@@ -140,6 +141,7 @@ def initial_state(
         "approval_decision": None,
         "review_feedback": [],
         "review_iterations_used": 0,
+        "feedback_allowed": False,
         "refinement_outcomes": [],
         "pending_refinement": None,
         "active_research_seconds": 0.0,
@@ -581,18 +583,19 @@ class DatasetScoutGraph:
                 new_evidence_ids=new_evidence_ids,
             )
             refinement_outcomes.append(outcome.model_dump(mode="json"))
-        can_refine_again = bool(pending) and (
+        feedback_allowed = (
             state.get("review_iterations_used", 0) < _REVIEW_ITERATION_LIMIT
             and state["tavily_credits_used"] + 2 <= self.settings.tavily_credit_limit
             and not self._expired(state)
         )
-        can_review = not missing_mandatory and (bool(approvable) or can_refine_again)
+        can_review = not missing_mandatory and bool(approvable)
         status = RunStatus.AWAITING_APPROVAL if can_review else RunStatus.NEEDS_INPUT
         report = self._report(state, ranked, missing_mandatory)
         return {
             "status": status.value,
             "assessments": _json_list(ranked),
             "recommended_candidate_id": recommended_candidate_id,
+            "feedback_allowed": feedback_allowed,
             "refinement_outcomes": refinement_outcomes,
             "pending_refinement": None,
             "review_rejected_candidate_id": None,
@@ -719,7 +722,11 @@ class DatasetScoutGraph:
 
     @staticmethod
     def route_after_scoring(state: SourcingState) -> str:
-        return "approval" if state["status"] == RunStatus.AWAITING_APPROVAL.value else "end"
+        can_pause = (
+            state["status"] == RunStatus.AWAITING_APPROVAL.value
+            or state.get("feedback_allowed", False)
+        )
+        return "approval" if can_pause else "end"
 
     def approval(self, state: SourcingState) -> dict[str, Any]:
         excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
@@ -736,7 +743,11 @@ class DatasetScoutGraph:
                     if candidate_is_approvable(assessment)
                     and assessment.candidate_id not in excluded_candidate_ids
                 ],
-                "message": "Approve the evidence-backed dataset manifest?",
+                "message": (
+                    "Approve the evidence-backed dataset manifest?"
+                    if state["status"] == RunStatus.AWAITING_APPROVAL.value
+                    else "Provide guidance for the next bounded dataset search."
+                ),
             }
         )
         approval = ApprovalRequest.model_validate(payload)
@@ -764,6 +775,7 @@ class DatasetScoutGraph:
             if state.get("review_iterations_used", 0) >= _REVIEW_ITERATION_LIMIT:
                 return {
                     "status": RunStatus.NEEDS_INPUT.value,
+                    "feedback_allowed": False,
                     "approval_decision": approval.decision.value,
                     "errors": [
                         *state["errors"],
@@ -777,6 +789,7 @@ class DatasetScoutGraph:
                 excluded_candidate_ids.add(rejected_candidate_id)
             return {
                 "status": RunStatus.DISCOVERING.value,
+                "feedback_allowed": False,
                 "approval_decision": approval.decision.value,
                 "review_feedback": [*state.get("review_feedback", []), approval.note],
                 "excluded_candidate_ids": sorted(excluded_candidate_ids),
@@ -785,6 +798,7 @@ class DatasetScoutGraph:
             }
         return {
             "status": RunStatus.APPROVED.value,
+            "feedback_allowed": False,
             "approval_decision": approval.decision.value,
             "approved_candidate_id": approval.candidate_id,
         }
@@ -804,7 +818,11 @@ class DatasetScoutGraph:
         errors = list(state["errors"])
         if iteration > _REVIEW_ITERATION_LIMIT:
             errors.append("Reviewer refinement limit reached; start a new run to continue")
-            return {"status": RunStatus.NEEDS_INPUT.value, "errors": errors}
+            return {
+                "status": RunStatus.NEEDS_INPUT.value,
+                "feedback_allowed": False,
+                "errors": errors,
+            }
         if (
             self._expired(state)
             or state["tavily_credits_used"] + 2 > self.settings.tavily_credit_limit
@@ -812,7 +830,11 @@ class DatasetScoutGraph:
             errors.append(
                 "Reviewer refinement could not run within the remaining time or credit budget"
             )
-            return {"status": RunStatus.NEEDS_INPUT.value, "errors": errors}
+            return {
+                "status": RunStatus.NEEDS_INPUT.value,
+                "feedback_allowed": False,
+                "errors": errors,
+            }
         hypothesis = make_review_hypothesis(
             iteration,
             state["review_feedback"][-1],

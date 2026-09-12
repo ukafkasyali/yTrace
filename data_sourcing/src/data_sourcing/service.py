@@ -139,7 +139,12 @@ class SourcingService:
 
     def approve(self, run_id: str, approval: ApprovalRequest) -> SourcingRun:
         run = self.artifacts.read_run(run_id)
-        if run.status is not RunStatus.AWAITING_APPROVAL:
+        can_resume_for_feedback = (
+            run.status is RunStatus.NEEDS_INPUT
+            and approval.decision is ApprovalDecision.REJECT
+            and run.feedback_allowed
+        )
+        if run.status is not RunStatus.AWAITING_APPROVAL and not can_resume_for_feedback:
             approved_candidate_id = run.approved_candidate_id or (
                 run.manifest.candidate_id if run.manifest else None
             )
@@ -149,7 +154,7 @@ class SourcingService:
                 and approval.candidate_id == approved_candidate_id
             ):
                 return run
-            raise RunConflict("Run is not awaiting approval")
+            raise RunConflict("Run is not awaiting approval or reviewer feedback")
         selected = next(
             (
                 item

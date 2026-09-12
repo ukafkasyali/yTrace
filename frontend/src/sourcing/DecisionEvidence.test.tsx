@@ -74,8 +74,11 @@ describe('decision evidence', () => {
     expect(markup).toContain('Recommendation: Robot joint torque measurements');
     expect(markup).toContain('All mandatory gates passed');
     expect(markup).toContain('Dataset ranking');
-    expect(markup).toContain('ZENODO: cc-by-4.0');
-    expect(markup).not.toContain('GITHUB: MIT');
+    expect(markup).toContain('Found value');
+    expect(markup).toContain('cc-by-4.0');
+    expect(markup).toContain('Zenodo record');
+    expect(markup).toContain('Open native source');
+    expect(markup).not.toContain('MIT');
     expect(markup).not.toContain('# Dataset sourcing report');
   });
 
@@ -223,6 +226,25 @@ describe('decision evidence', () => {
 
     expect(markup).toContain('No eligible datasets');
     expect(markup).toContain('Only datasets that pass every mandatory gate can be approved.');
+  });
+
+  it('offers a feedback form when a needs-input run can still refine', () => {
+    const run = runFixture();
+    run.status = 'NEEDS_INPUT';
+    run.feedbackAllowed = true;
+    run.recommendedCandidateId = null;
+    run.requirements[0].status = 'MISSING';
+    run.assessments[0].tier = 'REJECT';
+    run.assessments[0].missingRequirementIds = ['req_license'];
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('Help the scout continue');
+    expect(markup).toContain('What should the scout search for next?');
+    expect(markup).toContain('Refine search');
+    expect(markup).not.toContain('Dataset to approve');
   });
 
   it('ranks a domain match before a higher-scoring unrelated candidate', () => {

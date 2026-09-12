@@ -14,15 +14,39 @@ function evidenceRecords(run: SourcingRun, ids: string[], candidateId?: string) 
   );
 }
 
-function EvidenceLinks({ records }: { records: EvidenceRecord[] }) {
+function sourceName(record: EvidenceRecord) {
+  if (record.sourceKind === 'ZENODO') return 'Zenodo record';
+  if (record.sourceKind === 'HUGGING_FACE') return 'Hugging Face dataset page';
+  return 'GitHub repository';
+}
+
+function EvidenceItem({ record, requirementLabel }: {
+  record: EvidenceRecord;
+  requirementLabel: string;
+}) {
+  return <li className="requirement-evidence-item">
+    <div><span>Found value</span><strong>{record.observedValue}</strong></div>
+    <div><span>{sourceName(record)}</span><small>Supports “{requirementLabel}”</small></div>
+    <a href={record.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${sourceName(record)} supporting ${requirementLabel}`}>
+      Open native source <ArrowUpRight size={11} aria-hidden="true" />
+    </a>
+    {record.note && <p>{record.note.replace(/^Native excerpt:\s*/i, 'Source excerpt: ')}</p>}
+  </li>;
+}
+
+function EvidenceLinks({ records, requirementLabel }: {
+  records: EvidenceRecord[];
+  requirementLabel: string;
+}) {
   if (records.length === 0) return <span className="evidence-empty">No supporting record</span>;
-  return <ul className="evidence-links">{records.map(record =>
-    <li key={record.id}>
-      <a href={record.sourceUrl} target="_blank" rel="noopener noreferrer">
-        {record.sourceKind}: {record.observedValue} <ArrowUpRight size={11} aria-hidden="true" />
-      </a>
-    </li>,
-  )}</ul>;
+  const ordered = [...records].sort((left, right) => right.precedence - left.precedence);
+  return <div className="requirement-evidence">
+    <ul><EvidenceItem record={ordered[0]} requirementLabel={requirementLabel} /></ul>
+    {ordered.length > 1 && <details>
+      <summary>{ordered.length - 1} additional supporting source{ordered.length === 2 ? '' : 's'}</summary>
+      <ul>{ordered.slice(1).map(record => <EvidenceItem key={record.id} record={record} requirementLabel={requirementLabel} />)}</ul>
+    </details>}
+  </div>;
 }
 
 function decisionReason(run: SourcingRun, candidateId: string) {
@@ -120,6 +144,12 @@ export default function DecisionEvidence({
   const excludedCandidateIds = new Set(run.excludedCandidateIds);
   const eligibleAlternatives = ranked.filter(item =>
     candidateIsEligibleForApproval(item, excludedCandidateIds));
+  const evidenceCandidateId = candidateId ?? run.recommendedCandidateId
+    ?? ranked[0]?.candidateId;
+  const evidenceCandidate = run.candidates.find(item => item.id === evidenceCandidateId);
+  const evidenceAssessment = run.assessments.find(
+    item => item.candidateId === evidenceCandidateId,
+  );
 
   return <section className="decision-evidence" aria-labelledby="decision-evidence-title">
     <div className="decision-evidence-heading">
@@ -143,15 +173,22 @@ export default function DecisionEvidence({
       <div><dt>Evidence confidence</dt><dd>{recommendedAssessment?.evidenceConfidence.toLowerCase() ?? 'not established'}</dd></div>
     </dl>
 
-    <h4>Requirement coverage</h4>
+    <h4>Requirement coverage{evidenceCandidate ? ` for ${evidenceCandidate.name}` : ''}</h4>
+    <p className="requirement-evidence-help">Each record shows the exact value the scout found, the native page that supports it, and which requirement it addresses.</p>
     <div className="table-scroll">
       <table className="data-table evidence-table">
-        <thead><tr><th>Requirement</th><th>Status</th><th>Native evidence</th></tr></thead>
-        <tbody>{mandatory.map(requirement => <tr key={requirement.id}>
-          <td><strong>{requirement.label}</strong>{requirement.expectedValues.length > 0 && <small>Expected: {requirement.expectedValues.join(', ')}</small>}</td>
-          <td><span className={`evidence-status evidence-${requirement.status.toLowerCase()}`}>{requirement.status === 'VERIFIED' ? <Check size={12} aria-hidden="true" /> : <CircleX size={12} aria-hidden="true" />}{requirement.status.toLowerCase()}</span></td>
-          <td><EvidenceLinks records={evidenceRecords(run, requirement.evidenceIds, candidateId)} /></td>
-        </tr>)}</tbody>
+        <thead><tr><th>Requirement</th><th>Need</th><th>Result</th><th>Supporting evidence</th></tr></thead>
+        <tbody>{run.requirements.map(requirement => {
+          const records = evidenceRecords(run, requirement.evidenceIds, evidenceCandidateId);
+          const missing = evidenceAssessment?.missingRequirementIds.includes(requirement.id);
+          const status = missing ? 'missing' : records.length > 0 ? 'verified' : 'not found';
+          return <tr key={requirement.id}>
+            <td><strong>{requirement.label}</strong>{requirement.expectedValues.length > 0 && <small>Expected: {requirement.expectedValues.join(', ')}</small>}</td>
+            <td>{requirement.priority === 'MUST' ? 'Required' : 'Preferred'}{requirement.isSystemRequired && <small>Fixed integrity check</small>}</td>
+            <td><span className={`evidence-status evidence-${status.replace(' ', '_')}`}>{status === 'verified' ? <Check size={12} aria-hidden="true" /> : <CircleX size={12} aria-hidden="true" />}{status}</span></td>
+            <td><EvidenceLinks records={records} requirementLabel={requirement.label} /></td>
+          </tr>;
+        })}</tbody>
       </table>
     </div>
 

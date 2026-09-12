@@ -339,6 +339,7 @@ class SourcingRun(WireModel):
     excluded_candidate_ids: list[str] = Field(default_factory=list, max_length=2)
     review_feedback: list[str] = Field(default_factory=list, max_length=2)
     review_iterations_used: int = Field(default=0, ge=0, le=2)
+    feedback_allowed: bool = False
     refinement_outcomes: list[RefinementOutcome] = Field(default_factory=list, max_length=2)
     gap_queries_used: int = Field(default=0, ge=0, le=2)
     tavily_credits_used: int = Field(default=0, ge=0, le=12)
