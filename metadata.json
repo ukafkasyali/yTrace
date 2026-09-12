@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BC4940P8SEVGRZTGB3HAVM",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_sourcing/README.md",
+    "docs/DATA_SOURCING_API.md",
+    "frontend/src/services/index.test.ts",
+    "frontend/src/services/index.ts",
+    "frontend/src/services/sourcing.ts",
+    "frontend/src/sourcing/DatasetScout.tsx",
+    "frontend/src/sourcing/DecisionEvidence.test.tsx",
+    "frontend/src/sourcing/DecisionEvidence.tsx",
+    "frontend/src/sourcing/ScoutReview.tsx",
+    "frontend/src/styles.css"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1413397,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 83231850,
+    "output_tokens": 321799,
+    "api_call_count": 638
+  }
+}
