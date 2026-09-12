@@ -111,7 +111,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual([e["type"] for e in events], ["tool.started", "tool.completed", "answer.completed"])
         self.assertEqual([e["id"] for e in events], ["1", "2", "3"])
         answer = events[-1]["payload"]
-        self.assertEqual(answer["answer"], "A generated test response.")
+        self.assertIn("Measured in this selected window", answer["answer"])
+        self.assertIn("A generated test response.", answer["answer"])
+        self.assertEqual(answer["modelOutput"], "A generated test response.")
         self.assertEqual(answer["modelRevision"], "test-revision")
         self.assertIn("not a verified explanation", answer["evidence"][0]["label"])
         request, series = self.runtime.received
@@ -119,6 +121,15 @@ class ServerTests(unittest.TestCase):
         self.assertNotIn("secret label", json.dumps(self.runtime.received))
         self.assertEqual(series[0]["timeSec"], [4, 4.5, 5])
         self.assertEqual(series[0]["values"], [4, 4.5, 5])
+
+    def test_assistant_orchestrates_measurement_and_opentslm(self):
+        self.request.pop("modelId")
+        self.request["mode"] = "assistant"
+        events = self.events(self.start())
+        self.assertEqual([event["type"] for event in events], ["tool.started", "tool.completed", "tool.started", "tool.completed", "answer.completed"])
+        self.assertEqual(events[0]["payload"]["tool"], "measurement_summary")
+        self.assertEqual(events[2]["payload"]["tool"], "opentslm")
+        self.assertIn("Largest observed torque ranges", events[-1]["payload"]["answer"])
 
     def test_cancel_retains_busy_slot_until_runtime_exits(self):
         self.runtime.release.clear()
@@ -143,7 +154,7 @@ class ServerTests(unittest.TestCase):
                  ("window.channelIds", ["unknown"], "INVALID_CHANNELS"),
                  ("window.channelIds", ["joint_1", "joint_1"], "INVALID_CHANNELS"),
                  ("window.startSec", float("nan"), "INVALID_WINDOW"),
-                 ("window.startSec", True, "INVALID_WINDOW"), ("mode", "assistant", "MODE_UNAVAILABLE"),
+                 ("window.startSec", True, "INVALID_WINDOW"), ("mode", "unsupported", "MODE_UNAVAILABLE"),
                  ("modelId", "cnn-1d", "MODEL_UNAVAILABLE"), ("question", "", "INVALID_QUERY")]
         for key, value, code in cases:
             with self.subTest(code=code, key=key):

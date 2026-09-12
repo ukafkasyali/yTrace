@@ -86,6 +86,34 @@ def envelope_indices(values, budget):
     return sorted(selected)
 
 
+def measured_summary(series):
+    """Summarise exact submitted samples; annotations are never used as evidence."""
+    rows = []
+    for channel in series:
+        values = channel["values"]
+        if values:
+            lo, hi = min(values), max(values)
+            rows.append({"channel": channel["channelId"], "range": hi - lo,
+                         "peak": max(abs(value) for value in values)})
+    return sorted(rows, key=lambda row: (row["range"], row["peak"]), reverse=True)
+
+
+def present_generation(generation, summary):
+    """Make imperfect generative output legible without promoting it to fact."""
+    ranges = ", ".join(
+        f"{row['channel'].replace('joint_', 'Joint ')} ({row['range']:.3f} Nm range)"
+        for row in summary[:3]
+    )
+    # Smoke checkpoints may append malformed JSON. Preserve readable text and retain
+    # the original generation separately in the response payload for debugging.
+    lead = " ".join(generation.split("Answer:", 1)[0].split())
+    interpretation = f"OpenTSLM generated: {lead}" if lead else "OpenTSLM returned no readable natural-language interpretation."
+    return (
+        f"Measured in this selected window\nLargest observed torque ranges: {ranges}.\n\n"
+        f"OpenTSLM interpretation\n{interpretation} Treat this generated interpretation as a lead, not a verified event explanation."
+    )
+
+
 class Job:
     def __init__(self, request):
         self.id = uuid.uuid4().hex
@@ -183,9 +211,10 @@ class Bridge:
     def start(self, request):
         if not isinstance(request, dict):
             raise ApiError(400, "INVALID_QUERY", "Expected a query object.")
-        if request.get("mode") != "direct":
-            raise ApiError(422, "MODE_UNAVAILABLE", "Only direct OpenTSLM inference is connected.")
-        if request.get("modelId") not in ("opentslm", self.runtime.model_id):
+        mode = request.get("mode")
+        if mode not in ("direct", "assistant"):
+            raise ApiError(422, "MODE_UNAVAILABLE", "Choose direct OpenTSLM or the telemetry assistant.")
+        if mode == "direct" and request.get("modelId") not in ("opentslm", self.runtime.model_id):
             raise ApiError(422, "MODEL_UNAVAILABLE", "The selected model is not connected.")
         question = request.get("question")
         if not isinstance(question, str) or not question.strip() or len(question) > 4000:
@@ -197,7 +226,7 @@ class Bridge:
         if not self.runtime.ready:
             raise ApiError(503, "MODEL_NOT_READY", "The model is loading or unavailable. Check service health.", True)
         series = self.signals(window)["series"]
-        cleaned = {"mode": "direct", "modelId": "opentslm", "question": question.strip(),
+        cleaned = {"mode": mode, "modelId": "opentslm", "question": question.strip(),
                    "window": window, "playheadSec": playhead}
         with self.lock:
             self.prune()
@@ -214,6 +243,11 @@ class Bridge:
         try:
             if job.cancelled.is_set():
                 return
+            summary = measured_summary(series)
+            if job.request["mode"] == "assistant":
+                measurement_id = f"measure-{job.id}"
+                job.emit("tool.started", {"callId": measurement_id, "tool": "measurement_summary", "label": "Measuring torque ranges in the selected samples"})
+                job.emit("tool.completed", {"callId": measurement_id, "summary": "Calculated per-joint torque ranges from the selected raw telemetry."})
             job.emit("tool.started", {"callId": call_id, "tool": "opentslm", "label": "Running OpenTSLM on selected raw telemetry"})
             answer = self.runtime.generate(job.request, series, job.cancelled)
             if job.cancelled.is_set():
@@ -221,11 +255,11 @@ class Bridge:
             if not isinstance(answer, str) or not answer.strip() or len(answer) > 32_000:
                 raise ValueError("Runtime returned invalid or oversized output")
             job.emit("tool.completed", {"callId": call_id, "summary": "OpenTSLM generation completed; explanation has not been independently verified."})
-            job.emit("answer.completed", {"answer": answer, "modelId": self.runtime.model_id,
+            job.emit("answer.completed", {"answer": present_generation(answer, summary), "modelOutput": answer, "modelId": self.runtime.model_id,
                      "modelRevision": self.runtime.revision, "inputTrace": getattr(self.runtime, "last_trace", None),
                      "evidence": [{"id": f"input-{job.id}",
                      "window": job.request["window"], "label": "Input telemetry (not a verified explanation)",
-                     "source": f"{self.runtime.model_id}@{self.runtime.revision}"}]})
+                     "source": f"{self.runtime.model_id}@{self.runtime.revision}"}], "measurements": summary[:3]})
         except Exception:
             traceback.print_exc()
             if not job.cancelled.is_set():
@@ -332,7 +366,10 @@ class Handler(BaseHTTPRequestHandler):
                      "durationSec": recording["durationSeconds"], "channels": [{"id": c["id"], "name": c["name"],
                      "unit": c["unit"], "sampleRateHz": recording["sampleRateHz"]} for c in data["channels"]]}])
         elif route == ["models"]:
-            self.json_response(200, [{"id": "opentslm", "label": "OpenTSLM", "available": bool(bridge.runtime.ready),
+            self.json_response(200, [{"id": "assistant", "label": "Telemetry assistant", "available": bool(bridge.runtime.ready),
+                     "capabilities": ["language"], "revision": bridge.runtime.revision,
+                     **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})},
+                    {"id": "opentslm", "label": "OpenTSLM", "available": bool(bridge.runtime.ready),
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})}])
         elif len(route) == 3 and route[0] == "recordings":

@@ -23,8 +23,7 @@ export type ModelProfile = {
   reason?: string; revision?: string;
 };
 export const DECLARED_MODELS: readonly ModelProfile[] = [
-  { id: 'cnn-1d', label: '1D CNN', available: false, capabilities: ['classification'], reason: 'Model service not connected' },
-  { id: 'direct-llm', label: 'Direct LLM', available: false, capabilities: ['language'], reason: 'Model service not connected' },
+  { id: 'assistant', label: 'Telemetry assistant', available: false, capabilities: ['language'], reason: 'Model service not connected' },
   { id: 'opentslm', label: 'OpenTSLM', available: false, capabilities: ['language'], reason: 'Model service not connected' },
 ];
 export type QueryRequest = {

@@ -186,3 +186,7 @@ input,textarea{caret-color:var(--accent)}
 .conversation-intro>p{max-width:none}
 @media(min-width:851px) and (max-height:820px){.explorer-panel{height:280px;min-height:280px}.recording-title{padding-top:7px;padding-bottom:7px}.recording-title p{font-size:11px}.range-title{margin-bottom:3px}.explorer-body{padding-bottom:8px}}
 @media(max-width:850px){.explorer-panel{height:338px;min-height:338px}.mobile-assistant .left-workspace{height:calc(100dvh - 247px);min-height:430px}.mobile-assistant .assistant-panel{height:auto;min-height:0}.mobile-assistant .conversation{flex:1;min-height:0}.app-body:has(.mobile-assistant:not([style*="none"])){min-height:0}}
+
+/* Assistant replies separate measured facts, generated interpretation and next action. */
+.answer-brief{display:grid;gap:13px}.answer-brief section{padding-left:11px;border-left:1px solid #40564b}.answer-brief section:first-child{border-left-color:var(--accent)}.answer-brief h3{color:#dce8e1;font-size:11px;font-weight:600;letter-spacing:.02em;margin:0 0 3px;text-transform:uppercase}.answer-brief p{margin:0}.assistant-answer .answer-brief section:last-child p{color:#aebdb6}
+.assistant-capability{color:var(--quiet);font-size:10px}
