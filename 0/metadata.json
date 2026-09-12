@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BXS5PRT9B5CCW0TKR4SSYP",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:03:36.595049Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/submission/UI_WALKTHROUGH.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "2db338eaa5a9",
+  "checkpoint_transcript_start": 2119,
+  "transcript_lines_at_start": 2119,
+  "compact_transcript_start": 264,
+  "token_usage": {
+    "input_tokens": 19786,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 919895,
+    "output_tokens": 1757,
+    "api_call_count": 12
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:03:36.090612Z",
+    "agent_lines": 2,
+    "agent_removed": 1,
+    "human_added": 302,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 304,
+    "total_lines_changed": 382,
+    "agent_percentage": 0.7853403141361256,
+    "metric_version": 2
+  }
+}
