@@ -24,7 +24,6 @@ class Settings(BaseSettings):
 
     initial_query_limit: int = Field(default=3, ge=1, le=3)
     gap_query_limit: int = Field(default=2, ge=0, le=2)
-    review_iteration_limit: int = Field(default=2, ge=1, le=3)
     candidate_limit: int = Field(default=8, ge=1, le=8)
     tavily_credit_limit: int = Field(default=12, ge=1, le=12)
     run_timeout_seconds: int = Field(default=90, ge=10, le=90)

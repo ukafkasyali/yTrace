@@ -44,6 +44,8 @@ from data_sourcing.scoring import (
     requirement_is_evidenced,
 )
 
+_REVIEW_ITERATION_LIMIT = 2
+
 
 class SourcingState(TypedDict, total=False):
     run_id: str
@@ -497,7 +499,7 @@ class DatasetScoutGraph:
                 ],
             }
         if approval.decision is ApprovalDecision.REJECT:
-            if state.get("review_iterations_used", 0) >= self.settings.review_iteration_limit:
+            if state.get("review_iterations_used", 0) >= _REVIEW_ITERATION_LIMIT:
                 return {
                     "status": RunStatus.NEEDS_INPUT.value,
                     "approval_decision": approval.decision.value,
@@ -531,7 +533,7 @@ class DatasetScoutGraph:
     def review_refinement(self, state: SourcingState) -> dict[str, Any]:
         iteration = state.get("review_iterations_used", 0) + 1
         errors = list(state["errors"])
-        if iteration > self.settings.review_iteration_limit:
+        if iteration > _REVIEW_ITERATION_LIMIT:
             errors.append("Reviewer refinement limit reached; start a new run to continue")
             return {"status": RunStatus.NEEDS_INPUT.value, "errors": errors}
         if (

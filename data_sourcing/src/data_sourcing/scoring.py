@@ -267,7 +267,8 @@ def apply_recommendation_confidence(
 
 def candidate_is_approvable(assessment: CandidateAssessment) -> bool:
     return (
-        assessment.tier is not CandidateTier.REJECT
+        assessment.total_score >= 65
+        and assessment.tier is not CandidateTier.REJECT
         and not assessment.missing_requirement_ids
         and all(gate.passed for gate in assessment.gates)
     )

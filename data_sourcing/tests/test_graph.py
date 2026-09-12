@@ -96,6 +96,30 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
     ]
     assert any(item["id"] == "hyp_review_refinement_1" for item in refined["hypotheses"])
     assert scout.graph.get_state(config).next == ("approval",)
+
+    second_refinement = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Prefer machine-readable CSV files.",
+            }
+        ),
+        config,
+    )
+    exhausted = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Search one more time.",
+            }
+        ),
+        config,
+    )
+
+    assert second_refinement["status"] == RunStatus.AWAITING_APPROVAL.value
+    assert second_refinement["review_iterations_used"] == 2
+    assert exhausted["status"] == RunStatus.NEEDS_INPUT.value
+    assert exhausted["review_feedback"] == second_refinement["review_feedback"]
     scout.close()
     connection.close()
 
