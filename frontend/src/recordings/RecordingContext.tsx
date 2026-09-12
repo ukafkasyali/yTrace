@@ -18,6 +18,6 @@ export default function RecordingContext(props: Props) {
       <button aria-pressed={view === 'overview'} onClick={() => setView('overview')}><ChartNoAxesCombined size={13}/>Overview</button>
       <button aria-pressed={view === 'robot'} disabled={!isKuka} title={isKuka ? 'Inspect measured articulation when available; body and base frame are schematic' : 'A robot mapping is not available for this recording'} onClick={() => setView('robot')}><Box size={13}/>3D reference</button>
     </div>
-    {view === 'overview' ? <RecordingExplorer {...props}/> : <RobotBoundary><Suspense fallback={<p className="robot-boundary" role="status">Opening 3D reference…</p>}><RobotPanel data={props.data} playhead={props.playhead} highlighted={props.highlighted} onHighlight={props.onHighlight}/></Suspense></RobotBoundary>}
+    {view === 'overview' ? <RecordingExplorer {...props}/> : <RobotBoundary><Suspense fallback={<p className="robot-boundary" role="status">Opening 3D reference…</p>}><RobotPanel data={props.data} playhead={props.playhead} interval={props.interval} highlighted={props.highlighted} onHighlight={props.onHighlight}/></Suspense></RobotBoundary>}
   </section>;
 }
