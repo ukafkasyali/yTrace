@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowLeft, Database, Pause, Play, Radio, RotateCcw, SkipBack, SkipForward, Waves } from 'lucide-react';
 import AssistantPanel from './assistant/AssistantPanel';
+import type { PredictionCue } from './assistant/predictionBrief';
 import { loadDemoData, selectWindow } from './lib/data';
 import { intervalLabel, timecode } from './lib/format';
 import RecordingContext from './recordings/RecordingContext';
@@ -59,7 +60,7 @@ export default function App() {
 }
 
 function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLoading, caseError }: { data: DemoData; datasetId: string; onOpenRecording: (recording: Recording) => Promise<void>; cases: DemoCase[]; onOpenCase: (id: string) => Promise<void>; caseLoading: boolean; caseError: string }) {
-  const replay = useReplay(data.recording.durationSeconds, data.demoCase?.interval.end ?? 8);
+  const replay = useReplay(data.recording.durationSeconds, data.demoCase?.interval.start ?? Math.min(5.787, data.recording.durationSeconds/3));
   const [visualMode, setVisualMode] = useState<'robot' | 'signals' | 'markers'>('robot');
   const [view, setView] = useState<'inspect' | 'data'>('inspect');
   const [mobile, setMobile] = useState<'signals' | 'assistant'>('signals');
@@ -67,6 +68,20 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   const [following, setFollowing] = useState(false);
   const [zoom, setZoom] = useState(10);
   const [highlighted, setHighlighted] = useState<string[]>([]);
+  const [robotPrediction, setRobotPrediction] = useState<PredictionCue>();
+  const [replayStop, setReplayStop] = useState<number>();
+  useEffect(() => {
+    if (replayStop !== undefined && replay.playhead >= replayStop) { replay.seek(replayStop); setReplayStop(undefined); }
+  }, [replay.playhead, replayStop, replay.seek]);
+  const visiblePrediction = robotPrediction && robotPrediction.interval.start === interval.start && robotPrediction.interval.end === interval.end ? robotPrediction : undefined;
+  function showRobotPrediction(prediction: PredictionCue) {
+    setReplayStop(undefined); setRobotPrediction(prediction); setInterval({ ...prediction.interval });
+    replay.seek(prediction.onsetSeconds); setFollowing(false); setHighlighted(prediction.channelId ? [prediction.channelId] : []);
+    setView('inspect'); setMobile('signals'); setVisualMode('robot');
+  }
+  function replayInterval() {
+    replay.seek(interval.start); replay.setSpeed(.5); setReplayStop(interval.end); setFollowing(true); replay.toggle();
+  }
   const [draftStart, setDraftStart] = useState(interval.start.toFixed(3));
   const [draftEnd, setDraftEnd] = useState(interval.end.toFixed(3));
   const [selectionError, setSelectionError] = useState('');
@@ -88,23 +103,26 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   const validViewport = viewport.end > viewport.start ? viewport : { start: 0, end: Math.max(.01, replay.playhead) };
   // Playback moves the visual cursor, never the investigation's selected input.
   const effectiveInterval = interval;
-  function select(next: Interval) { if (next.start < 0 || next.end <= next.start || next.end > replay.playhead) { setSelectionError('Choose a nonempty interval already reached by the replay.'); return; } replay.pause(); setFollowing(false); setInterval(next); setSelectionError(''); }
+  function select(next: Interval) { setReplayStop(undefined); if (next.start < 0 || next.end <= next.start || next.end > data.recording.durationSeconds) { setSelectionError('Choose a nonempty interval within this recording.'); return; } replay.pause(); setFollowing(false); setInterval(next); setSelectionError(''); }
   function seek(value: number) {
-    replay.seek(value); setFollowing(true); setHighlighted([]); setSelectionError('');
+    setReplayStop(undefined); replay.seek(value); setFollowing(true); setHighlighted([]); setSelectionError('');
   }
   function marker(e: Marker) {
+    setReplayStop(undefined);
     const context = markerWindow(e, data.recording.durationSeconds);
-    replay.seek(context.end);
+    replay.seek(context.start);
     setInterval(context);
+    setVisualMode('robot');
+    setMobile('signals');
     setFollowing(false);
     setHighlighted([]);
     setSelectionError('');
   }
   function navigateMarker(direction: number) {
-    const target = direction > 0 ? data.events.find(e => e.timeSeconds > replay.playhead) : [...data.events].reverse().find(e => e.timeSeconds < (effectiveInterval.start || replay.playhead));
+    const target = direction > 0 ? data.events.find(e => e.timeSeconds > Math.max(interval.end, replay.playhead)) : [...data.events].reverse().find(e => e.timeSeconds < (effectiveInterval.start || replay.playhead));
     if (target) marker(target);
   }
-  function evidence(e: EvidenceLink) { if (e.interval.start < 0 || e.interval.end > data.recording.durationSeconds || e.interval.end <= e.interval.start) return; replay.seek(e.interval.end); setInterval({ ...e.interval }); setFollowing(false); setHighlighted(e.channelIds?.length ? e.channelIds : [e.channelId]); setView('inspect'); setMobile('signals'); setVisualMode('signals'); }
+  function evidence(e: EvidenceLink) { setReplayStop(undefined); if (e.interval.start < 0 || e.interval.end > data.recording.durationSeconds || e.interval.end <= e.interval.start) return; replay.seek(e.interval.start); setInterval({ ...e.interval }); setFollowing(false); setHighlighted(e.channelIds?.length ? e.channelIds : [e.channelId]); setView('inspect'); setMobile('signals'); setVisualMode('signals'); }
   return <div className="app-shell">
     <header className="app-header"><a className="brand" href="#" onClick={e => { e.preventDefault(); setView('inspect'); }}><Activity size={23} strokeWidth={1.8}/><span>trace</span></a><div className="header-divider"/><span className="project-name">Investigate recorded contact</span><span className="replay-label"><RotateCcw size={11}/>Replay</span><div className="header-right"><span className="model-status"><CpuStatus/>{availability}</span><button className="btn btn-subtle" onClick={() => { replay.pause(); setView('data'); }}><Database size={14}/>Data source</button></div></header>
     <div className="app-body">
@@ -112,18 +130,18 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
         {(cases.length > 0 || caseError) && <div className="demo-cases"><label>Recording <select aria-label="Example case" disabled={caseLoading} value={data.demoCase?.id ?? ''} onChange={e => void onOpenCase(e.target.value)}><option value="" disabled>KUKA · original recording</option>{cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><details className="case-source"><summary>Source · {data.recording.id}</summary><p>{data.demoCase?.note ?? 'Original KUKA recording. Publisher markers are annotations, not verified contact onset. Raw model input is available from 4 to 9 seconds.'}</p></details>{(caseLoading || caseError) && <span role={caseError ? 'alert' : 'status'}>{caseLoading ? 'Loading raw telemetry…' : caseError}</span>}</div>}
         <div className="mobile-switch"><button className={mobile === 'signals' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('signals'); setVisualMode('signals'); }}>Replay</button><button className={mobile === 'assistant' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('assistant'); }}>Investigation</button></div>
         <div className={`inspect-grid mobile-${mobile}`} style={{ display: view === 'inspect' ? undefined : 'none' }}>
-          <div className="left-workspace"><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onModelWindow={select}/></div>
+          <div className="left-workspace"><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
           <div className={`visual-workspace visual-${visualMode}`}>
-            <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : 'Publisher markers'}</button>)}</div>
-            {visualMode !== 'signals' && <RecordingContext display={visualMode === 'robot' ? 'robot' : 'overview'} datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/>}
+            <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : 'Publisher markers'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
+            {visualMode !== 'signals' && <RecordingContext prediction={visiblePrediction} display={visualMode === 'robot' ? 'robot' : 'overview'} datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/>}
             {visualMode !== 'markers' && <SignalViewer visibleChannelIds={visualMode === 'robot' ? previewChannels : undefined} data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>}
           </div>
         </div>
         {view === 'data' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><DataWorkspace services={services} data={data} onOpenRecording={onOpenRecording}/></div>}
       </main>
     </div>
-    <footer className="transport"><div className="transport-controls"><button className="icon-button" aria-label="Replay from beginning" title="Replay from beginning" onClick={() => { setFollowing(true); setHighlighted([]); replay.restart(); }}><RotateCcw size={15}/></button><button className="icon-button" aria-label="Previous publisher marker" disabled={!data.events.some(e => e.timeSeconds < effectiveInterval.start)} onClick={() => navigateMarker(-1)}><SkipBack size={15}/></button><button className="play-button" aria-label={replay.playing ? 'Pause replay' : 'Play replay'} onClick={() => { if (!replay.playing) setFollowing(true); replay.toggle(); }}>{replay.playing ? <Pause size={17} fill="currentColor"/> : <Play size={17} fill="currentColor"/>}</button><button className="icon-button" aria-label="Next publisher marker" disabled={!data.events.some(e => e.timeSeconds > replay.playhead)} onClick={() => navigateMarker(1)}><SkipForward size={15}/></button></div><div className="replay-clock"><strong className="mono">{timecode(replay.playhead, true)}</strong><span className="mono">/ {timecode(data.recording.durationSeconds)}</span></div><div className="timeline-control"><label className="sr-only" htmlFor="playhead">Replay position in seconds</label><input id="playhead" type="range" min="0" max={data.recording.durationSeconds} step="0.001" value={replay.playhead} onChange={e => seek(Number(e.target.value))} style={{ '--progress': `${replay.playhead/data.recording.durationSeconds*100}%` } as React.CSSProperties}/><div className="timeline-marks">{data.events.map(e => <button key={e.id} className={e.timeSeconds <= replay.playhead ? 'reached' : 'upcoming'} style={{ left: `${e.timeSeconds/data.recording.durationSeconds*100}%` }} aria-label={`${e.label}, publisher annotation at ${e.timeSeconds.toFixed(3)} seconds${e.timeSeconds > replay.playhead ? ', upcoming' : ''}`} title={`${e.label} · ${e.timeSeconds.toFixed(3)} s · publisher annotation`} onClick={() => marker(e)}/>)}</div></div><label className="speed-control"><span className="sr-only">Playback speed</span><select aria-label="Playback speed" value={replay.speed} onChange={e => replay.setSpeed(Number(e.target.value))}>{[.5,1,2,4].map(n => <option key={n} value={n}>{n}×</option>)}</select></label><span className="play-state">{replay.playing ? 'Playing' : 'Paused'}</span></footer>
-    <div className="selection-footer"><span><span className="selection-dot"/>Investigation interval <strong className="mono">{intervalLabel(effectiveInterval)}</strong></span><form onSubmit={e => { e.preventDefault(); select({ start: Number(draftStart), end: Number(draftEnd) }); }}><label>From <input aria-label="Selection start seconds" type="number" step="0.001" min="0" max={replay.playhead} value={draftStart} onChange={e => setDraftStart(e.target.value)}/></label><label>to <input aria-label="Selection end seconds" type="number" step="0.001" min="0" max={replay.playhead} value={draftEnd} onChange={e => setDraftEnd(e.target.value)}/></label><button type="submit">Apply</button></form><button className="text-button" disabled={replay.playhead < 1.024} onClick={() => { const end = Math.floor(replay.playhead * 1000) / 1000; select({ start: Math.round((end - 1.024) * 1000) / 1000, end }); }}>Select at cursor</button>{selectionError && <span role="alert" className="error-message">{selectionError}</span>}</div>
+    <footer className="transport"><div className="transport-controls"><button className="icon-button" aria-label="Replay from beginning" title="Replay from beginning" onClick={() => { setReplayStop(undefined); setFollowing(true); setHighlighted([]); replay.restart(); }}><RotateCcw size={15}/></button><button className="icon-button" aria-label="Previous publisher marker" disabled={!data.events.some(e => e.timeSeconds < effectiveInterval.start)} onClick={() => navigateMarker(-1)}><SkipBack size={15}/></button><button className="play-button" aria-label={replay.playing ? 'Pause replay' : 'Play replay'} onClick={() => { if (!replay.playing) setFollowing(true); replay.toggle(); }}>{replay.playing ? <Pause size={17} fill="currentColor"/> : <Play size={17} fill="currentColor"/>}</button><button className="icon-button" aria-label="Next publisher marker" disabled={!data.events.some(e => e.timeSeconds > Math.max(interval.end, replay.playhead))} onClick={() => navigateMarker(1)}><SkipForward size={15}/></button></div><div className="replay-clock"><strong className="mono">{timecode(replay.playhead, true)}</strong><span className="mono">/ {timecode(data.recording.durationSeconds)}</span></div><div className="timeline-control"><label className="sr-only" htmlFor="playhead">Replay position in seconds</label><input id="playhead" type="range" min="0" max={data.recording.durationSeconds} step="0.001" value={replay.playhead} onChange={e => seek(Number(e.target.value))} style={{ '--progress': `${replay.playhead/data.recording.durationSeconds*100}%` } as React.CSSProperties}/><div className="timeline-marks">{data.events.map(e => <button key={e.id} className={e.timeSeconds <= replay.playhead ? 'reached' : 'upcoming'} style={{ left: `${e.timeSeconds/data.recording.durationSeconds*100}%` }} aria-label={`${e.label}, publisher annotation at ${e.timeSeconds.toFixed(3)} seconds${e.timeSeconds > replay.playhead ? ', upcoming' : ''}`} title={`${e.label} · ${e.timeSeconds.toFixed(3)} s · publisher annotation`} onClick={() => marker(e)}/>)}</div></div><label className="speed-control"><span className="sr-only">Playback speed</span><select aria-label="Playback speed" value={replay.speed} onChange={e => replay.setSpeed(Number(e.target.value))}>{[.5,1,2,4].map(n => <option key={n} value={n}>{n}×</option>)}</select></label><span className="play-state">{replay.playing ? 'Playing' : 'Paused'}</span></footer>
+    <div className="selection-footer"><span><span className="selection-dot"/>Investigation interval <strong className="mono">{intervalLabel(effectiveInterval)}</strong></span><form onSubmit={e => { e.preventDefault(); select({ start: Number(draftStart), end: Number(draftEnd) }); }}><label>From <input aria-label="Selection start seconds" type="number" step="0.001" min="0" max={data.recording.durationSeconds} value={draftStart} onChange={e => setDraftStart(e.target.value)}/></label><label>to <input aria-label="Selection end seconds" type="number" step="0.001" min="0" max={data.recording.durationSeconds} value={draftEnd} onChange={e => setDraftEnd(e.target.value)}/></label><button type="submit">Apply</button></form><button className="text-button" disabled={replay.playhead < 1.024} onClick={() => { const end = Math.floor(replay.playhead * 1000) / 1000; select({ start: Math.round((end - 1.024) * 1000) / 1000, end }); }}>Select at cursor</button>{selectionError && <span role="alert" className="error-message">{selectionError}</span>}</div>
   </div>;
 }
 function CpuStatus() { return <Radio size={13}/>; }

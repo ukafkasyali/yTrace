@@ -41,6 +41,13 @@ Samet owns the dashboard. Uğur and Atakan provide ingestion and recording acces
 
 The implementation contract is `frontend/src/services/index.ts`. Configure `VITE_API_BASE_URL` with the API prefix (for example `/api`); without it, backend controls remain disconnected. Setting a prefix enables requests but is not a health check. See `frontend/README.md` for development setup and CORS limitations.
 
+The data-source workspace also consumes the evidence-complete dataset scout. In
+local development Vite routes `/api/sourcing-runs` to `127.0.0.1:8001` before its
+broader inference proxy. The UI polls the durable run, preserves `NEEDS_INPUT`,
+shows hard gates and both confidence measures, and requires a human decision.
+An approved manifest only fills the existing ingestion source URL; ingestion
+remains a separate explicit action.
+
 ## Shared data contract
 
 Use opaque, stable string IDs. Times are **seconds from recording start**, including event times and evidence links. Units belong to each channel; torque is `Nm`. Never normalize the values sent for display without also supplying the transform. All intervals use `[startSec, endSec)`.
@@ -101,6 +108,11 @@ The routes below are requested by the implemented service client with `/api` as 
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
 | `startImport(sourceUrl)` | `POST /api/ingestions` | `{ ingestionId }` |
 | `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion progress and validation report |
+| `startSourcingRun(input, idempotencyKey)` | `POST /api/sourcing-runs` | durable run ID and initial status |
+| `getSourcingRun(runId)` | `GET /api/sourcing-runs/:id` | requirements, evidence, gates and ranking |
+| `reviewSourcingRun(runId, decision)` | `POST /api/sourcing-runs/:id/approvals` | resumed run after human review |
+| `getSourcingReport(runId)` | `GET /api/sourcing-runs/:id/report` | evidence report as Markdown text |
+| `getSourcingManifest(runId)` | `GET /api/sourcing-runs/:id/manifest` | approved ingestion handoff |
 
 Signal decimation is for display only. Backend model inference and numerical evidence should use original data for the same window. Recording responses include total duration even when only a preview window is returned. The current viewer initially requests the whole recording with a 200,000-point budget; it does not yet retrieve raw windows on demand. Local analysis on a returned display series explicitly reports that reduced resolution.
 
@@ -112,7 +124,7 @@ type QueryRequest = {
   modelId?: string; // required in direct mode
   question: string;
   window: WindowRef;
-  playheadSec: number; // finite; window.endSec must be <= this playback cursor
+  playheadSec: number; // finite historical analysis cutoff; window.endSec must be <= this
   conversationId?: string;
 };
 ```
@@ -177,3 +189,14 @@ arbitrary. `answer.completed` includes `modelOutput` (original generation) and
 `inputTrace` with model revision, exact window, `samplesPerChannel`, `inputSha256`,
 normalization and generation latency. The UI retains these with the completed
 answer and its export, separately from current selection and publisher metadata.
+
+
+### Completed-recording cursor separation
+
+The visual replay cursor can be at the beginning of an incident while its complete
+recorded window is analyzed. `playheadSec` in query/receipt payloads is the bounded
+historical analysis cutoff (at least window.endSec, at most recording duration).
+It no longer implies the current 3D cursor. Investigation exports retain that
+legacy field and add explicit `analysisHorizonSec` and `replayCursorSec` fields.
+Raw 7×1,024 sample validation is unchanged. This applies to completed recordings;
+it is not permission to read future data from a live stream.

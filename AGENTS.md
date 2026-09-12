@@ -262,3 +262,22 @@ Read `docs/submission/QWEN_BASELINE.md` and the exact prompt beside it before
 modifying or describing this baseline. It is zero-shot plot input compared with
 fine-tuned OpenTSLM numeric input: training and representation are confounded.
 Do not attribute null contact outputs to a proven cause or revise historical scores.
+
+
+## Incident navigation update — 13 September
+
+User explicitly requested all publisher markers upfront and incident navigation
+at the beginning. All annotations are now browsable; selecting one starts 0.4 s
+before its marker when possible. Analysis is retrospective over the completed
+recording, separate from the visual replay cursor. Legacy API `playheadSec` is its
+bounded analysis cutoff; exports distinguish `analysisHorizonSec`/`replayCursorSec`.
+No raw-window/model shape constraint is relaxed.
+
+Three measured-motion variants from batches 14/28 now replace four near-identical
+batch-41 choices in the active private catalogue. The user explicitly approved the
+CPU-only restart; activation and browser navigation passed on 13 September. The
+same v5b training PID remained running. Old pose fixtures remain for rollback
+compatibility; the old catalogue is `demo_cases.before-motion-replacement.json`.
+The existing canary-v4 service is temporarily on CPU with four compute threads
+following GPU OOM during reload; a teammate's v5b training job occupies the GPU.
+Do not interrupt that training job or claim inference is currently on GPU.

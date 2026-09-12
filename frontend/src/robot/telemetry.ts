@@ -56,5 +56,6 @@ export function torqueAtPlayhead(data: DemoData, playhead: number) {
 /** Only known fixtures are routed; never borrow another recording's pose. */
 export function positionFixture(recordingId: string): string | undefined {
   if (recordingId === '05-28-21-25') return '/robot/kuka/positions.json';
-  if (['03-15-12-53', '03-22-11-18'].includes(recordingId)) return `/robot/kuka/positions-${recordingId}.json`;
+  // Retain previous catalogue fixtures while a coordinated deployment is pending.
+  if (['03-15-12-53', '03-22-11-18', '04-22-15-33', '04-22-15-53', '05-26-14-28', '05-28-20-57', '05-28-21-02', '05-28-21-07', '05-28-21-15'].includes(recordingId)) return `/robot/kuka/positions-${recordingId}.json`;
 }

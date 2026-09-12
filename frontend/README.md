@@ -75,16 +75,33 @@ before starting or building Vite, for example:
 VITE_API_BASE_URL=/api npm run dev
 ```
 
-Vite proxies `/api` to `http://127.0.0.1:8000` (the local SSH tunnel). A separate
-backend origin must provide appropriate CORS. The
+Vite's local development proxies route `/api/sourcing-runs` and
+`/api/sourcing-requirement-previews` to the dataset scout on `127.0.0.1:8001`,
+while the remaining `/api` routes go to the inference bridge on `127.0.0.1:8000`
+(the local SSH tunnel). A separate backend origin must provide appropriate CORS. The
 client uses `credentials: 'same-origin'`; cross-origin cookie authentication is
 not configured. Never place model keys or other secrets in `VITE_*` variables.
 Setting the URL enables requests; it does not prove a service is healthy.
+
+For an integrated local run, start the scout from the repository root:
+
+```sh
+cd data_sourcing
+uv run uvicorn data_sourcing.api:create_app --factory --reload --port 8001
+```
+
+Then run the frontend with `VITE_API_BASE_URL=/api npm run dev`. The **Data source**
+workspace can start or resume an evidence review, inspect hard gates and
+contradictions, approve its recommendation, and pass the approved canonical URL
+to the existing ingestion form. Approval never starts ingestion automatically.
 
 - **Ingestion team:** provide datasets, recording signals/events, dataset search
   and ingestion-job endpoints. The current viewer accepts seven synchronized,
   finite-valued channels; recordings with missing samples or gaps are rejected
   with a message rather than silently repaired.
+- **Dataset sourcing:** provide `/sourcing-runs` lifecycle, approval, report and
+  manifest endpoints. A shared deployment should route these paths through the
+  authenticated same-origin API gateway.
 - **Model team:** provide `/models`, `/queries`, query SSE streams and query
   cancellation. The deployed model IDs are `assistant` and `opentslm`.
   Assistant requests allow server-side tool orchestration; comparison requests
@@ -153,3 +170,13 @@ Original recording `05-28-21-25` has raw detail in `[4,9)`. The backend examples
 recording `03-22-11-18` (test split). These fixed examples are not a new benchmark.
 Each now has its own recorded position fixture; see the position-validation report
 for the distinction between the original Jacobian check and reference-mapped examples.
+
+
+All publisher markers are browsable before playback. Selecting an incident or
+example starts the robot at the context beginning (normally 0.4 s before the
+marker). **Replay interval · 0.5×** plays that context and stops at its end.
+Analysis of the completed recording is independent from the visual cursor;
+exports distinguish the analysis cutoff from that cursor. **Show onset in 3D**
+shows a valid generated contact onset and responding joint, never impact location.
+The active additional motion catalogue and deployment details are documented in
+[the walkthrough](../docs/submission/UI_WALKTHROUGH.md#deployment-handoff).

@@ -2,7 +2,7 @@ import { selectWindow } from '../lib/data';
 import type { DemoData, EvidenceLink, Interval } from '../types';
 
 export type InvestigationAnswer = {
-  question: string; interval: Interval; playhead: number; text: string;
+  question: string; interval: Interval; playhead: number; replayCursor?: number; text: string;
   mode: 'local' | 'assistant'; source: string; evidence: EvidenceLink[];
   modelId?: string; modelRevision?: string; inputTrace?: unknown; modelOutput?: string;
 };
@@ -55,6 +55,7 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
     question: answer.question,
     window: { startSec: answer.interval.start, endSec: answer.interval.end,
       convention: 'half-open [start, end)', playheadSec: answer.playhead,
+      analysisHorizonSec: answer.playhead, replayCursorSec: answer.replayCursor ?? answer.playhead,
       resolution: window.resolution, sampleRateHz: window.sampleRateHz, samplesPerChannel: window.times.length },
     publisherAnnotations: data.events.filter(e => e.timeSeconds >= answer.interval.start && e.timeSeconds < answer.interval.end),
     measurements: { origin: 'deterministic_calculation', method: 'sampled min, max, range and absolute peak', channels: measurements },

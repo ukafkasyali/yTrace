@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, RotateCcw, SlidersHorizontal, Waves } from 'lucide-react';
-import { predictionBrief } from './predictionBrief';
+import { predictionBrief, predictionCue, type PredictionCue } from './predictionBrief';
 import { downloadInvestigationReport, type InvestigationAnswer } from './investigationReport';
 import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelWindow';
 import { analyzeWindow } from '../lib/data';
@@ -10,7 +10,7 @@ import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 
 type Message = InvestigationAnswer & { id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
-type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void };
+type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
   return <div className="answer-brief">{blocks.map((block, index) => {
@@ -21,12 +21,13 @@ function AnswerText({ text }: { text: string }) {
       : <p key={`${heading}-${index}`}>{block.replace(/\n+/g, ' ')}</p>;
   })}</div>;
 }
-export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, onEvidence, onModelWindow }: Props) {
+export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, onEvidence, onModelWindow, onRobotPrediction }: Props) {
   const [question, setQuestion] = useState('');
   const [mode, setMode] = useState<'local' | 'assistant'>('assistant');
-  const historical = interval.end <= playhead;
+  const availableThrough = data.recording.durationSeconds;
+  const historical = interval.end <= availableThrough;
   const windowIssue = useMemo(() => modelWindowIssue(data, interval, historical ? interval.end : 0), [data, interval, historical]);
-  const fitHorizon = Math.min(Math.floor(playhead * 1000) / 1000, data.detail.endSeconds);
+  const fitHorizon = Math.min(Math.floor(availableThrough * 1000) / 1000, data.detail.endSeconds);
   const fittedWindow = useMemo(() => fitModelWindow(data, interval, fitHorizon), [data, interval, fitHorizon]);
   const [exportStatus, setExportStatus] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,11 +48,11 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
   async function submit(prompt = question) {
     const runMode = mode;
     if (!prompt.trim() || busy || (runMode === 'assistant' && !assistantAvailable)) return;
-    const snapshot = { ...interval }, horizon = playhead;
+    const snapshot = { ...interval }, horizon = Math.max(playhead, snapshot.end);
     if (runMode === 'assistant' && modelWindowIssue(data, snapshot, horizon)) return;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
-    setMessages(ms => [...ms, { id, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
+    setMessages(ms => [...ms, { id, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
     setQuestion('');
     setBusy(true);
     try {
@@ -95,6 +96,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Turn a contact event into an investigation.</h3><p>Analyze the selected interval to compare a model interpretation with measured joint signals. Then inspect the evidence and save your findings.</p><p className="intro-limit">Recorded telemetry can suggest what to investigate. It cannot verify a physical cause.</p></div>}
       {messages.map(m => {
         const brief = predictionBrief(m.modelOutput);
+        const cue = m.status === 'complete' ? predictionCue(m.modelOutput, m.interval) : undefined;
         const measuredText = m.text.split(/\n\s*\n/).find(block => block.startsWith('Measured in this selected window'))?.split('\n').slice(1).join(' ');
         return <article className="conversation-turn" key={m.id}>
           <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>
@@ -104,6 +106,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
               {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
             {m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}
+            {cue && <button className="text-button robot-prediction-action" onClick={() => onRobotPrediction(cue)}>Show predicted time cue in 3D <ArrowUpRight size={12}/></button>}
             {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation · unverified</summary><p>Generated text can disagree with publisher annotations. Review those annotations separately.</p><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}</details>}
             {m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export investigation</button>}
             {(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}
@@ -113,6 +116,6 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     </div>
     {exportStatus && <p className="report-status" role="status">{exportStatus}</p>}
     {mode === 'assistant' && !assistantAvailable && <p className="status-note" role="status">Model unavailable. Choose Measurements only to inspect torque ranges, peaks and variability.</p>}
-    <form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label="Stop analysis" onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > playhead}><ArrowUp size={18}/></button>}</div></form>
+    <form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label="Stop analysis" onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form>
   </section>;
 }

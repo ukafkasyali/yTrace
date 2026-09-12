@@ -1,0 +1,43 @@
+[project]
+name = "evidence-dataset-scout"
+version = "0.1.0"
+description = "Evidence-complete agentic dataset sourcing for robot telemetry"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
+  "langgraph==1.2.11",
+  "langgraph-checkpoint-sqlite>=3,<4",
+  "openai>=2,<3",
+  "pydantic-settings>=2.10,<3",
+  "uvicorn>=0.35,<1",
+]
+
+[project.scripts]
+dataset-scout = "data_sourcing.__main__:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-cov>=6.2,<7",
+  "ruff>=0.12,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/data_sourcing"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

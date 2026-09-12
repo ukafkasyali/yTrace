@@ -292,3 +292,19 @@ The original `[4,9)` fixture and smoke command remain supported. The current
 private deployment retains canary-v4's exact promoted checkpoint and training
 normalization. A pre-change code backup is `inference-before-window-cases.tar`
 in the deployment directory; it does not contain weights or credentials.
+
+
+## Current handoff: CPU inference and motion variants (13 September)
+
+The live canary-v4 checkpoint/config is unchanged, but inference temporarily runs
+with `TRACE_DEVICE=cpu OMP_NUM_THREADS=4 MKL_NUM_THREADS=4` while the teammate's
+`llama-har-sp-timef-rationale-v5b` training occupies the GPU. A CUDA reload failed
+with OOM; CPU readiness and a real browser generation subsequently passed.
+Do not describe the current service as GPU inference or stop the training job.
+
+The active catalogue now includes three different measured-motion recordings from
+batches 14 and 28, replacing the batch-41 near-duplicates. On 13 September the user
+explicitly approved the CPU-only restart. The model returned ready with the same
+checkpoint/config, the browser displayed the new choices, and training PID 95923
+remained running. Rollback catalogue: `inference/demo_cases.before-motion-replacement.json`.
+See `docs/submission/UI_WALKTHROUGH.md` for navigation and validation details.

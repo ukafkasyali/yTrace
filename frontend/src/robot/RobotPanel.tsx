@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Flag, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import type { PredictionCue } from '../assistant/predictionBrief';
 import { COLORS } from '../lib/format';
 import type { DemoData, Interval } from '../types';
 import { createRobotScene, validateGeometry, type RobotGeometry } from './scene';
 import { positionAtPlayhead, positionFixture, torqueAtPlayhead, validatePositions, type PositionData } from './telemetry';
 
-type Props = { data: DemoData; playhead: number; interval: Interval; highlighted: string[]; onHighlight: (id: string) => void };
-export default function RobotPanel({ data, playhead, interval, highlighted, onHighlight }: Props) {
+type Props = { prediction?: PredictionCue; data: DemoData; playhead: number; interval: Interval; highlighted: string[]; onHighlight: (id: string) => void };
+export default function RobotPanel({ prediction, data, playhead, interval, highlighted, onHighlight }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<ReturnType<typeof createRobotScene> | null>(null);
   const callback = useRef(onHighlight); callback.current = onHighlight;
@@ -51,7 +52,8 @@ export default function RobotPanel({ data, playhead, interval, highlighted, onHi
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; controller.abort(); scene.current?.dispose(); scene.current = null; geometry.current = null; };
   }, [attempt, data.recording.id, data.recording.durationSeconds]);
-  useEffect(() => { scene.current?.highlight(highlighted); }, [highlighted]);
+  const atOnset = Boolean(prediction && Math.abs(playhead - prediction.onsetSeconds) <= .125);
+  useEffect(() => { scene.current?.highlight(highlighted, atOnset ? prediction?.channelId : undefined); }, [highlighted, atOnset, prediction?.channelId, loading]);
   useEffect(() => {
     const measured = positions ? positionAtPlayhead(positions, data.recording.id, playhead) : null;
     const angles = measured?.radians ?? geometry.current?.illustrativePoseRadians;
@@ -61,12 +63,15 @@ export default function RobotPanel({ data, playhead, interval, highlighted, onHi
   const measured = positions ? positionAtPlayhead(positions, data.recording.id, playhead) : null;
   const poseStatus = measured ? `Recorded articulation · ${measured.time.toFixed(3)} s` : loading ? 'Loading joint positions…' : 'Fixed illustrative pose';
   const selectedMarker = data.events.find(event => event.timeSeconds >= interval.start && event.timeSeconds < interval.end);
+  const rawAvailable = interval.start >= data.detail.startSeconds && interval.end <= data.detail.endSeconds;
   return <div className="robot-panel">
     <div className="robot-caption"><strong>KUKA LWR4+ <span>· schematic</span></strong><span>{poseStatus}</span></div>
+    <div className={`robot-event-cue${atOnset ? ' at-onset' : ''}`} aria-label="Robot event context">
+      {prediction ? <><strong>{atOnset ? 'At predicted onset' : playhead < prediction.onsetSeconds ? 'Before predicted onset' : 'After predicted onset'} · {prediction.onsetSeconds.toFixed(3)} s</strong><span>{prediction.title}{prediction.channelId ? ` · strongest response J${prediction.channelId.slice(-1)}` : ''}. Highlight is a time cue, not an impact location.</span></> : selectedMarker ? <><strong>Publisher marker · {selectedMarker.timeSeconds.toFixed(3)} s</strong><span>{rawAvailable ? 'Annotated event time. Analyze the interval for a model prediction.' : 'Annotated event time. Only overview measurements are available here.'}</span></> : <><strong>Recorded movement</strong><span>Select an event and analyze its torque to investigate contact.</span></>}
+    </div>
     <div className="robot-content">
       <div className="robot-stage">
         <div className="robot-canvas" ref={host} role="img" aria-label={measured ? `Seven-joint schematic with recorded articulation at ${measured.time.toFixed(3)} seconds. Body shape and global base orientation are illustrative. Use joint buttons to highlight telemetry.` : 'Seven-joint robot schematic in a fixed illustrative pose. Measured articulation is unavailable at this time. Use joint buttons to highlight telemetry.'}/>
-        {selectedMarker && <div className="robot-marker-note"><Flag size={12}/><div><strong>{selectedMarker.label} · {selectedMarker.timeSeconds.toFixed(3)} s</strong><span>Publisher annotation · pose shown only as time context</span></div></div>}
         {loading && <div className="robot-message" role="status">Loading robot reference…</div>}
         {error && <div className="robot-message" role="alert"><p>{error}</p><button className="btn" onClick={() => setAttempt(n => n + 1)}>Retry 3D</button></div>}
         {!loading && !error && <div className="robot-camera" role="group" aria-label="Robot camera controls">

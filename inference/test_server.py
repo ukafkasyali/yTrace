@@ -252,7 +252,8 @@ class ServerTests(unittest.TestCase):
         from inference.server import Bridge
         root = Path(__file__).resolve().parents[1]
         bridge = Bridge(self.runtime, root / "frontend/public/data/kuka-demo.json", root / "inference/demo_cases.json")
-        self.assertEqual([case["id"] for case in bridge.cases], ["accidental", "intentional", "free"])
+        self.assertEqual([case["id"] for case in bridge.cases], ["accidental", "intentional", "accidental-04-22-15-33", "accidental-04-22-15-53", "accidental-05-26-14-28", "free"])
+        self.assertEqual(len(bridge.recordings), 6)
         fingerprints = set()
         for case in bridge.cases:
             window = bridge.validate_window({"datasetId": DATASET_ID, "recordingId": case["recordingId"],
@@ -262,7 +263,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(signals["resolution"], "raw")
             self.assertEqual([len(c["values"]) for c in signals["series"]], [1024] * 7)
             fingerprints.add(json.dumps(signals["series"]))
-        self.assertEqual(len(fingerprints), 3)
+        self.assertEqual(len(fingerprints), 6)
 
 
 if __name__ == "__main__":
