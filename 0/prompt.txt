@@ -1,0 +1,17 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: https://zenodo.org/records/6461868
+</in-app-browser-context>
+
+## My request:
+Great! Local testing worked well without Tavily. Before I try with Tavily I would like to work on integrating our data sourcing module to the latest frontend in main.
+
+---
+
+I want to do a live testing with Tavily and real LLM.
+
+---
+
+I saved the keys.
