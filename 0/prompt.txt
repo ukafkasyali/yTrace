@@ -1,0 +1,41 @@
+In the paper, they are doing something like this: Prompt for CoT generation We generated CoT rationales by prompting the model with a correct and dissimilar label.
+The following prompt template was used for HAR-CoT generation:
+You are shown a time-series plot of accelerometer over a 2.56 second window.
+This data corresponds to one of two possible activities:
+[CORRECT_ACTIVITY]
+[DISSIMILAR_ACTIVITY]
+Your task is to classify the activity based on analysis of the data.
+Instructions:
+- Begin by analyzing the time-series without assuming a specific label.
+- Think step-by-step about what the observed patterns suggest regarding movement intensity
+and behavior.
+- Write your rationale as a single, natural paragraph, do not use bullet
+points, numbered steps, or section headings.
+- Do not refer back to the plot or to the act of visual analysis in your rationale; the
+plot is only for reference but you should reason about the
+time-series data.
+- Do **not** assume any answer at the beginning, analyze as if you do not
+yet know which class is correct.
+- Do **not** mention either class label until the final sentence.
+- Make sure that your last word is the answer. You MUST end your response
+with "Answer: [CORRECT_ACTIVITY]": should we try something like that as well? Is it possible with the current config, so that we arent just doing classification or regression with extra steps but have the why: Prompt for CoT generation We generated CoT rationales by prompting the model with a correct and dissimilar label.
+The following prompt template was used for HAR-CoT generation:
+You are shown a time-series plot of accelerometer over a 2.56 second window.
+This data corresponds to one of two possible activities:
+[CORRECT_ACTIVITY]
+[DISSIMILAR_ACTIVITY]
+Your task is to classify the activity based on analysis of the data.
+Instructions:
+- Begin by analyzing the time-series without assuming a specific label.
+- Think step-by-step about what the observed patterns suggest regarding movement intensity
+and behavior.
+- Write your rationale as a single, natural paragraph, do not use bullet
+points, numbered steps, or section headings.
+- Do not refer back to the plot or to the act of visual analysis in your rationale; the
+plot is only for reference but you should reason about the
+time-series data.
+- Do **not** assume any answer at the beginning, analyze as if you do not
+yet know which class is correct.
+- Do **not** mention either class label until the final sentence.
+- Make sure that your last word is the answer. You MUST end your response
+with "Answer: [CORRECT_ACTIVITY]":
