@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,19 @@ def fixed_subset(dataset: Dataset, size: int, seed: int) -> Dataset:
     return Subset(dataset, indices)
 
 
+class ZeroSignalDataset:
+    def __init__(self, dataset: Dataset) -> None:
+        self.dataset = dataset
+
+    def __len__(self) -> int:
+        return len(self.dataset)
+
+    def __getitem__(self, index: int) -> dict[str, object]:
+        sample = dict(self.dataset[index])
+        sample["time_series"] = torch.zeros_like(sample["time_series"])
+        return sample
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, required=True)
@@ -37,6 +51,7 @@ def main() -> None:
     parser.add_argument("--samples", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--seed", type=int, default=20260912)
+    parser.add_argument("--zero-signal", action="store_true")
     args = parser.parse_args()
 
     from opentslm.model.llm.OpenTSLMSP import OpenTSLMSP
@@ -50,7 +65,8 @@ def main() -> None:
     model.load_from_file(str(args.checkpoint))
     model.eval()
     full_dataset = RobotQADataset(args.prepared_root, args.split, mode="summary")
-    dataset = fixed_subset(full_dataset, min(args.samples, len(full_dataset)), args.seed)
+    selected_dataset = fixed_subset(full_dataset, min(args.samples, len(full_dataset)), args.seed)
+    dataset: Dataset = ZeroSignalDataset(selected_dataset) if args.zero_signal else selected_dataset
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -80,6 +96,8 @@ def main() -> None:
         "checkpoint": str(args.checkpoint.resolve()),
         "split": args.split,
         "selection": "fixed random subset without replacement",
+        "input_condition": "zero_signal" if args.zero_signal else "real_signal",
+        "target_class_counts": dict(Counter(str(row["target"]["event_type"]) for row in rows)),
         "seed": args.seed,
         "requested_samples": args.samples,
         **metrics,

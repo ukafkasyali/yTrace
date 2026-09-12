@@ -41,6 +41,7 @@ def main() -> None:
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--prepared-root", type=Path, default=Path("data/prepared/v1"))
     parser.add_argument("--evaluation-output", type=Path, required=True)
+    parser.add_argument("--zero-signal-output", type=Path)
     parser.add_argument("--sanity-output", type=Path, required=True)
     parser.add_argument("--test-samples", type=int, default=512)
     parser.add_argument("--poll-seconds", type=int, default=60)
@@ -59,6 +60,7 @@ def main() -> None:
         raise RuntimeError(f"Training did not complete successfully: {training_status}")
 
     checkpoint = args.run_dir / "best_model.pt"
+    zero_signal_output = args.zero_signal_output or Path(f"{args.evaluation_output}-zero-signal")
     write_status(status_path, state="evaluating", checkpoint=str(checkpoint))
     try:
         subprocess.run(
@@ -73,6 +75,27 @@ def main() -> None:
                 str(args.evaluation_output),
                 "--samples",
                 str(args.test_samples),
+                "--batch-size",
+                "4",
+            ],
+            check=True,
+        )
+        write_status(status_path, state="evaluating_zero_signal", checkpoint=str(checkpoint))
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/evaluate_opentslm.py",
+                "--checkpoint",
+                str(checkpoint),
+                "--prepared-root",
+                str(args.prepared_root),
+                "--output",
+                str(zero_signal_output),
+                "--samples",
+                str(args.test_samples),
+                "--batch-size",
+                "4",
+                "--zero-signal",
             ],
             check=True,
         )
@@ -92,6 +115,7 @@ def main() -> None:
         )
         combined_metrics = {
             **numeric_metrics(args.evaluation_output / "metrics.json", "test"),
+            **numeric_metrics(zero_signal_output / "metrics.json", "test_zero_signal"),
             **numeric_metrics(args.sanity_output / "metrics.json", "sanity"),
         }
         if args.wandb_run_id:
