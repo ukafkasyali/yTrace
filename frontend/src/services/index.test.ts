@@ -101,4 +101,77 @@ describe('service contracts', () => {
     expect((await service.getWindow('recording', 5, 7, ['joint-1'], 500)).series[0].values[1]).toBeNull();
     await expect(service.getWindow('recording', 5, 7, ['joint-1'], 500)).rejects.toBeInstanceOf(ApiError);
   });
+
+  it('uses an idempotency key and preserves the sourcing brief', async () => {
+    const accepted = { runId: 'run-1', status: 'QUEUED', statusUrl: '/api/sourcing-runs/run-1' };
+    const fetch = vi.fn().mockResolvedValue(Response.json(accepted, { status: 202 }));
+    vi.stubGlobal('fetch', fetch);
+    const input = { brief: 'Find public robot collision time-series data.' };
+    expect(await createServices('/api').startSourcingRun(input, 'intent-1')).toEqual(accepted);
+    expect(fetch).toHaveBeenCalledWith('/api/sourcing-runs', expect.objectContaining({
+      method: 'POST', body: JSON.stringify(input), headers: expect.objectContaining({ 'Idempotency-Key': 'intent-1' }),
+    }));
+  });
+
+  it('previews sourcing requirements before creating a run', async () => {
+    const preview = {
+      requirements: [{
+        id: 'req_provenance', label: 'Canonical provenance', description: 'Versioned source',
+        priority: 'MUST', category: 'PROVENANCE', expectedValues: [], isSystemRequired: true,
+      }],
+    };
+    const fetch = vi.fn().mockResolvedValue(Response.json(preview));
+    vi.stubGlobal('fetch', fetch);
+    const input = {
+      brief: 'Find public robot collision time-series data.',
+      customRequirements: ['At least 200 labelled collision events'],
+    };
+
+    expect(await createServices('/api').previewSourcingRequirements(input)).toEqual(preview);
+    expect(fetch).toHaveBeenCalledWith('/api/sourcing-requirement-previews', expect.objectContaining({
+      method: 'POST', body: JSON.stringify(input),
+    }));
+  });
+
+  it('validates sourcing runs and supports approval artifacts', async () => {
+    const run = {
+      runId: 'run-1', status: 'AWAITING_APPROVAL', brief: 'Find robot collision time-series data.',
+      requirements: [], candidates: [], profiles: [], evidence: [], assessments: [], errors: [], reportMarkdown: '# Report',
+      executionMode: 'CACHED', manifest: null, approvedCandidateId: null, excludedCandidateIds: [],
+      reviewFeedback: [], reviewIterationsUsed: 0, refinementOutcomes: [],
+    };
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json(run))
+      .mockResolvedValueOnce(Response.json({ ...run, status: 'APPROVED' }))
+      .mockResolvedValueOnce(new Response('# Report', { headers: { 'Content-Type': 'text/markdown' } }))
+      .mockResolvedValueOnce(Response.json({
+        runId: 'run-1', candidateId: 'candidate-1', name: 'Robot telemetry', canonicalUrl: 'https://zenodo.org/records/1',
+        licenseId: 'cc-by-4.0', labels: ['collision'], fileExtensions: ['.mat'], evidenceIds: ['ev-1'],
+        limitations: [], approvedAt: '2026-09-12T12:00:00Z',
+      }));
+    vi.stubGlobal('fetch', fetch);
+    const service = createServices('/api');
+    expect((await service.getSourcingRun('run/1')).status).toBe('AWAITING_APPROVAL');
+    await service.reviewSourcingRun('run/1', {
+      decision: 'APPROVE', candidateId: 'candidate-1', note: 'Reviewed',
+    });
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/sourcing-runs/run%2F1/approvals', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ decision: 'APPROVE', candidateId: 'candidate-1', note: 'Reviewed' }),
+    }));
+    expect(await service.getSourcingReport('run/1')).toBe('# Report');
+    expect((await service.getSourcingManifest('run/1')).candidateId).toBe('candidate-1');
+  });
+
+  it('rejects malformed sourcing status responses', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ runId: 'run-1', status: 'DONE' })));
+    await expect(createServices('/api').getSourcingRun('run-1')).rejects.toBeInstanceOf(ProtocolError);
+  });
+
+  it('rejects unsafe source URLs in sourcing artifacts', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+      runId: 'run-1', candidateId: 'candidate-1', name: 'Unsafe', canonicalUrl: 'javascript:alert(1)',
+      licenseId: 'unknown', labels: [], fileExtensions: [], evidenceIds: [], limitations: [], approvedAt: 'now',
+    })));
+    await expect(createServices('/api').getSourcingManifest('run-1')).rejects.toBeInstanceOf(ProtocolError);
+  });
 });

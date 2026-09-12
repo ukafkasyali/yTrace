@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Raw Torque Data from Collision and Contact Experiments on a KUKA Robot",
+    "url": "https://github.com/zhang-zengjie/robot-raw-collision-signals",
+    "content": "Repository for collision and intentional-contact raw torque signals. It links https://zenodo.org/records/21927431 and https://zenodo.org/records/21941203.",
+    "score": 1.0
+  },
+  {
+    "title": "Raw Torque Data — Part I: Accidental Collisions",
+    "url": "https://zenodo.org/records/21927431",
+    "content": "Raw joint torque measurements from accidental robot collisions at 1 kHz.",
+    "score": 0.98
+  },
+  {
+    "title": "Raw Torque Data — Part II: Intentional Contacts",
+    "url": "https://zenodo.org/records/21941203",
+    "content": "Raw joint torque measurements from intentional contacts at 1 kHz.",
+    "score": 0.97
+  }
+]

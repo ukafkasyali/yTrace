@@ -1,0 +1,631 @@
+import sqlite3
+from uuid import uuid4
+
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.types import Command
+
+from data_sourcing.adapters.discovery import SearchBatch
+from data_sourcing.adapters.native import NativeDocument, NativeFile, build_verified_candidate
+from data_sourcing.config import Settings
+from data_sourcing.graph import DatasetScoutGraph, _markdown_text, initial_state
+from data_sourcing.models import (
+    CreateSourcingRun,
+    ExecutionMode,
+    RequirementCategory,
+    RequirementDefinition,
+    RequirementPriority,
+    RunStatus,
+    SearchHypothesis,
+    SearchResult,
+)
+
+
+def build_graph() -> tuple[DatasetScoutGraph, sqlite3.Connection]:
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    graph = DatasetScoutGraph(Settings(_env_file=None), saver)
+    return graph, connection
+
+
+def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> None:
+    guide_url = "https://github.com/example/dataset-guide"
+    dataset_url = "https://zenodo.org/records/123"
+
+    class GuideSearch:
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            return SearchBatch(
+                results=[SearchResult(title="Dataset guide", url=guide_url, query=query)],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class LinkedDatasetVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            is_dataset = str(candidate.canonical_url).rstrip("/") == dataset_url
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url).rstrip("/"),
+                source_kind=candidate.source_kind,
+                name="Robot collision dataset" if is_dataset else "Dataset guide",
+                revision="v1",
+                license_id="cc-by-4.0" if is_dataset else "MIT",
+                text=(
+                    "This dataset contains recorded robot collision signals with documented "
+                    "columns."
+                    if is_dataset
+                    else f"A curated guide to datasets. Data record: {dataset_url}"
+                ),
+                files=[NativeFile(name="signals.csv", size=100)] if is_dataset else [],
+                related_urls=[] if is_dataset else [dataset_url],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=GuideSearch(),
+        verifier=LinkedDatasetVerifier(),
+    )
+    result = scout.graph.invoke(
+        initial_state(
+            str(uuid4()),
+            CreateSourcingRun(
+                brief="Find robot collision time-series data with downloadable signal files."
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": str(uuid4())}},
+    )
+
+    by_url = {
+        item["canonical_url"].rstrip("/"): item for item in result["candidates"]
+    }
+    assert set(by_url) == {guide_url, dataset_url}
+    assert by_url[dataset_url]["discovery_depth"] == 1
+    assert by_url[dataset_url]["discovered_from_candidate_id"] == by_url[guide_url]["id"]
+    assert by_url[guide_url]["source_role"] == "DISCOVERY_LEAD"
+    assert by_url[dataset_url]["source_role"] == "DATASET_ARTIFACT"
+    report = result["report_markdown"]
+    dataset_ranking = report.split("## Dataset ranking", 1)[1].split(
+        "## Discovery leads excluded", 1
+    )[0]
+    assert by_url[dataset_url]["id"] in dataset_ranking
+    assert by_url[guide_url]["id"] not in dataset_ranking
+    assert "suitability" in dataset_ranking
+    assert "/100" not in dataset_ranking
+    assert "Why" in dataset_ranking
+    assert "Dataset guide" in report.split("## Discovery leads excluded", 1)[1]
+    guide_profile = next(
+        item for item in result["profiles"] if item["candidate_id"] == by_url[guide_url]["id"]
+    )
+    dataset_profile = next(
+        item for item in result["profiles"] if item["candidate_id"] == by_url[dataset_url]["id"]
+    )
+    assert guide_profile["is_dataset_artifact"] is False
+    assert dataset_profile["is_dataset_artifact"] is True
+    scout.close()
+    connection.close()
+
+
+def test_excluded_lead_report_escapes_untrusted_markdown() -> None:
+    escaped = _markdown_text("[dataset](javascript:alert(1)) <script>\nsecond line")
+
+    assert "javascript:alert" in escaped
+    assert "[dataset](" not in escaped
+    assert "<script>" not in escaped
+    assert "\n" not in escaped
+
+
+def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    request = CreateSourcingRun(
+        brief=(
+            "Find robot collision and intentional contact time-series torque data sampled at 1 kHz."
+        )
+    )
+    config = {"configurable": {"thread_id": run_id}}
+
+    paused = scout.graph.invoke(
+        initial_state(run_id, request, allow_cached_demo=True),
+        config,
+    )
+
+    assert paused["status"] == RunStatus.AWAITING_APPROVAL.value
+    assert paused["recommended_candidate_id"] is None
+    candidate_id = paused["assessments"][0]["candidate_id"]
+    snapshot = scout.graph.get_state(config)
+    assert snapshot.next == ("approval",)
+
+    completed = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "APPROVE",
+                "candidateId": candidate_id,
+            }
+        ),
+        config,
+    )
+
+    assert completed["status"] == RunStatus.APPROVED.value
+    assert completed["feedback_allowed"] is False
+    assert completed["manifest"]["candidate_id"] == candidate_id
+    assert any("batch_count" in item for item in completed["manifest"]["limitations"])
+    scout.close()
+    connection.close()
+
+
+def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    config = {"configurable": {"thread_id": run_id}}
+    paused = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief=(
+                    "Find robot collision and intentional contact time-series torque data from "
+                    "https://github.com/zhang-zengjie/robot-raw-collision-signals"
+                )
+            ),
+            allow_cached_demo=True,
+        ),
+        config,
+    )
+    candidate_id = paused["assessments"][0]["candidate_id"]
+
+    refined = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "candidateId": candidate_id,
+                "note": "Prioritize datasets that include free-motion baseline recordings.",
+            }
+        ),
+        config,
+    )
+
+    assert refined["status"] == RunStatus.NEEDS_INPUT.value
+    assert refined["feedback_allowed"] is True
+    assert refined["review_iterations_used"] == 1
+    assert refined["review_feedback"] == [
+        "Prioritize datasets that include free-motion baseline recordings."
+    ]
+    assert any(item["id"] == "hyp_review_refinement_1" for item in refined["hypotheses"])
+    assert refined["refinement_outcomes"] == [
+        {
+            "iteration": 1,
+            "feedback": "Prioritize datasets that include free-motion baseline recordings.",
+            "query": next(
+                item["query"]
+                for item in refined["hypotheses"]
+                if item["id"] == "hyp_review_refinement_1"
+            ),
+            "outcome": "RECOMMENDATION_WITHHELD",
+            "rejected_candidate_id": candidate_id,
+            "previous_recommended_candidate_id": None,
+            "recommended_candidate_id": None,
+            "new_candidate_ids": [],
+            "new_evidence_ids": [],
+        }
+    ]
+    assert refined["recommended_candidate_id"] is None
+    assert refined["excluded_candidate_ids"] == [candidate_id]
+    assert "excluded by reviewer" in refined["report_markdown"]
+    assert scout.graph.get_state(config).next == ("approval",)
+
+    second_refinement = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Prefer machine-readable CSV files.",
+            }
+        ),
+        config,
+    )
+    assert second_refinement["status"] == RunStatus.NEEDS_INPUT.value
+    assert second_refinement["review_iterations_used"] == 2
+    assert second_refinement["feedback_allowed"] is False
+    scout.close()
+    connection.close()
+
+
+def test_refinement_prioritizes_new_results_and_records_recommendation_change() -> None:
+    original_url = "https://zenodo.org/records/6461868"
+    refined_url = "https://zenodo.org/records/1"
+
+    class SequencedSearch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.calls += 1
+            url = original_url if self.calls <= 3 else refined_url
+            return SearchBatch(
+                results=[SearchResult(title=f"Dataset {self.calls}", url=url, query=query)],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class CompleteVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url),
+                source_kind=candidate.source_kind,
+                name=candidate.name,
+                revision="v1",
+                license_id="cc-by-4.0",
+                text=(
+                    "This dataset contains recorded industrial robot collision and "
+                    "intentional contact torque time-series at 1 kHz. "
+                    "Dataset structure documents seven joints and signal columns."
+                ),
+                files=[NativeFile(name="signals.csv", size=100)],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=SequencedSearch(),
+        verifier=CompleteVerifier(),
+    )
+    run_id = str(uuid4())
+    config = {"configurable": {"thread_id": run_id}}
+    paused = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief="Find robot collision and intentional contact torque data sampled at 1 kHz."
+            ),
+            allow_cached_demo=False,
+        ),
+        config,
+    )
+
+    refined = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "candidateId": paused["recommended_candidate_id"],
+                "note": "Find another independently published dataset.",
+            }
+        ),
+        config,
+    )
+
+    outcome = refined["refinement_outcomes"][0]
+    assert paused["recommended_candidate_id"] == "ds_9be731e6fb6b"
+    assert refined["recommended_candidate_id"] == "ds_7d0f10684c2e"
+    assert outcome["outcome"] == "RECOMMENDATION_CHANGED"
+    assert outcome["rejected_candidate_id"] == "ds_9be731e6fb6b"
+    assert refined["excluded_candidate_ids"] == ["ds_9be731e6fb6b"]
+    assert outcome["previous_recommended_candidate_id"] == "ds_9be731e6fb6b"
+    assert outcome["recommended_candidate_id"] == "ds_7d0f10684c2e"
+    assert outcome["new_candidate_ids"] == ["ds_7d0f10684c2e"]
+    assert outcome["new_evidence_ids"]
+    scout.close()
+    connection.close()
+
+
+def test_cnc_brief_cannot_recommend_an_unrelated_robot_collision_dataset() -> None:
+    class MixedDomainSearch:
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            return SearchBatch(
+                results=[
+                    SearchResult(
+                        title="Robot joint torque measurements for accidental contact",
+                        url="https://zenodo.org/records/6461868",
+                        query=query,
+                    ),
+                    SearchResult(
+                        title="CNC machining process monitoring",
+                        url="https://github.com/boschresearch/CNC_Machining",
+                        query=query,
+                    ),
+                ],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class MixedDomainVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            domain_text = (
+                "This dataset contains recorded CNC machining head accidental contact "
+                "current time-series."
+                if "CNC" in candidate.name
+                else "This dataset contains recorded industrial robot joint accidental "
+                "contact torque time-series."
+            )
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url),
+                source_kind=candidate.source_kind,
+                name=candidate.name,
+                revision="v1",
+                license_id="cc-by-4.0",
+                text=f"{domain_text} Dataset structure documents signal columns.",
+                files=[NativeFile(name="signals.csv", size=100)],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=MixedDomainSearch(),
+        verifier=MixedDomainVerifier(),
+    )
+    run_id = str(uuid4())
+
+    result = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief=(
+                    "Find a dataset of CNC machines where the head makes accidental contact."
+                )
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    candidates = {item["id"]: item for item in result["candidates"]}
+    recommendation = candidates[result["recommended_candidate_id"]]
+    robot = next(
+        item
+        for item in result["assessments"]
+        if "Robot joint" in candidates[item["candidate_id"]]["name"]
+    )
+
+    assert "CNC machining" in recommendation["name"]
+    assert result["assessments"][0]["candidate_id"] == recommendation["id"]
+    assert next(gate for gate in robot["gates"] if gate["gate"] == "domain")["passed"] is False
+    assert robot["suitability_level"] == "LOW"
+    assert "score" not in robot
+    assert "total_score" not in robot
+    assert "tier" not in robot
+    scout.close()
+    connection.close()
+
+
+def test_reviewer_can_approve_an_alternate_eligible_candidate(monkeypatch) -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    state = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief=(
+                    "Find robot collision and intentional contact time-series torque data from "
+                    "https://github.com/zhang-zengjie/robot-raw-collision-signals"
+                )
+            ),
+            allow_cached_demo=True,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+    recommended_id = state["recommended_candidate_id"]
+    alternate_id = "ds_aaaaaaaaaaaa"
+    alternate_profile = dict(state["profiles"][0], candidate_id=alternate_id)
+    alternate_assessment = dict(state["assessments"][0], candidate_id=alternate_id)
+    alternate_evidence = [
+        dict(item, id=f"ev_{index:016x}", candidate_id=alternate_id)
+        for index, item in enumerate(state["evidence"], start=1)
+    ]
+    state["profiles"] = [*state["profiles"], alternate_profile]
+    state["assessments"] = [*state["assessments"], alternate_assessment]
+    state["evidence"] = [*state["evidence"], *alternate_evidence]
+    monkeypatch.setattr(
+        "data_sourcing.graph.interrupt",
+        lambda _: {"decision": "APPROVE", "candidateId": alternate_id},
+    )
+
+    approval_update = scout.approval(state)
+    manifest_update = scout.manifest_generation(state | approval_update)
+
+    assert recommended_id != alternate_id
+    assert approval_update["approved_candidate_id"] == alternate_id
+    assert manifest_update["manifest"]["candidate_id"] == alternate_id
+    scout.close()
+    connection.close()
+
+
+def test_unresolved_free_motion_label_uses_two_gap_queries_and_abstains() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    request = CreateSourcingRun(
+        brief="Find robot collision, contact, and free-motion torque time-series datasets."
+    )
+
+    result = scout.graph.invoke(
+        initial_state(run_id, request, allow_cached_demo=True),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    assert result["status"] == RunStatus.NEEDS_INPUT.value
+    assert result["gap_queries_used"] == 2
+    assert len(result["hypotheses"]) == 5
+    assert result["recommended_candidate_id"] is None
+    assert "req_task_labels" in result["report_markdown"]
+    scout.close()
+    connection.close()
+
+
+def test_needs_input_pauses_for_feedback_and_resumes_refinement() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    config = {"configurable": {"thread_id": run_id}}
+    request = CreateSourcingRun(
+        brief=(
+            "Find robot collision data with a requirement absent from the cached fixture at "
+            "https://github.com/zhang-zengjie/robot-raw-collision-signals"
+        ),
+        requirements=[
+            RequirementDefinition(
+                id="req_custom_unavailable",
+                label="Includes maintenance work-order IDs",
+                description="Custom requirement verified from native sources.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.OTHER,
+                expected_values=["Includes maintenance work-order IDs"],
+            )
+        ],
+    )
+
+    paused = scout.graph.invoke(
+        initial_state(run_id, request, allow_cached_demo=True),
+        config,
+    )
+
+    assert paused["status"] == RunStatus.NEEDS_INPUT.value
+    assert paused["feedback_allowed"] is True
+    assert scout.graph.get_state(config).next == ("approval",)
+
+    refined = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Search specifically for maintenance work-order identifiers.",
+            }
+        ),
+        config,
+    )
+
+    assert refined["review_iterations_used"] == 1
+    assert refined["review_feedback"] == [
+        "Search specifically for maintenance work-order identifiers."
+    ]
+    scout.close()
+    connection.close()
+
+
+def test_unknown_task_labels_do_not_create_an_impossible_empty_requirement() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    request = CreateSourcingRun(
+        brief="Find a useful public industrial robot dataset for a future analysis task."
+    )
+
+    result = scout.graph.invoke(
+        initial_state(run_id, request, allow_cached_demo=False),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    assert result["status"] == RunStatus.NEEDS_INPUT.value
+    assert not any(item["id"] == "req_task_labels" for item in result["requirements"])
+    scout.close()
+    connection.close()
+
+
+def test_mixed_live_and_cached_discovery_is_marked_partial() -> None:
+    class SequencedSearch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.calls += 1
+            return SearchBatch(
+                results=[
+                    SearchResult(
+                        title=f"Result {self.calls}",
+                        url=f"https://zenodo.org/records/{self.calls}",
+                        query=query,
+                    )
+                ],
+                credits_used=2 if self.calls == 1 else 0,
+                execution_mode=(ExecutionMode.LIVE if self.calls == 1 else ExecutionMode.CACHED),
+                warnings=[] if self.calls == 1 else ["cache fallback"],
+            )
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    search = SequencedSearch()
+    scout = DatasetScoutGraph(Settings(_env_file=None), saver, search=search)
+    state = initial_state(
+        str(uuid4()),
+        CreateSourcingRun(brief="Find robot collision telemetry from public datasets."),
+        allow_cached_demo=True,
+    )
+    hypotheses = [
+        SearchHypothesis(id="hyp_one", rationale="first", query="robot collision one"),
+        SearchHypothesis(id="hyp_two", rationale="second", query="robot collision two"),
+    ]
+    state["hypotheses"] = [item.model_dump(mode="json") for item in hypotheses]
+
+    update = scout._perform_searches(state, hypotheses)
+
+    assert update["execution_mode"] == ExecutionMode.PARTIAL.value
+    assert "cache fallback" in update["errors"]
+    scout.close()
+    connection.close()
+
+
+def test_query_budget_is_three_initial_plus_two_gap_searches() -> None:
+    class EmptySearch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.calls += 1
+            return SearchBatch(
+                results=[],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    search = EmptySearch()
+    scout = DatasetScoutGraph(Settings(_env_file=None), saver, search=search)
+    run_id = str(uuid4())
+
+    result = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief="Find public robot collision torque time-series datasets for training."
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    assert search.calls == 5
+    assert result["tavily_credits_used"] == 10
+    assert result["gap_queries_used"] == 2
+    assert result["status"] == RunStatus.NEEDS_INPUT.value
+    scout.close()
+    connection.close()
