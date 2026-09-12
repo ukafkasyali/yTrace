@@ -13,4 +13,4 @@ def test_metrics_include_invalid_outputs() -> None:
     ]
     metrics = evaluate_rows(rows)
     assert metrics["parse_validity"] == 0.5
-    assert metrics["contact_accuracy"] == 1.0
+    assert metrics["contact_accuracy"] == 0.5

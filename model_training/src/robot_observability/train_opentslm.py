@@ -297,6 +297,8 @@ def run(args: argparse.Namespace) -> None:
 
     def validate(phase: str, epoch: int, step: int) -> tuple[float, bool]:
         nonlocal best_validation
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         write_status(
             status_path,
             state="validating",
@@ -390,6 +392,8 @@ def run(args: argparse.Namespace) -> None:
                         **{f"validation_zero_signal/{key}": value for key, value in zero_metrics.items()},
                     }
                 )
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         return validation_loss, improved
 
     if validation_config.get("at_start", False):

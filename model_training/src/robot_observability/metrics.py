@@ -35,18 +35,20 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
         else parse_answer(str(item.get("output", "")))
         for item in items
     ]
-    valid = [(item, prediction) for item, prediction in zip(items, parsed) if prediction is not None]
     metrics: dict[str, float | int] = {
         "n": len(items),
-        "parse_validity": len(valid) / len(items) if items else 0.0,
+        "parse_validity": sum(prediction is not None for prediction in parsed) / len(items) if items else 0.0,
     }
-    if not valid:
+    if not items:
         return metrics
 
     def pairs(key: str) -> tuple[list[object], list[object]]:
         selected = [
-            (item["target"].get(key), prediction.get(key))
-            for item, prediction in valid
+            (
+                item["target"].get(key),
+                prediction.get(key) if isinstance(prediction, dict) else None,
+            )
+            for item, prediction in zip(items, parsed)
             if key in item["target"]
         ]
         return [pair[0] for pair in selected], [pair[1] for pair in selected]
@@ -55,7 +57,14 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
     if y_true:
         contact_true = np.asarray([value is True for value in y_true], dtype=bool)
         contact_pred = np.asarray([value is True for value in y_pred], dtype=bool)
-        metrics["contact_accuracy"] = float(accuracy_score(contact_true, contact_pred))
+        metrics["contact_accuracy"] = float(
+            np.mean(
+                [
+                    isinstance(prediction, bool) and prediction == truth
+                    for truth, prediction in zip(y_true, y_pred)
+                ]
+            )
+        )
         metrics["contact_f1"] = float(f1_score(contact_true, contact_pred, pos_label=True, zero_division=0))
     y_true, y_pred = pairs("event_type")
     if y_true:
@@ -75,11 +84,15 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
             )
         )
     y_true, y_pred = pairs("onset_ms")
-    errors = [
-        abs(float(pred) - float(truth))
-        for truth, pred in zip(y_true, y_pred)
-        if truth is not None and pred is not None
-    ]
+    contact_onsets = [(truth, pred) for truth, pred in zip(y_true, y_pred) if truth is not None]
+    errors = []
+    for truth, prediction in contact_onsets:
+        try:
+            errors.append(abs(float(prediction) - float(truth)))
+        except (TypeError, ValueError):
+            continue
+    if contact_onsets:
+        metrics["onset_coverage"] = len(errors) / len(contact_onsets)
     if errors:
         metrics["onset_mae_ms"] = float(np.mean(errors))
         metrics["onset_median_ae_ms"] = float(np.median(errors))
