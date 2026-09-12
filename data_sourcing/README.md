@@ -68,7 +68,7 @@ entry showing the executed query, evidence delta and whether the deterministic r
 changed. The rejected candidate is retained in the evidence and ranking audit, but is excluded
 from subsequent recommendation and approval choices. If no eligible replacement is found, the
 agent withholds its recommendation instead of selecting the rejected candidate again. Feedback
-guides discovery but does not rewrite hard gates or score weights.
+guides discovery but does not rewrite hard gates or the deterministic suitability policy.
 
 If no dataset is eligible, the run pauses as `NEEDS_INPUT` while a refinement remains. The UI then
 shows a feedback field even though there is no candidate to reject; submitting it resumes the same
@@ -79,15 +79,19 @@ The planner treats an explicitly named equipment or application domain as a mand
 requirement. Native verification records matched terms in each profile's `domains` field and
 stores a `domains` evidence record. With an LLM configured, semantic equivalents are accepted
 only when the model returns a verbatim excerpt that can be found in the fetched native source.
-Candidates without that evidence fail the domain gate and rank below candidates from the
-requested domain, regardless of their raw score.
+Candidates without that evidence fail the domain gate and receive low suitability.
+
+Reviewer-facing assessments use three levels: low, medium and high suitability. Each level is
+accompanied by deterministic strength, limitation and blocker explanations with evidence IDs where
+available. Evidence confidence remains separate. Numeric weighted scores are retained only as a
+backward-compatible internal ranking detail and are not shown in the UI or report.
 
 Search results begin as discovery leads. Each GitHub, Zenodo, or Hugging Face URL keeps a separate
 identity, and native links are followed for at most two hops within the run limits. A source is
 promoted to a dataset artifact only when its own native record directly exposes a non-empty
 supported data or archive file and its content supports that it publishes observations or
 measurements. Guides, papers, catalogues, awesome lists, tutorials, and code-only repositories
-remain auditable discovery leads: they may reveal a child dataset URL, but neither their score nor
+remain auditable discovery leads: they may reveal a child dataset URL, but neither their suitability nor
 a linked source's evidence can make them approvable. Reports and the UI rank promoted artifacts
 and list rejected discovery leads separately with the dataset-identity reason.
 

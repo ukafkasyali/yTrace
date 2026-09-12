@@ -102,19 +102,27 @@ page that exposed a child native URL. Profiles expose `isDatasetArtifact` and
 a guide with a dataset it links to. Clients should rank only dataset artifacts and may show leads
 in a separate audit section. Older persisted payloads that predate these fields remain valid.
 
+Each assessment exposes reviewer-facing `suitabilityLevel` as `LOW`, `MEDIUM`, or `HIGH` and
+`suitabilityFactors` as typed `STRENGTH`, `LIMITATION`, or `BLOCKER` explanations. Factors include
+the relevant evidence IDs when evidence exists. A failed mandatory gate always produces `LOW`;
+otherwise the existing deterministic weighted assessment maps to `MEDIUM` or `HIGH`. Evidence
+confidence remains separate: it describes the completeness and consistency of support, not dataset
+fitness. `totalScore`, `score`, and `tier` remain temporarily available for older clients and
+deterministic tie-breaking, but new reviewer interfaces should not display them.
+
 When the brief explicitly names equipment or an application domain, requirements include a
 mandatory `DOMAIN` category. Verified profiles expose the native-source-supported terms in
 `domains`, and the associated evidence uses `claimKey: "domains"`. Domain matching may use the
 configured LLM to recognize semantic equivalents, but a match is accepted only when its returned
 quote exists verbatim in a fetched native source. Unsupported or uncertain domains therefore fail
 the `domain` hard gate instead of receiving task-fit credit. Candidate ranking places supported
-domain matches ahead of higher-scoring domain mismatches; the raw deterministic scores remain
-visible for auditability.
+domain matches ahead of unrelated candidates. The report records qualitative suitability factors
+instead of exposing numeric scores.
 
 ### `POST /api/sourcing-runs/{runId}/approvals`
 
 Only valid in `AWAITING_APPROVAL`. The reviewer may approve the recommendation or another
-assessed candidate whose score is at least 65 and which passes every mandatory hard gate. The
+assessed candidate with `MEDIUM` or `HIGH` suitability which passes every mandatory hard gate. The
 response retains `recommendedCandidateId` for auditability and records the reviewer override in
 `approvedCandidateId`.
 
@@ -140,7 +148,7 @@ evidence. If `feedbackAllowed` is false, the time, credit or two-refinement boun
 the reviewer must start a new run.
 
 Reviewer feedback directs the next discovery query; it does not silently alter mandatory gates or
-the deterministic score weights. Newly discovered candidates are considered before previously
+the deterministic suitability policy. Newly discovered candidates are considered before previously
 unverified candidates while already verified, non-excluded choices remain available. When the
 reviewer rejects the current recommendation and the search finds no eligible replacement, the
 response records `RECOMMENDATION_WITHHELD` and sets `recommendedCandidateId` to `null`; it never
@@ -167,7 +175,8 @@ Returns `text/markdown`. The dataset ranking contains only sources that pass the
 `dataset_identity` hard gate; inspected guides, papers, lists, catalogues and other non-dataset
 pages appear under `Discovery leads excluded` with their reason. Contradictions list every native
 observation and precedence. Resolution uses the highest-precedence native value while
-`evidence.jsonl` retains all observations.
+`evidence.jsonl` retains all observations. Every ranked source includes its suitability level and
+the strengths, limitations, or blockers that produced it; numeric scores are omitted.
 
 ### `GET /api/sourcing-runs/{runId}/manifest`
 

@@ -87,6 +87,18 @@ class ConfidenceLevel(StrEnum):
     LOW = "LOW"
 
 
+class SuitabilityLevel(StrEnum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class SuitabilityFactorKind(StrEnum):
+    STRENGTH = "STRENGTH"
+    LIMITATION = "LIMITATION"
+    BLOCKER = "BLOCKER"
+
+
 class ExecutionMode(StrEnum):
     LIVE = "LIVE"
     CACHED = "CACHED"
@@ -260,6 +272,13 @@ class ScoreBreakdown(WireModel):
         return sum(self.model_dump().values())
 
 
+class SuitabilityFactor(WireModel):
+    kind: SuitabilityFactorKind
+    label: str = Field(min_length=1, max_length=120)
+    explanation: str = Field(min_length=1, max_length=500)
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
 class CandidateAssessment(WireModel):
     candidate_id: str
     gates: list[GateResult]
@@ -268,6 +287,8 @@ class CandidateAssessment(WireModel):
     tier: CandidateTier
     evidence_confidence: ConfidenceLevel
     recommendation_confidence: ConfidenceLevel = ConfidenceLevel.LOW
+    suitability_level: SuitabilityLevel | None = None
+    suitability_factors: list[SuitabilityFactor] = Field(default_factory=list, max_length=20)
     missing_requirement_ids: list[str] = Field(default_factory=list)
     conflicts: list[str] = Field(default_factory=list)
 
@@ -277,6 +298,15 @@ class CandidateAssessment(WireModel):
             raise ValueError("total_score must equal the score breakdown")
         if any(not gate.passed for gate in self.gates) and self.tier is not CandidateTier.REJECT:
             raise ValueError("a candidate with a failed hard gate must be rejected")
+        level_by_tier = {
+            CandidateTier.RECOMMEND: SuitabilityLevel.HIGH,
+            CandidateTier.SHORTLIST: SuitabilityLevel.MEDIUM,
+            CandidateTier.REJECT: SuitabilityLevel.LOW,
+        }
+        if self.suitability_level and self.suitability_level is not level_by_tier[self.tier]:
+            raise ValueError("suitability_level must match the deterministic candidate tier")
+        if self.suitability_level and not self.suitability_factors:
+            raise ValueError("classified candidates must include suitability factors")
         return self
 
 

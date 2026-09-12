@@ -13,8 +13,28 @@ from data_sourcing.models import (
     RequirementPriority,
     ResearchRequirement,
     ScoreBreakdown,
+    SuitabilityFactor,
+    SuitabilityFactorKind,
+    SuitabilityLevel,
     VerificationStatus,
 )
+
+_LEVEL_BY_TIER = {
+    CandidateTier.RECOMMEND: SuitabilityLevel.HIGH,
+    CandidateTier.SHORTLIST: SuitabilityLevel.MEDIUM,
+    CandidateTier.REJECT: SuitabilityLevel.LOW,
+}
+
+_GATE_LABELS = {
+    "dataset_identity": "Dataset identity",
+    "provenance": "Canonical provenance",
+    "time_series_files": "Usable time-series files",
+    "license": "Explicit licence",
+    "domain": "Equipment or application domain",
+    "task_labels": "Task labels",
+    "schema": "Schema documentation",
+    "acquisition": "Acquisition feasibility",
+}
 
 
 def _evidence_for(evidence: list[EvidenceRecord], candidate_id: str, claim: str) -> list[str]:
@@ -101,6 +121,143 @@ def requirement_is_met(requirement: ResearchRequirement, profile: DatasetProfile
     if requirement.category is RequirementCategory.MODALITY:
         return profile.has_time_series_files
     return False
+
+
+def _suitability_factors(
+    *,
+    profile: DatasetProfile,
+    required: list[ResearchRequirement],
+    fit_requirements: list[ResearchRequirement],
+    evidence: list[EvidenceRecord],
+    task_ratio: float,
+    gates: list[GateResult],
+    missing: list[str],
+    conflicts: list[str],
+    label_evidence: list[str],
+    schema_evidence: list[str],
+    file_evidence: list[str],
+    size_evidence: list[str],
+) -> list[SuitabilityFactor]:
+    factors: list[SuitabilityFactor] = []
+    requirements_by_id = {item.id: item for item in required}
+
+    def requirement_evidence_ids(requirement: ResearchRequirement) -> list[str]:
+        claim = requirement_claim_key(requirement)
+        return _evidence_for(evidence, profile.candidate_id, claim) if claim else []
+
+    for requirement_id in missing:
+        requirement = requirements_by_id[requirement_id]
+        factors.append(
+            SuitabilityFactor(
+                kind=SuitabilityFactorKind.BLOCKER,
+                label=requirement.label,
+                explanation="Mandatory requirement is unsupported by native evidence.",
+                evidence_ids=[],
+            )
+        )
+
+    failed_gate_labels = {factor.label for factor in factors}
+    for gate in gates:
+        label = _GATE_LABELS.get(gate.gate, gate.gate.replace("_", " ").title())
+        if not gate.passed and label not in failed_gate_labels:
+            factors.append(
+                SuitabilityFactor(
+                    kind=SuitabilityFactorKind.BLOCKER,
+                    label=label,
+                    explanation=gate.reason,
+                    evidence_ids=gate.evidence_ids,
+                )
+            )
+
+    if not missing and all(gate.passed for gate in gates):
+        factors.append(
+            SuitabilityFactor(
+                kind=SuitabilityFactorKind.STRENGTH,
+                label="Mandatory requirements",
+                explanation="All mandatory requirements and integrity gates are supported.",
+                evidence_ids=[
+                    evidence_id
+                    for requirement in required
+                    for evidence_id in requirement_evidence_ids(requirement)
+                ],
+            )
+        )
+
+    if fit_requirements:
+        factors.append(
+            SuitabilityFactor(
+                kind=(
+                    SuitabilityFactorKind.STRENGTH
+                    if task_ratio == 1
+                    else SuitabilityFactorKind.LIMITATION
+                ),
+                label="Task and domain fit",
+                explanation=(
+                    "Native evidence matches every requested task and domain condition."
+                    if task_ratio == 1
+                    else "Native evidence does not cover every requested task and domain condition."
+                ),
+                evidence_ids=[
+                    evidence_id
+                    for requirement in fit_requirements
+                    for evidence_id in requirement_evidence_ids(requirement)
+                ],
+            )
+        )
+
+    training_ready = bool(
+        profile.labels and label_evidence and profile.schema_documented and schema_evidence
+    )
+    factors.append(
+        SuitabilityFactor(
+            kind=(
+                SuitabilityFactorKind.STRENGTH
+                if training_ready
+                else SuitabilityFactorKind.LIMITATION
+            ),
+            label="Training readiness",
+            explanation=(
+                "Labels and schema documentation support direct model preparation."
+                if training_ready
+                else "Labels or schema documentation are incomplete for direct model preparation."
+            ),
+            evidence_ids=[*label_evidence, *schema_evidence],
+        )
+    )
+
+    acquisition_ready = bool(
+        profile.has_time_series_files
+        and file_evidence
+        and profile.acquisition_feasible
+        and size_evidence
+    )
+    factors.append(
+        SuitabilityFactor(
+            kind=(
+                SuitabilityFactorKind.STRENGTH
+                if acquisition_ready
+                else SuitabilityFactorKind.LIMITATION
+            ),
+            label="Acquisition readiness",
+            explanation=(
+                "Usable files are available within the configured acquisition bound."
+                if acquisition_ready
+                else "Usable files or bounded acquisition could not be fully established."
+            ),
+            evidence_ids=[*file_evidence, *size_evidence],
+        )
+    )
+
+    if conflicts:
+        factors.append(
+            SuitabilityFactor(
+                kind=SuitabilityFactorKind.LIMITATION,
+                label="Evidence consistency",
+                explanation=f"Conflicting native claims remain: {', '.join(conflicts)}.",
+                evidence_ids=[],
+            )
+        )
+    return factors
 
 
 def assess_candidate(
@@ -298,6 +455,21 @@ def assess_candidate(
         if coverage >= 0.8 and len(conflicts) <= 1
         else ConfidenceLevel.LOW
     )
+    suitability_level = _LEVEL_BY_TIER[tier]
+    suitability_factors = _suitability_factors(
+        profile=profile,
+        required=required,
+        fit_requirements=fit_requirements,
+        evidence=evidence,
+        task_ratio=task_ratio,
+        gates=gates,
+        missing=missing,
+        conflicts=conflicts,
+        label_evidence=label_evidence,
+        schema_evidence=schema_evidence,
+        file_evidence=file_evidence,
+        size_evidence=size_evidence,
+    )
     return CandidateAssessment(
         candidate_id=profile.candidate_id,
         gates=gates,
@@ -305,6 +477,8 @@ def assess_candidate(
         total_score=score.total,
         tier=tier,
         evidence_confidence=evidence_confidence,
+        suitability_level=suitability_level,
+        suitability_factors=suitability_factors,
         missing_requirement_ids=missing,
         conflicts=conflicts,
     )

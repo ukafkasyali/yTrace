@@ -649,15 +649,26 @@ class DatasetScoutGraph:
             lines.append("- No native source was verified as directly publishing a dataset.")
         for assessment in artifact_assessments:
             conflict = ", ".join(assessment.conflicts) or "none"
+            suitability = assessment.suitability_level.value if assessment.suitability_level else {
+                CandidateTier.RECOMMEND: "HIGH",
+                CandidateTier.SHORTLIST: "MEDIUM",
+                CandidateTier.REJECT: "LOW",
+            }[assessment.tier]
             review_status = (
                 "; excluded by reviewer"
                 if assessment.candidate_id in excluded_candidate_ids
                 else ""
             )
             lines.append(
-                f"- `{assessment.candidate_id}` — {assessment.total_score}/100, "
-                f"{assessment.tier.value}; conflicts: {conflict}{review_status}"
+                f"- `{assessment.candidate_id}` — {suitability} suitability; "
+                f"conflicts: {conflict}{review_status}"
             )
+            for factor in assessment.suitability_factors:
+                lines.append(
+                    f"  - Why {suitability} — {factor.kind.value.casefold()}: "
+                    f"{_markdown_text(factor.label)} — "
+                    f"{_markdown_text(factor.explanation)}"
+                )
             for claim in assessment.conflicts:
                 lines.append(
                     f"  - {self._conflict_resolution(evidence, assessment.candidate_id, claim)}"

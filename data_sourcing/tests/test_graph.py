@@ -100,6 +100,9 @@ def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> 
     )[0]
     assert by_url[dataset_url]["id"] in dataset_ranking
     assert by_url[guide_url]["id"] not in dataset_ranking
+    assert "suitability" in dataset_ranking
+    assert "/100" not in dataset_ranking
+    assert "Why" in dataset_ranking
     assert "Dataset guide" in report.split("## Discovery leads excluded", 1)[1]
     guide_profile = next(
         item for item in result["profiles"] if item["candidate_id"] == by_url[guide_url]["id"]

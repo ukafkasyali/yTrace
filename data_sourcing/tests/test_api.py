@@ -26,6 +26,10 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         run = client.get(f"/api/sourcing-runs/{run_id}")
         assert run.status_code == 200
         assert run.json()["status"] == "AWAITING_APPROVAL"
+        assessment = run.json()["assessments"][0]
+        assert assessment["suitabilityLevel"] in {"LOW", "MEDIUM", "HIGH"}
+        assert assessment["suitabilityFactors"]
+        assert all(item["explanation"] for item in assessment["suitabilityFactors"])
         candidate_id = run.json()["recommendedCandidateId"]
 
         wrong_approval = client.post(
@@ -37,6 +41,8 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         report = client.get(f"/api/sourcing-runs/{run_id}/report")
         assert report.status_code == 200
         assert "batch_count" in report.text
+        assert "suitability" in report.text
+        assert "/100" not in report.text
         assert client.get(f"/api/sourcing-runs/{run_id}/manifest").status_code == 409
 
         approval = client.post(

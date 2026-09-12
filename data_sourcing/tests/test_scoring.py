@@ -12,6 +12,8 @@ from data_sourcing.models import (
     ResearchRequirement,
     ScoreBreakdown,
     SourceKind,
+    SuitabilityFactorKind,
+    SuitabilityLevel,
     VerificationStatus,
 )
 from data_sourcing.scoring import (
@@ -132,7 +134,36 @@ def test_complete_candidate_is_recommended() -> None:
 
     assert assessment.tier is CandidateTier.RECOMMEND
     assert assessment.total_score >= 80
+    assert assessment.suitability_level is SuitabilityLevel.HIGH
+    assert any(
+        factor.kind is SuitabilityFactorKind.STRENGTH
+        and factor.label == "Mandatory requirements"
+        for factor in assessment.suitability_factors
+    )
     assert assessment.evidence_confidence is ConfidenceLevel.HIGH
+
+
+def test_medium_suitability_explains_readiness_limitations() -> None:
+    dataset_profile = profile().model_copy(
+        update={"domains": ["cnc"], "labels": [], "schema_documented": False}
+    )
+    records = [
+        *complete_evidence(dataset_profile.candidate_id),
+        domain_evidence(dataset_profile.candidate_id, "cnc"),
+    ]
+
+    assessment = assess_candidate(
+        dataset_profile,
+        [requirement(RequirementCategory.DOMAIN, "cnc")],
+        records,
+    )
+
+    assert assessment.suitability_level is SuitabilityLevel.MEDIUM
+    assert any(
+        factor.kind is SuitabilityFactorKind.LIMITATION
+        and factor.label == "Training readiness"
+        for factor in assessment.suitability_factors
+    )
 
 
 def test_internal_fault_is_not_inferred_from_collision_labels() -> None:
@@ -143,6 +174,13 @@ def test_internal_fault_is_not_inferred_from_collision_labels() -> None:
     )
 
     assert assessment.tier is CandidateTier.REJECT
+    assert assessment.suitability_level is SuitabilityLevel.LOW
+    assert any(
+        factor.kind is SuitabilityFactorKind.BLOCKER
+        and factor.label == "TASK_LABELS"
+        and "unsupported" in factor.explanation
+        for factor in assessment.suitability_factors
+    )
     assert "req_task_labels" in assessment.missing_requirement_ids
 
 
