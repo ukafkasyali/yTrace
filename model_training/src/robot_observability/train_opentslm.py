@@ -9,6 +9,7 @@ import math
 import os
 import platform
 import random
+import re
 import time
 from collections import Counter
 from contextlib import nullcontext
@@ -484,6 +485,56 @@ def generation_eval(
     metrics["final_blank_rate"] = (
         float(np.mean([not str(row["output"]).strip() for row in rows])) if rows else 0.0
     )
+    rationale_texts = []
+    for row in rows:
+        output = str(row["output"])
+        rationale_at = output.casefold().find("rationale:")
+        answer_at = output.casefold().rfind("answer:")
+        rationale_texts.append(
+            output[rationale_at + len("rationale:") : answer_at].strip()
+            if 0 <= rationale_at < answer_at
+            else ""
+        )
+    metrics["rationale_presence"] = (
+        float(np.mean([bool(rationale) for rationale in rationale_texts])) if rows else 0.0
+    )
+    class_labels = ("free", "intentional", "accidental")
+    metrics["rationale_premature_label_rate"] = (
+        float(
+            np.mean(
+                [
+                    any(re.search(rf"\b{label}\b", rationale, re.IGNORECASE) for label in class_labels)
+                    for rationale in rationale_texts
+                    if rationale
+                ]
+            )
+        )
+        if any(rationale_texts)
+        else 0.0
+    )
+    target_joint_checks = []
+    prediction_joint_checks = []
+    target_onset_checks = []
+    for row, rationale in zip(rows, rationale_texts):
+        target_joint = row["target"].get("strongest_joint")
+        target_onset = row["target"].get("onset_ms")
+        prediction = row["prediction"]
+        predicted_joint = prediction.get("strongest_joint") if isinstance(prediction, dict) else None
+        if target_joint is not None:
+            target_joint_checks.append(str(target_joint) in rationale)
+        if predicted_joint is not None:
+            prediction_joint_checks.append(str(predicted_joint) in rationale)
+        if target_onset is not None:
+            target_onset_checks.append(f"{target_onset} ms" in rationale)
+    metrics["rationale_target_joint_consistency"] = (
+        float(np.mean(target_joint_checks)) if target_joint_checks else 0.0
+    )
+    metrics["rationale_prediction_joint_consistency"] = (
+        float(np.mean(prediction_joint_checks)) if prediction_joint_checks else 0.0
+    )
+    metrics["rationale_target_onset_consistency"] = (
+        float(np.mean(target_onset_checks)) if target_onset_checks else 0.0
+    )
     return metrics, rows
 
 
@@ -594,17 +645,38 @@ def run(args: argparse.Namespace) -> None:
         raise RuntimeError("CUDA is required unless --allow-cpu is explicitly supplied")
     model = load_model(config, device)
     eos = model.get_eos_token() or ""
+    output_format = str(config.get("targets", {}).get("format", "answer_then_evidence"))
     train_dataset: Dataset = RobotQADataset(
-        args.prepared_root, "train", mode="mixed", eos_token=eos, seed=seed
+        args.prepared_root,
+        "train",
+        mode="mixed",
+        eos_token=eos,
+        seed=seed,
+        output_format=output_format,
     )
     validation_dataset: Dataset = RobotQADataset(
-        args.prepared_root, "validation", mode="all_intents", eos_token=eos, seed=seed
+        args.prepared_root,
+        "validation",
+        mode="all_intents",
+        eos_token=eos,
+        seed=seed,
+        output_format=output_format,
     )
     validation_summary_dataset: Dataset = RobotQADataset(
-        args.prepared_root, "validation", mode="summary", eos_token=eos, seed=seed
+        args.prepared_root,
+        "validation",
+        mode="summary",
+        eos_token=eos,
+        seed=seed,
+        output_format=output_format,
     )
     validation_matched_dataset: Dataset = RobotQADataset(
-        args.prepared_root, "validation", mode="mixed", eos_token=eos, seed=seed
+        args.prepared_root,
+        "validation",
+        mode="mixed",
+        eos_token=eos,
+        seed=seed,
+        output_format=output_format,
     )
     if args.smoke:
         train_dataset = fixed_subset(train_dataset, 32, seed)
@@ -670,8 +742,13 @@ def run(args: argparse.Namespace) -> None:
         )
     )
 
-    batch_size = 1 if args.smoke else int(config["batch_size"])
-    validation_batch_size = 1 if args.smoke else int(config["validation"].get("batch_size", batch_size))
+    fit_probe_config = config.get("fit_probe", {})
+    batch_size = int(fit_probe_config.get("batch_size", 1)) if args.smoke else int(config["batch_size"])
+    validation_batch_size = (
+        int(fit_probe_config.get("validation_batch_size", batch_size))
+        if args.smoke
+        else int(config["validation"].get("batch_size", batch_size))
+    )
     accumulation = 1 if args.smoke else int(config["gradient_accumulation_steps"])
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate, num_workers=0
@@ -704,7 +781,7 @@ def run(args: argparse.Namespace) -> None:
         collate_fn=collate,
         num_workers=0,
     )
-    epochs = 20 if args.smoke else int(config["epochs"])
+    epochs = int(fit_probe_config.get("epochs", 20)) if args.smoke else int(config["epochs"])
     steps_per_epoch = math.ceil(len(train_loader) / accumulation)
     total_steps = (
         min(args.max_steps, epochs * steps_per_epoch) if args.max_steps else epochs * steps_per_epoch

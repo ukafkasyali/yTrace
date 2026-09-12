@@ -144,5 +144,7 @@ def test_generation_eval_retries_invalid_first_pass_and_reports_it(tmp_path) -> 
     assert metrics["retry_rate"] == 0.5
     assert metrics["first_pass_blank_rate"] == 0.5
     assert metrics["final_blank_rate"] == 0.0
+    assert metrics["rationale_presence"] == 0.0
+    assert metrics["rationale_premature_label_rate"] == 0.0
     assert rows[0]["retry_used"] is True
     assert rows[0]["first_pass_output"] == ""

@@ -4,11 +4,22 @@
 
 The target user is a robot operator diagnosing a completed telemetry interval. The model receives
 numeric synchronized joint-torque streams and a natural-language question, then generates a short
-evidence statement and a machine-readable answer. The current evidence supports recording-held-out
+evidence-grounded rationale followed by a machine-readable answer. The current evidence supports recording-held-out
 performance on one KUKA LWR4+ platform. Public metadata does not expose reliable subject identity,
 and no other robot is present, so neither subject-disjoint nor device-transfer performance is claimed.
 
-## Output schema
+## Output contract
+
+The current target format is one natural `Rationale:` paragraph followed by `Answer:` on the final
+line. This mirrors the rationale-distillation direction used by HAR-CoT while keeping the answer
+strictly parseable. Unlike the HAR binary-class prompt, joint attribution and localization have no
+meaningful "dissimilar label". Their rationale is therefore synthesized deterministically from the
+manual onset and train-calibrated pseudo-labels. Correct labels are output supervision only and are
+never present in the student prompt. A future teacher-generated paraphrase must retain those facts,
+pass automatic consistency checks, and be compared as an ablation before replacing this auditable
+target.
+
+The full summary JSON is:
 
 The full summary response is:
 
@@ -30,18 +41,19 @@ empty values. Parsing validity is an explicit metric; unparseable output is neve
 ## Processing
 
 1. Download all Zenodo archives with resume, checksum validation, and an append-only event log.
-2. Discover complete sessions through `JK_MsrExtTrq.mat` and `JK_moments.mat` pairs.
-3. Convert MATLAB one-based event markers exactly once to zero-based internal indices.
-4. Split complete session folders 70/15/15 within accidental/contact source classes.
-5. Fit per-joint robust center and scale on subsampled training sessions only.
+2. Build one canonical TimeF dataset per source part with the repository's TimeNet connector.
+3. Load only TimeF records, validating dataset identity, seven named torque series, 1 kHz cadence,
+   provenance, and zero-based event indices. Record the TimeF versions and manifest hashes.
+4. Split complete TimeF recordings 70/15/15 within accidental/contact source classes.
+5. Fit per-joint robust center and scale on subsampled training recordings only.
 6. Generate positive windows with randomized event positions. Generate hard free-motion negatives
    from high-derivative-energy areas between events, outside a 750 ms guard region.
 7. Preserve signed torque; robust-scale and clip only the model view. Retain raw Nm statistics as
    metadata for visualization and deterministic baselines, but never expose them in model prompts.
 8. Calibrate per-joint affected thresholds at the 99th percentile of train-only free-motion scores.
 9. Store memory-mapped model arrays, JSONL provenance/targets, split map, normalization, and summary.
-10. Build the equivalent TimeF dataset with signals, metadata, classification, answer, and temporal
-    localization tasks.
+10. Materialize the TimeF-derived windows as memory-mapped arrays for GPU throughput; this cache is
+    an optimization with an immutable source receipt, not a competing dataset definition.
 
 ## Pseudo-label definition
 

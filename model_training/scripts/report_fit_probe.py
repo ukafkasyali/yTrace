@@ -32,6 +32,8 @@ def main() -> None:
     parser.add_argument("--min-signal-change-rate", type=float, default=0.30)
     parser.add_argument("--min-relative-signal-loss-gap", type=float, default=0.05)
     parser.add_argument("--min-task-ablation-delta", type=float, default=0.10)
+    parser.add_argument("--min-rationale-presence", type=float, default=0.90)
+    parser.add_argument("--max-premature-label-rate", type=float, default=0.05)
     parser.add_argument("--max-relative-generalization-gap", type=float)
     args = parser.parse_args()
 
@@ -70,6 +72,9 @@ def main() -> None:
         "valid_json": float(latest["parse_validity"]) >= args.min_parse_validity,
         "exact_schema": float(latest["schema_exact_match"]) >= args.min_schema_fit,
         "exact_decoded_answer": float(latest["answer_exact_match"]) >= args.min_answer_fit,
+        "rationale_present": float(latest.get("rationale_presence", 0.0)) >= args.min_rationale_presence,
+        "class_not_leaked_before_answer": float(latest.get("rationale_premature_label_rate", 1.0))
+        <= args.max_premature_label_rate,
         "every_observed_intent_fitted": bool(intent_answer_metrics)
         and min(intent_answer_metrics) >= args.min_answer_fit,
         "prediction_depends_on_signal": float(latest_zero.get("prediction_change_rate", 0.0))

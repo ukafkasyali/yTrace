@@ -21,6 +21,7 @@ class RobotQADataset:
         mode: str = "summary_plus_atomic",
         seed: int = 20260912,
         eos_token: str = "",
+        output_format: str = "answer_then_evidence",
     ) -> None:
         self.prepared = PreparedSplit(root, split)
         if mode not in {"mixed", "summary", "summary_plus_atomic", "all_intents"}:
@@ -28,6 +29,9 @@ class RobotQADataset:
         self.mode = mode
         self.seed = seed
         self.eos_token = eos_token
+        if output_format not in {"answer_then_evidence", "rationale_then_answer"}:
+            raise ValueError(f"Unknown output format: {output_format}")
+        self.output_format = output_format
 
     def __len__(self) -> int:
         multiplier = (
@@ -61,6 +65,16 @@ class RobotQADataset:
         question = variants[int.from_bytes(digest[:4], "big") % len(variants)]
         schema_keys = list(answer_payload(metadata, intent))
         schema = json.dumps(schema_keys, separators=(",", ":"))
+        if self.output_format == "rationale_then_answer":
+            response_contract = (
+                "First write `Rationale:` as one natural paragraph grounded in temporal and joint "
+                "patterns. Do not use headings inside it or name the interaction class before the "
+                f"final line. End with `Answer:` and one closed compact JSON object containing only {schema}. "
+            )
+        else:
+            response_contract = (
+                f"Respond with `Answer:` and one closed compact JSON object containing only {schema}. "
+            )
         return {
             "pre_prompt": (
                 "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
@@ -70,12 +84,16 @@ class RobotQADataset:
             "time_series": torch.from_numpy(signal.astype("float32", copy=True)),
             "post_prompt": (
                 f"\nQuestion: {question}\n"
-                f"Respond with `Answer:` and one closed compact JSON object containing only {schema}. "
+                f"{response_contract}"
                 "Use JSON types exactly: booleans are true/false, numbers are unquoted, arrays are "
                 "arrays, and missing values are null. Never quote a boolean, number, or null. "
-                "Then write one short `Evidence:` sentence."
+                + (
+                    ""
+                    if self.output_format == "rationale_then_answer"
+                    else "Then write one short `Evidence:` sentence."
+                )
             ),
-            "answer": target_text(metadata, intent) + self.eos_token,
+            "answer": target_text(metadata, intent, self.output_format) + self.eos_token,
             "record_id": metadata["record_id"],
             "intent": intent,
             "metadata": metadata,

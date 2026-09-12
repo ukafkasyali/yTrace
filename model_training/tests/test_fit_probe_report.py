@@ -27,6 +27,8 @@ def _write_run(run_dir: Path, state: str) -> None:
             "parse_validity": 1.0,
             "schema_exact_match": 1.0,
             "answer_exact_match": 0.9,
+            "rationale_presence": 1.0,
+            "rationale_premature_label_rate": 0.0,
             "intent/contact/answer_exact_match": 0.9,
         },
         {

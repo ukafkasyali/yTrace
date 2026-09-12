@@ -2,9 +2,12 @@ architecture: soft_prompt
 base_model: meta-llama/Llama-3.2-1B
 warm_start: OpenTSLM/llama-3.2-1b-har-sp
 upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
+targets:
+  format: rationale_then_answer
+  rationale_source: deterministic_signal_pseudolabels_v1
 precision: bfloat16
-batch_size: 2
-gradient_accumulation_steps: 8
+batch_size: 4
+gradient_accumulation_steps: 4
 epochs: 3
 early_stopping_patience: 3
 max_wall_time_hours: 3.0
@@ -18,6 +21,10 @@ lora:
   rank: 16
   alpha: 32
   dropout: 0.0
+fit_probe:
+  batch_size: 4
+  validation_batch_size: 4
+  epochs: 20
 validation:
   at_start: true
   every_steps: 50

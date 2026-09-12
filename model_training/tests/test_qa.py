@@ -25,3 +25,6 @@ def test_dynamic_answer_precedes_evidence() -> None:
         "joint_scores": [0.0] * 7,
     }
     assert target_text(metadata, "contact").startswith('Answer: {"contact":false}\nEvidence:')
+    rationale_target = target_text(metadata, "contact", "rationale_then_answer")
+    assert rationale_target.startswith("Rationale: Across J1–J7")
+    assert rationale_target.endswith('Answer: {"contact":false}')
