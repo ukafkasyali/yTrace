@@ -1,0 +1,63 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BNCF1WMG19VVHDJAQGA15A",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T20:36:46.974045Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/src/dataset_profiler/profiler.py",
+    "data_ingestion/tests/test_kuka_parser.py",
+    "data_ingestion/tests/test_profiler.py",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/investigationReport.test.ts",
+    "frontend/src/assistant/investigationReport.ts",
+    "frontend/src/styles.css",
+    "model_training/src/robot_observability/comparison.py",
+    "model_training/tests/test_comparison.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "a0324c22c282",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 206485,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 5127662,
+    "output_tokens": 31307,
+    "api_call_count": 45
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T20:36:46.896815Z",
+    "agent_lines": 609,
+    "agent_removed": 8,
+    "human_added": 7815,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 8424,
+    "total_lines_changed": 8452,
+    "agent_percentage": 7.300047326076668,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    }
+  ]
+}

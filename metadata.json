@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BNCF1WMG19VVHDJAQGA15A",
+  "strategy": "manual-commit",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/src/dataset_profiler/profiler.py",
+    "data_ingestion/tests/test_kuka_parser.py",
+    "data_ingestion/tests/test_profiler.py",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/investigationReport.test.ts",
+    "frontend/src/assistant/investigationReport.ts",
+    "frontend/src/styles.css",
+    "model_training/src/robot_observability/comparison.py",
+    "model_training/tests/test_comparison.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 206485,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 5127662,
+    "output_tokens": 31307,
+    "api_call_count": 45
+  }
+}
