@@ -138,6 +138,13 @@ verify provider metadata/checksums, compute SHA-256, and atomically promote veri
 - [ ] Redirect, DNS, timeout, truncation, size, and checksum failures fail closed.
 - [ ] Partial files never appear in the verified cache.
 
+**Progress:**
+
+- [x] Zenodo streams exact manifest assets into staging, verifies size/provider checksum, computes
+  SHA-256, and atomically promotes content.
+- [x] Redirect, public-address, cross-host, truncation, size, and checksum guards are implemented.
+- [ ] Persist source-asset-to-content receipts and connect acquisition to the queued job worker.
+
 **Verification:**
 
 - [ ] Mock tests cover every failure class and deterministic success.

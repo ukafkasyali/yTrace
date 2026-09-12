@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -8,15 +9,18 @@ import httpx
 from fastapi.testclient import TestClient
 
 from dataset_profiler.ingestion import (
+    AcquisitionError,
     CreateIngestion,
     IngestionJobConflict,
     IngestionJobStore,
     IngestionService,
     IngestionState,
     ManifestContractError,
+    ZenodoAcquirer,
     parse_manifest,
 )
 from dataset_profiler.ingestion.api import create_app
+from dataset_profiler.ingestion.contracts import ManifestAsset, SourceKind
 from dataset_profiler.ingestion.service import (
     ApprovedSourceResolutionError,
     HttpApprovedSourceResolver,
@@ -65,6 +69,82 @@ class ManifestContractTests(unittest.TestCase):
 
         with self.assertRaises(ManifestContractError):
             parse_manifest(payload)
+
+
+class ZenodoAcquirerTests(unittest.TestCase):
+    def asset(self, content: bytes, checksum: str | None = None) -> ManifestAsset:
+        return ManifestAsset.model_validate(
+            {
+                "assetId": "asset_0123456789abcdef",
+                "name": "signals.csv",
+                "role": "DATA",
+                "sizeBytes": len(content),
+                "providerLocator": "zenodo:123:signals.csv",
+                "downloadUrl": "https://zenodo.org/api/files/123/signals.csv",
+                "sourceChecksum": (
+                    {"algorithm": "md5", "value": checksum} if checksum else None
+                ),
+            }
+        )
+
+    def test_verified_content_is_promoted_and_reused_by_sha256(self) -> None:
+        content = b"robot-signal-data"
+        checksum = hashlib.md5(content, usedforsecurity=False).hexdigest()
+        requests = 0
+
+        def handler(_: httpx.Request) -> httpx.Response:
+            nonlocal requests
+            requests += 1
+            return httpx.Response(200, content=content)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            acquirer = ZenodoAcquirer(
+                Path(temporary),
+                client=httpx.Client(transport=httpx.MockTransport(handler)),
+                validate_dns=False,
+            )
+            first = acquirer.acquire(SourceKind.ZENODO, self.asset(content, checksum))
+            second = acquirer.acquire(SourceKind.ZENODO, self.asset(content, checksum))
+
+            self.assertEqual(first.content_sha256, hashlib.sha256(content).hexdigest())
+            self.assertEqual(first.content_path, second.content_path)
+            self.assertEqual(first.content_path.read_bytes(), content)
+            self.assertEqual(requests, 2)
+            self.assertEqual(list((Path(temporary) / "staging").iterdir()), [])
+            acquirer.close()
+
+    def test_truncation_checksum_redirect_and_cross_host_fail_closed(self) -> None:
+        content = b"robot-signal-data"
+        cases = [
+            httpx.Response(200, content=content[:-1], headers={"Content-Length": str(len(content))}),
+            httpx.Response(200, content=content),
+            httpx.Response(302, headers={"Location": "https://zenodo.org/other"}),
+        ]
+        assets = [
+            self.asset(content),
+            self.asset(content, "0" * 32),
+            self.asset(content),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            for response, asset in zip(cases, assets, strict=True):
+                acquirer = ZenodoAcquirer(
+                    Path(temporary),
+                    client=httpx.Client(
+                        transport=httpx.MockTransport(lambda _, value=response: value)
+                    ),
+                    validate_dns=False,
+                )
+                with self.assertRaises(AcquisitionError):
+                    acquirer.acquire(SourceKind.ZENODO, asset)
+                acquirer.close()
+
+            cross_host = self.asset(content).model_copy(
+                update={"download_url": "https://api.github.com/repos/org/repo"}
+            )
+            acquirer = ZenodoAcquirer(Path(temporary), validate_dns=False)
+            with self.assertRaisesRegex(AcquisitionError, "allowlisted"):
+                acquirer.acquire(SourceKind.ZENODO, cross_host)
+            acquirer.close()
 
 
 class IngestionJobStoreTests(unittest.TestCase):

@@ -66,6 +66,12 @@ job. Until the acquisition worker is added, valid licensed jobs remain `queued`;
 dataset-file license creates the one job in `needs_input` rather than substituting a repository code
 license.
 
+The first acquisition adapter handles manifest-listed Zenodo assets only. It revalidates the exact
+HTTPS provider URL, optionally resolves only public addresses, disables redirects, streams into an
+isolated staging file, enforces both manifest and configured byte limits, verifies the original MD5
+or SHA-256 when supplied, computes SHA-256 for content addressing, and atomically promotes verified
+bytes. It does not extract or inspect archives yet and is not connected to the queued-job worker.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and
