@@ -1,0 +1,17 @@
+I want the visual sample of what is fed into qwen so we can use it in our slides. I can download it
+
+---
+
+what does the deterministic baseline contain
+
+---
+
+ok, now what is the next step shortly
+
+---
+
+yes, do it. After that explain how we are going to deploy this. We have long data samples, so will it run in a sliding/shifting window manner
+
+---
+
+In the hackathon, we are asked to use the following connector to process that data (use timenet). We are asked to use the timenet connector format, so make the dataloader ingest https://github.com/thuml/Time-Series-Library.git which is then implemented in data_ingestion/scripts/build_kuka_timef_dataset.py
