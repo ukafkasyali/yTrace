@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Local inference, or an SSH tunnel to the Nebius VM. No browser secrets.
-    proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true } },
+    // Route the narrower scout prefix first; inference keeps its existing port.
+    proxy: {
+      '/api/sourcing-runs': { target: 'http://127.0.0.1:8001', changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+    },
   },
 });

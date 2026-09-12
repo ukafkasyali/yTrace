@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight, Database, Download, Search } from 'lucide-react';
 import type { DemoData } from '../types';
 import type { Dataset, DatasetSearchResult, ImportJob, Recording, Services } from '../services';
+import DatasetScout from '../sourcing/DatasetScout';
 
 type Props = { services: Services; data: DemoData; onOpenRecording: (record: Recording) => Promise<void> };
 const stages = ['Inspect source', 'Map channels', 'Validate signals', 'Import into TimeNet'];
@@ -77,6 +78,8 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
       <div className="table-scroll"><table className="data-table"><caption>Loaded channel mapping</caption><thead><tr><th>Channel</th><th>Signal</th><th>Unit</th><th>Source sampling</th></tr></thead><tbody>{data.channels.map(channel => <tr key={channel.id}><td>{channel.id}</td><td>{channel.name}</td><td>{channel.unit}</td><td>{data.recording.sampleRateHz} Hz</td></tr>)}</tbody></table></div>
       <p className="status-note">Publisher markers are annotations, not verified physical collision-onset times. Original archive: {data.recording.archive}.</p>
     </section>
+
+    <DatasetScout services={services} onUseSource={setSourceUrl} />
 
     <section className="workspace-section"><h2>Dataset discovery</h2>
       {!services.connected && <p className="status-note">Discovery and ingestion require the team’s backend. The loaded recording remains available locally.</p>}

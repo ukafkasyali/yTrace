@@ -31,7 +31,7 @@ export type DatasetCandidate = {
   canonicalUrl: string;
   sourceKind: 'ZENODO' | 'GITHUB' | 'HUGGING_FACE';
   description: string;
-  revision?: string;
+  revision: string | null;
   relatedUrls: string[];
 };
 
@@ -40,14 +40,14 @@ export type DatasetProfile = {
   name: string;
   canonicalUrl: string;
   sourceKinds: ('ZENODO' | 'GITHUB' | 'HUGGING_FACE')[];
-  revision?: string;
-  licenseId?: string;
-  fileCount?: number;
-  totalSizeBytes?: number;
+  revision: string | null;
+  licenseId: string | null;
+  fileCount: number | null;
+  totalSizeBytes: number | null;
   fileExtensions: string[];
   labels: string[];
-  sampleRateHz?: number;
-  channelCount?: number;
+  sampleRateHz: number | null;
+  channelCount: number | null;
   hasTimeSeriesFiles: boolean;
   schemaDocumented: boolean;
   acquisitionFeasible: boolean;
@@ -56,7 +56,7 @@ export type DatasetProfile = {
 export type EvidenceRecord = {
   id: string;
   candidateId: string;
-  requirementId?: string;
+  requirementId: string | null;
   claimKey: string;
   observedValue: string;
   sourceUrl: string;
@@ -64,7 +64,7 @@ export type EvidenceRecord = {
   status: 'VERIFIED' | 'MISSING' | 'CONFLICTING' | 'UNVERIFIED';
   precedence: number;
   retrievedAt: string;
-  note?: string;
+  note: string | null;
 };
 
 export type CandidateAssessment = {
@@ -92,12 +92,12 @@ export type SourcingManifest = {
   candidateId: string;
   name: string;
   canonicalUrl: string;
-  revision?: string;
+  revision: string | null;
   licenseId: string;
   labels: string[];
-  sampleRateHz?: number;
+  sampleRateHz: number | null;
   fileExtensions: string[];
-  totalSizeBytes?: number;
+  totalSizeBytes: number | null;
   evidenceIds: string[];
   limitations: string[];
   approvedAt: string;
@@ -114,13 +114,13 @@ export type SourcingRun = {
   profiles: DatasetProfile[];
   evidence: EvidenceRecord[];
   assessments: CandidateAssessment[];
-  recommendedCandidateId?: string;
+  recommendedCandidateId: string | null;
   gapQueriesUsed: number;
   tavilyCreditsUsed: number;
   executionMode: 'LIVE' | 'CACHED' | 'PARTIAL';
   errors: string[];
   reportMarkdown: string;
-  manifest?: SourcingManifest;
+  manifest: SourcingManifest | null;
   createdAt: string;
   updatedAt: string;
 };
