@@ -3,10 +3,28 @@
   "checkpoint_id": "01M2BH3CF4F91YPGV57HPAXBTV",
   "strategy": "manual-commit",
   "branch": "feat/data-ingestion-profiler",
-  "checkpoints_count": 2,
+  "checkpoints_count": 4,
   "files_touched": [
     "data_ingestion/README.md",
-    "data_ingestion/pyproject.toml"
+    "data_ingestion/docs/KUKA_CONTACT_PART2_INSPECTION.md",
+    "data_ingestion/outputs/.gitignore",
+    "data_ingestion/outputs/kuka_contact_part2_profile.json",
+    "data_ingestion/outputs/kuka_contact_part2_timef_validation.json",
+    "data_ingestion/pyproject.toml",
+    "data_ingestion/scripts/build_kuka_contact_part2_timef.py",
+    "data_ingestion/scripts/validate_kuka_contact_part2_timef.py",
+    "data_ingestion/src/dataset_profiler/cli.py",
+    "data_ingestion/src/dataset_profiler/datasets/__init__.py",
+    "data_ingestion/src/dataset_profiler/datasets/kuka_collision.py",
+    "data_ingestion/src/dataset_profiler/datasets/kuka_parser.py",
+    "data_ingestion/src/dataset_profiler/timef_validation.py",
+    "data_ingestion/src/dataset_profiler/timenet/__init__.py",
+    "data_ingestion/src/dataset_profiler/timenet/integration.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_collision/connector.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_contact/__init__.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_contact/connector.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_contact/dataset.yaml",
+    "data_ingestion/tests/test_kuka_contact_part2_timenet_connector.py"
   ],
   "sessions": [
     {
@@ -15,13 +33,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 216729,
+    "input_tokens": 492426,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 4080384,
-    "output_tokens": 45823,
-    "api_call_count": 54
+    "cache_read_tokens": 11325184,
+    "output_tokens": 81724,
+    "api_call_count": 142
   }
 }
