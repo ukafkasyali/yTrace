@@ -6,8 +6,8 @@ cd "$(dirname "$0")/.."
 current_session="timef-rationale-v5b"
 current_run="runs/llama-har-sp-timef-rationale-v5b"
 next_run="runs/llama-har-sp-timef-rationale-focused-v6"
-v5_eval="artifacts/evaluation/v5b-grounding-validation-512"
-next_eval="artifacts/evaluation/v6-focused-grounding-validation-512"
+v5_eval="artifacts/evaluation/v5b-conversational-validation-512"
+next_eval="artifacts/evaluation/v6-conversational-validation-512"
 
 for target in "$next_run" "$v5_eval" "$next_eval"; do
   if [[ -e "$target" ]]; then
@@ -69,7 +69,8 @@ PYTHONPATH=src .venv/bin/python scripts/evaluate_grounding_panel.py \
   --prepared-root data/prepared/timef-v1 \
   --output "$v5_eval" \
   --samples 512 \
-  --batch-size 4
+  --batch-size 4 \
+  --selection event-intent-stratified
 
 PYTHONPATH=src .venv/bin/python -m robot_observability.train_opentslm \
   --config configs/opentslm_sp_focused_control.yaml \
@@ -83,4 +84,5 @@ PYTHONPATH=src .venv/bin/python scripts/evaluate_grounding_panel.py \
   --prepared-root data/prepared/timef-v1 \
   --output "$next_eval" \
   --samples 512 \
-  --batch-size 4
+  --batch-size 4 \
+  --selection event-intent-stratified

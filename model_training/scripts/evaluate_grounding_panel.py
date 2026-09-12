@@ -8,7 +8,12 @@ from collections import Counter
 from pathlib import Path
 
 from robot_observability.opentslm_dataset import RobotQADataset
-from robot_observability.train_opentslm import generation_eval, stratified_grounding_subset
+from robot_observability.train_opentslm import (
+    generation_eval,
+    stratified_grounding_subset,
+    stratified_summary_subset,
+    stratified_training_probe_subset,
+)
 
 
 def main() -> None:
@@ -20,6 +25,11 @@ def main() -> None:
     parser.add_argument("--samples", type=int, default=48)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--seed", type=int, default=20260912)
+    parser.add_argument(
+        "--selection",
+        choices=("event-intent-stratified", "event-stratified", "joint-stratified"),
+        default="event-stratified",
+    )
     args = parser.parse_args()
 
     from opentslm.model.llm.OpenTSLMSP import OpenTSLMSP
@@ -34,11 +44,20 @@ def main() -> None:
     dataset = RobotQADataset(
         args.prepared_root,
         "validation",
-        mode="summary",
+        mode="all_intents" if args.selection == "event-intent-stratified" else "summary",
         seed=args.seed,
         output_format="rationale_then_answer",
     )
-    panel = stratified_grounding_subset(dataset, min(args.samples, len(dataset)), args.seed + 3)
+    selection_size = min(args.samples, len(dataset))
+    if args.selection == "event-intent-stratified":
+        panel = stratified_training_probe_subset(dataset, selection_size, args.seed + 3)
+        selection_description = "fixed event-by-intent stratified panel with natural joint prevalence"
+    elif args.selection == "joint-stratified":
+        panel = stratified_grounding_subset(dataset, selection_size, args.seed + 3)
+        selection_description = "fixed free-plus-J1-J7 panel, onset-quintile spread within joint"
+    else:
+        panel = stratified_summary_subset(dataset, selection_size, args.seed + 3)
+        selection_description = "fixed event-stratified panel with natural joint prevalence"
     metrics, rows = generation_eval(
         model,
         panel,
@@ -48,7 +67,7 @@ def main() -> None:
     report = {
         "checkpoint": str(args.checkpoint.resolve()),
         "split": "validation",
-        "selection": "fixed free-plus-J1-J7 panel, onset-quintile spread within joint",
+        "selection": selection_description,
         "seed": args.seed,
         "requested_samples": args.samples,
         "joint_counts": dict(Counter(str(row["target"].get("strongest_joint") or "free") for row in rows)),

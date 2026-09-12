@@ -3,6 +3,7 @@ from collections import Counter
 import torch
 
 from robot_observability.augmentation import JointAttributionCurriculumDataset
+from robot_observability.qa import INTENTS
 
 
 def sample(record_id: str, strongest_joint: str | None) -> dict[str, object]:
@@ -96,3 +97,18 @@ def test_curriculum_control_keeps_all_channels_canonical() -> None:
     for item in curriculum:
         assert torch.equal(item["time_series"], original["time_series"])
         assert item["metadata"]["augmentation"]["type"] == "identity"
+
+
+def test_conversational_curriculum_covers_every_supported_intent() -> None:
+    curriculum = JointAttributionCurriculumDataset(
+        [sample("record-conversational", "J3")],
+        seed=11,
+        output_format="rationale_then_answer",
+        eos_token="",
+        permute_strongest=False,
+        views=INTENTS,
+    )
+
+    assert len(curriculum) == len(INTENTS)
+    assert tuple(item["intent"] for item in curriculum) == INTENTS
+    assert len({item["answer"].split("Answer:", 1)[0] for item in curriculum}) == len(INTENTS)

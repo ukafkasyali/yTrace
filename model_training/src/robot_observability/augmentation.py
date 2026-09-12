@@ -8,10 +8,11 @@ import numpy as np
 
 from robot_observability.constants import JOINT_NAMES
 from robot_observability.opentslm_dataset import build_sample
+from robot_observability.qa import INTENTS
 
 
 class JointAttributionCurriculumDataset:
-    """Create matched summary, joint-attribution, and onset views.
+    """Create deterministic conversational views over the same source windows.
 
     Only the strongest-joint view permutes channels. Contact examples are assigned
     globally balanced destination joints, and every joint-keyed label is remapped
@@ -29,12 +30,17 @@ class JointAttributionCurriculumDataset:
         output_format: str,
         eos_token: str,
         permute_strongest: bool = True,
+        views: tuple[str, ...] | None = None,
     ) -> None:
         self.dataset = dataset
         self.seed = seed
         self.output_format = output_format
         self.eos_token = eos_token
         self.permute_strongest = permute_strongest
+        self.views = tuple(views or self.VIEWS)
+        unknown = set(self.views) - set(INTENTS)
+        if unknown:
+            raise ValueError(f"Unknown curriculum intents: {sorted(unknown)}")
         contact_indices = [
             index
             for index in range(len(dataset))
@@ -48,10 +54,10 @@ class JointAttributionCurriculumDataset:
         }
 
     def __len__(self) -> int:
-        return len(self.dataset) * len(self.VIEWS)
+        return len(self.dataset) * len(self.views)
 
     def source_index(self, index: int) -> int:
-        return index // len(self.VIEWS)
+        return index // len(self.views)
 
     def _permutation(
         self,
@@ -80,8 +86,8 @@ class JointAttributionCurriculumDataset:
         return permutation.tolist()
 
     def __getitem__(self, index: int) -> dict[str, object]:
-        base_index, view_index = divmod(index, len(self.VIEWS))
-        intent = self.VIEWS[view_index]
+        base_index, view_index = divmod(index, len(self.views))
+        intent = self.views[view_index]
         original = self.dataset[base_index]
         metadata = dict(original["metadata"])
         signal = original["time_series"]

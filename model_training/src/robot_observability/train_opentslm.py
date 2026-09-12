@@ -26,7 +26,7 @@ from robot_observability.checkpoints import store_runtime_checkpoint
 from robot_observability.constants import JOINT_NAMES, OPENTSLM_COMMIT, TIMENET_COMMIT
 from robot_observability.metrics import evaluate_rows, parse_answer, schema_value_valid
 from robot_observability.opentslm_dataset import RobotQADataset
-from robot_observability.qa import answer_payload
+from robot_observability.qa import INTENTS, answer_payload
 
 
 def emit(path: Path, event: str, **fields: object) -> None:
@@ -121,7 +121,8 @@ def grounding_selection_result(
     """Score decoded grounding only when minimum safety/task gates are met."""
     joint_weight = float(config.get("joint_weight", 0.5))
     onset_weight = float(config.get("onset_weight", 0.5))
-    joint = float(metrics.get("strongest_joint_macro_accuracy", 0.0))
+    joint_metric = str(config.get("joint_metric", "strongest_joint_macro_accuracy"))
+    joint = float(metrics.get(joint_metric, 0.0))
     onset = float(metrics.get("onset_within_50ms", 0.0))
     score = joint_weight * joint + onset_weight * onset
     gates = config.get("gates", {})
@@ -803,6 +804,7 @@ def run(args: argparse.Namespace) -> None:
             output_format=output_format,
             eos_token=eos,
             permute_strongest=bool(config.get("training", {}).get("balanced_joint_permutation", True)),
+            views=(tuple(INTENTS) if config.get("training", {}).get("curriculum_intents") == "all" else None),
         )
     probe_config = config["observability"].get("training_probe", {})
     probe_enabled = bool(probe_config.get("enabled", True))
@@ -844,12 +846,25 @@ def run(args: argparse.Namespace) -> None:
         min(len(validation_dataset), int(config["validation"]["loss_subset"])),
         seed + 2,
     )
-    generation_size = min(len(validation_summary_dataset), int(config["validation"]["generation_subset"]))
-    generation_dataset = (
-        fixed_subset(validation_summary_dataset, generation_size, seed + 3)
-        if args.smoke
-        else stratified_grounding_subset(validation_summary_dataset, generation_size, seed + 3)
+    generation_selection = str(config["validation"].get("generation_selection", "event_stratified"))
+    generation_source_dataset = (
+        validation_dataset
+        if generation_selection == "event_intent_stratified"
+        else validation_summary_dataset
     )
+    generation_size = min(len(generation_source_dataset), int(config["validation"]["generation_subset"]))
+    if args.smoke:
+        generation_dataset = fixed_subset(generation_source_dataset, generation_size, seed + 3)
+    elif generation_selection == "event_stratified":
+        generation_dataset = stratified_summary_subset(validation_summary_dataset, generation_size, seed + 3)
+    elif generation_selection == "joint_stratified":
+        generation_dataset = stratified_grounding_subset(
+            validation_summary_dataset, generation_size, seed + 3
+        )
+    elif generation_selection == "event_intent_stratified":
+        generation_dataset = stratified_training_probe_subset(validation_dataset, generation_size, seed + 3)
+    else:
+        raise ValueError(f"Unknown validation generation selection: {generation_selection}")
     zero_signal_dataset: Dataset = ZeroSignalDataset(
         stratified_subset(
             generation_dataset,
@@ -942,9 +957,7 @@ def run(args: argparse.Namespace) -> None:
             else len(train_dataset)
         ),
         "train_views_per_source": (
-            len(JointAttributionCurriculumDataset.VIEWS)
-            if isinstance(train_dataset, JointAttributionCurriculumDataset)
-            else 1
+            len(train_dataset.views) if isinstance(train_dataset, JointAttributionCurriculumDataset) else 1
         ),
         "validation_examples": len(validation_dataset),
         "training_probe_examples": len(train_probe_loss_dataset),
