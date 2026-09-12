@@ -83,3 +83,23 @@ an oracle and is not advertised as a learned baseline victory.
 - Onset: MAE, median/P90 absolute error, and accuracy within 10/25/50 ms.
 - Generation: strict JSON parse-validity rate.
 - Confidence intervals should resample recording sessions, not individual windows.
+
+## Long-recording deployment
+
+OpenTSLM consumes a fixed 1,024-sample (1.024 s) view; it does not ingest an arbitrarily long
+recording in one call. Deployment has two retrospective modes:
+
+1. For an operator-selected time interval, retrieve exactly seven aligned torque channels from the
+   TimeF record, apply the immutable training normalization, and analyze one 1.024 s window.
+2. For an offline whole-recording scan, move a 1.024 s window with an initial 256 ms stride and
+   micro-batch windows on the GPU. Only accept an onset predicted inside the trained 205–716 ms
+   interior. Convert it to recording time with `absolute onset = window start + relative onset`, then
+   cluster overlapping predictions that agree on onset and semantics. Report overlap agreement as a
+   consistency measure, not calibrated probability.
+
+For large archives, the deterministic disturbance score should cheaply propose candidate regions;
+OpenTSLM then explains those regions instead of decoding every overlapping window. Each merged event
+stores its TimeF record ID, source window starts, absolute evidence span, deterministic measurements,
+and model output for later natural-language retrieval. Stride, clustering tolerance, and any trigger
+threshold must be selected on validation recordings. Current shift-equivariance results are a known
+limitation, so whole-recording auto-scan is not a safety or real-time claim.
