@@ -1,7 +1,3 @@
-Great! Write a bash script to easily get the project up and running for testing please.
-
----
-
 Great we got it somehow working but there are some issues that needs addressing.
 
 
