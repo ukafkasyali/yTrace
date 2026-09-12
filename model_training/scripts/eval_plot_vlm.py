@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from __future__ import annotations
 
 import argparse
@@ -14,11 +16,19 @@ def main() -> None:
     parser.add_argument("--endpoint", default="http://127.0.0.1:8000")
     parser.add_argument("--model", default="Qwen/Qwen3-VL-4B-Instruct")
     parser.add_argument("--limit", type=int, default=512)
+    parser.add_argument("--shots", type=int, choices=(0, 1), default=0)
+    parser.add_argument("--demonstration-seed", type=int, default=20260912)
     args = parser.parse_args()
     print(
         json.dumps(
             evaluate_plot_vlm(
-                args.prepared_root, args.output, endpoint=args.endpoint, model=args.model, limit=args.limit
+                args.prepared_root,
+                args.output,
+                endpoint=args.endpoint,
+                model=args.model,
+                limit=args.limit,
+                shots=args.shots,
+                demonstration_seed=args.demonstration_seed,
             ),
             indent=2,
         )

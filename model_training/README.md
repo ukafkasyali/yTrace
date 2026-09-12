@@ -19,7 +19,8 @@ contract. A new robot dataset should add a reader and mapping rather than fork t
 - Strongest-joint pseudo-label is calibrated top-5%-mean disturbance, not contact-location truth.
 - Natural-language evidence plus strict JSON output. Free motion uses `null` onset/joint fields.
 - Primary TSLM: OpenTSLM SoftPrompt + Llama 3.2 1B + HAR warm start.
-- Baselines: transparent signal features and Qwen3-VL 4B over equivalent seven-panel plots.
+- Baselines: a multi-task 1D CNN, transparent signal features, and Qwen3-VL 4B over equivalent
+  seven-panel plots in zero-shot and one-shot modes.
 - Retrospective observability only; this is not a causal collision detector or safety controller.
 
 See [the design decisions](docs/design.md), [dataset documentation](docs/dataset.md), and
@@ -35,11 +36,38 @@ robot-observe download --output data/raw
 robot-observe prepare --config configs/data.yaml
 robot-observe baseline --prepared-root data/prepared/v1 --output-root artifacts/baseline/v1
 
+# Required learned baseline: event semantics, onset, and joint evidence.
+python scripts/train_cnn.py \
+  --prepared-root data/prepared/v1 \
+  --run-name cnn-1d-seed-20260912
+
+# Direct multimodal LLM: use the same command with --shots 0 for zero-shot.
+python scripts/eval_plot_vlm.py \
+  --prepared-root data/prepared/v1 \
+  --output artifacts/evaluation/qwen3-vl-one-shot \
+  --shots 1
+
 python scripts/build_timef.py --registry artifacts/timef-registry --cache data/raw
 python -m robot_observability.train_opentslm \
   --prepared-root data/prepared/v1 \
   --run-name llama-har-sp-smoke \
   --smoke --max-steps 200
+```
+
+All learned models select checkpoints on validation only. CNN, direct-LLM, and OpenTSLM test
+evaluation use the same fixed 512-example sample (or the complete test split when smaller), selected
+without replacement with seed `20260912`. The one-shot example is selected independently from the
+training split and its record ID is saved in the run manifest.
+
+Combine completed metric files without silently accepting mismatched sample counts:
+
+```bash
+python scripts/compare_models.py \
+  --result CNN=runs/cnn-1d-seed-20260912/metrics.json \
+  --result Direct-zero=artifacts/evaluation/qwen3-vl-zero-shot/metrics.json \
+  --result Direct-one=artifacts/evaluation/qwen3-vl-one-shot/metrics.json \
+  --result OpenTSLM=artifacts/evaluation/opentslm-test/metrics.json \
+  --output artifacts/evaluation/model-comparison.json
 ```
 
 Every expensive operation is resumable or refuses to overwrite prior artifacts. Training emits an

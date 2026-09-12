@@ -54,13 +54,20 @@ an oracle and is not advertised as a learned baseline victory.
 ## Experiment order and go/no-go checks
 
 1. Transparent handcrafted/logistic signal baseline on the locked test split.
-2. OpenTSLM checkpoint load and one-batch forward pass.
-3. Overfit 32 training examples; require falling loss and valid structured generation.
-4. Verify that shifting a signal shifts predicted onset and permuting channels changes joint attribution.
-5. Launch the wall-clock-capped full Llama 1B SoftPrompt run.
-6. Evaluate Qwen3-VL 4B zero-shot on the same test windows rendered as plots.
-7. If time remains, train the fresh encoder/projector ablation. Flamingo is optional only after its
+2. Train the multi-task 1D CNN baseline, selecting on validation macro-F1 and evaluating test once.
+3. OpenTSLM checkpoint load and one-batch forward pass.
+4. Overfit 32 training examples; require falling loss and valid structured generation.
+5. Verify that shifting a signal shifts predicted onset and permuting channels changes joint attribution.
+6. Launch the wall-clock-capped full Llama 1B SoftPrompt run.
+7. Evaluate Qwen3-VL 4B zero-shot and one-shot on the same test windows rendered as plots. The one
+   in-context example is deterministically sampled from train and is identical for every test query.
+8. If time remains, train the fresh encoder/projector ablation. Flamingo is optional only after its
    upstream multichannel defect is patched and tested.
+
+The comparison set is at most 512 test windows, selected without replacement with seed `20260912`.
+This same seed and cap are used by CNN, direct Qwen3-VL, and OpenTSLM evaluation so metric rows remain
+like-for-like. No test result participates in checkpoint selection, prompt-demonstration selection,
+or hyperparameter tuning.
 
 ## Metrics
 

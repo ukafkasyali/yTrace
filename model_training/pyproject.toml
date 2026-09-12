@@ -27,6 +27,9 @@ train = [
   "tqdm>=4.67,<5",
   "wandb==0.30.0",
 ]
+vlm = [
+  "matplotlib>=3.9,<4",
+]
 dev = [
   "pytest>=8.3,<9",
   "ruff==0.16.7",

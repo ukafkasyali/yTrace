@@ -61,4 +61,33 @@ uv pip install --python .vlm-venv/bin/python 'vllm>=0.11,<1' qwen-vl-utils==0.0.
 .vlm-venv/bin/vllm serve Qwen/Qwen3-VL-4B-Instruct --port 8000 --gpu-memory-utilization 0.70
 ```
 
-Run `scripts/eval_plot_vlm.py` only when OpenTSLM training is not occupying the H100.
+Run `scripts/eval_plot_vlm.py` only when OpenTSLM training is not occupying the H100. Preserve the
+existing zero-shot artifacts and put one-shot results in a new directory:
+
+```bash
+.venv/bin/python scripts/eval_plot_vlm.py \
+  --prepared-root data/prepared/v1 \
+  --output artifacts/evaluation/qwen3-vl-one-shot \
+  --shots 1
+```
+
+## 1D CNN GPU run
+
+The CNN is intentionally separate from the OpenTSLM trainer but consumes the identical prepared
+split. On a fresh single-GPU instance, clone or copy the repository and prepared dataset, then run:
+
+```bash
+cd /home/<username>/ysamet/model_training
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -e '.[train,dev]'
+.venv/bin/python -m pytest
+nvidia-smi
+tmux new-session -d -s cnn-1d \
+  '.venv/bin/python scripts/train_cnn.py --prepared-root data/prepared/v1 --run-name cnn-1d-seed-20260912 2>&1 | tee runs/cnn-1d-seed-20260912.stdout.log'
+```
+
+The default command refuses CPU training and refuses to overwrite an existing run. Monitor
+`runs/cnn-1d-seed-20260912/status.json`, `metrics.jsonl`, W&B, and `nvidia-smi`. The checkpoint is
+chosen on validation semantics macro-F1 with onset MAE as the tie-breaker; test is evaluated only
+after model selection.
