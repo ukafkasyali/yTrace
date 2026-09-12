@@ -1,0 +1,1 @@
+current memory utilization is quite low, can't we increase the batch size to make the training faster as well to get the results. Use the quality neutral immediately available improvment ideas to increase the speed without quality sacrifice.
