@@ -1,0 +1,76 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BZ2PJBGN376190ZET48SEE",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:26:18.693133Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "AGENTS.md",
+    "docs/submission/PRODUCT_PRIORITIES.md",
+    "frontend/README.md",
+    "frontend/src/lib/rawWindow.test.ts",
+    "frontend/src/lib/useRawWindow.ts",
+    "inference/README.md",
+    "inference/raw_recordings.py",
+    "inference/test_server.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "30c678d47caf",
+  "checkpoint_transcript_start": 2412,
+  "transcript_lines_at_start": 2412,
+  "compact_transcript_start": 302,
+  "token_usage": {
+    "input_tokens": 389316,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 10404917,
+    "output_tokens": 24482,
+    "api_call_count": 84
+  },
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:26:17.981442Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 57,
+    "human_modified": 40,
+    "human_removed": 0,
+    "total_committed": 67,
+    "total_lines_changed": 130,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1118,
+      "user_lines_removed": 37,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/App.tsx": 7,
+        "frontend/src/assistant/AssistantPanel.tsx": 9,
+        "frontend/src/lib/rawWindow.ts": 23,
+        "frontend/src/lib/useRawWindow.ts": 22,
+        "inference/raw_recordings.py": 164,
+        "inference/server.py": 87,
+        "inference/test_server.py": 63
+      },
+      "user_removed_per_file": {
+        "frontend/src/App.tsx": 4,
+        "frontend/src/assistant/AssistantPanel.tsx": 8,
+        "inference/server.py": 25
+      }
+    }
+  ]
+}
