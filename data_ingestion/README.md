@@ -38,6 +38,19 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 
 The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dataset_profile.json), and the observed facts, interpretations, and unresolved questions are documented in [docs/KUKA_BATCH_01_INSPECTION.md](docs/KUKA_BATCH_01_INSPECTION.md).
 
+## Approved-source ingestion handoff
+
+`dataset_profiler.ingestion` owns the strict consumer for sourcing manifest schema 1.1 and the
+SQLite ingestion-job identity. It does not import `data_sourcing`; both modules validate the shared
+[`approved-source-manifest-v1.1.json`](../docs/contracts/approved-source-manifest-v1.1.json)
+fixture. Legacy or incomplete manifests, provider-mismatched URLs, and manifests without data assets
+fail before acquisition.
+
+One `approvedSourceId` has at most one logical ingestion job. Matching retries return the existing
+job, including after restart; another asset selection returns a conflict rather than creating a
+second ready dataset. This persistence layer does not download content, execute source code, or
+mark a dataset ready.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and
