@@ -802,6 +802,7 @@ def run(args: argparse.Namespace) -> None:
             seed=seed,
             output_format=output_format,
             eos_token=eos,
+            permute_strongest=bool(config.get("training", {}).get("balanced_joint_permutation", True)),
         )
     probe_config = config["observability"].get("training_probe", {})
     probe_enabled = bool(probe_config.get("enabled", True))

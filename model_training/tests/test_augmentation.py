@@ -81,3 +81,18 @@ def test_destination_joint_schedule_is_globally_balanced_and_deterministic() -> 
     assert set(counts) == {f"J{index}" for index in range(1, 8)}
     assert max(counts.values()) - min(counts.values()) <= 1
     assert destinations == [second[index * 3 + 1]["metadata"]["strongest_joint"] for index in range(29)]
+
+
+def test_curriculum_control_keeps_all_channels_canonical() -> None:
+    original = sample("record-control", "J3")
+    curriculum = JointAttributionCurriculumDataset(
+        [original],
+        seed=11,
+        output_format="rationale_then_answer",
+        eos_token="",
+        permute_strongest=False,
+    )
+
+    for item in curriculum:
+        assert torch.equal(item["time_series"], original["time_series"])
+        assert item["metadata"]["augmentation"]["type"] == "identity"

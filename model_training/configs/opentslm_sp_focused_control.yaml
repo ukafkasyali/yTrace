@@ -3,8 +3,8 @@ base_model: meta-llama/Llama-3.2-1B
 warm_start: OpenTSLM/llama-3.2-1b-har-sp
 upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
 experiment:
-  hypothesis: one_third_balanced_joint_equivariance_with_canonical_semantics_and_localization
-  comparison_run: llama-har-sp-timef-rationale-v5b
+  hypothesis: focused_three_intent_control_without_channel_permutation
+  comparison_run: llama-har-sp-timef-rationale-joint-permutation-v6
 targets:
   format: rationale_then_answer
   rationale_source: deterministic_signal_pseudolabels_v1
@@ -18,7 +18,7 @@ training:
   max_examples: 8192
   warmup_fraction: 0.03
   joint_attribution_curriculum: true
-  balanced_joint_permutation: true
+  balanced_joint_permutation: false
 learning_rates:
   encoder: 0.0002
   projector: 0.0001

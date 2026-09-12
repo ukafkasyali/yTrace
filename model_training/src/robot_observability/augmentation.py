@@ -28,11 +28,13 @@ class JointAttributionCurriculumDataset:
         seed: int,
         output_format: str,
         eos_token: str,
+        permute_strongest: bool = True,
     ) -> None:
         self.dataset = dataset
         self.seed = seed
         self.output_format = output_format
         self.eos_token = eos_token
+        self.permute_strongest = permute_strongest
         contact_indices = [
             index
             for index in range(len(dataset))
@@ -85,7 +87,11 @@ class JointAttributionCurriculumDataset:
         signal = original["time_series"]
         original_record_id = str(original["record_id"])
 
-        if intent == "strongest_joint" and metadata.get("strongest_joint") is not None:
+        if (
+            self.permute_strongest
+            and intent == "strongest_joint"
+            and metadata.get("strongest_joint") is not None
+        ):
             destination = self.destination_joint.get(base_index)
             permutation = self._permutation(
                 original_record_id,
