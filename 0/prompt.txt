@@ -1,0 +1,357 @@
+# Files pasted by the user:
+
+## "We have completed the deterministic profiling milestone for KUKA Part I Batch 0…": /home/ugur/.codex/attachments/687afb21-1ca2-45bf-9071-3cd6d86c1c07/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
+
+---
+
+Approved, with the following adjustments before implementation:
+
+1. Change the dataset ID from `kuka/collision-part1-batch01` to:
+
+`kuka/collision-part1`
+
+The connector should represent the upstream Part I dataset. Batch 01 is only the subset/local source we are using for this implementation and validation milestone. Structure the connector so that processing additional batches later does not require creating a new dataset identity or redesigning the mapping.
+
+2. Before using `dimensionless` for `PosMsr`, check whether TimeF supports an unknown/unspecified/null unit. Prefer that if available.
+
+If TimeF strictly requires a unit and no unknown representation exists, use `dimensionless` only as a compatibility placeholder and:
+
+- mark the original unit as unresolved in a machine-readable way;
+- document this explicitly in `HUMAN_MAPPING_DECISIONS.md`;
+- ensure downstream consumers can distinguish “actually dimensionless” from “unknown unit represented as dimensionless because of a TimeF constraint.”
+
+Otherwise, proceed with the proposed mapping:
+
+- one experimental run → one Record;
+- no `subject_ids` for now;
+- 7 `MsrExtTrq` joint signals;
+- 7 `PosMsr` joint signals;
+- 1 kHz `RegularAxis`;
+- `MsrExtTrq` as the torque source;
+- collision indices represented as raw point annotations, preserving MATLAB index, converted Python index, and timestamp;
+- retain `source_run_id` and source-file provenance;
+- `start_time=None`;
+- no ML task at this milestone;
+- MIT dataset license;
+- N·m for torque.
+
+For the 14-scalar-series representation, proceed if that is the natural/required representation under the pinned TimeF API. Please document in `HUMAN_MAPPING_DECISIONS.md` why 14 scalar series were selected instead of two 7-channel multivariate series so that this becomes an explicit mapping decision rather than an implicit implementation detail.
+
+For provenance, prefer structured record metadata if TimeF provides an appropriate mechanism. If TimeF does not, the proposed record-wide annotations are acceptable. `source_run_id` must remain easily recoverable because we will later use it for leakage/group-split validation.
+
+Please now implement the connector, round-trip it through TimeF, and run the previously specified validation against `dataset_profile.json`. Do not add ML tasks, windowing, LLM orchestration, or Part II yet.
+
+---
+
+can you create a pr with these results
+
+---
+
+what did we change in the timenet repo
+
+---
+
+# Files pasted by the user:
+
+## "We will submit **one hackathon repository only**. Therefore, all code authored …": /home/ugur/.codex/attachments/66e8475b-e389-4cc7-8538-e8666b511647/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
+
+---
+
+ok  lets do a pr
+
+---
+
+Can we see the connector we did for this kuka dataset
+
+---
+
+Can you explain what it does
+
+---
+
+1. Search every supplied MATLAB/source/script file for:
+   ```perl
+   grep -RniE 'PosMsr|GetMeasuredJointPositions|rad2deg|deg2rad|180/pi|pi/180' <dataset-root>
+   ```
+   We want to see where `PosMsr` was created and whether any unit conversion occurred.
+2. Print min/max for each of the seven `PosMsr` channels. If values look roughly like:
+   ```
+   -2.1, 1.4, 0.7...
+   ```
+   that's highly consistent with radians.
+
+   If you see things like:
+   ```
+   -120, 85, 40...
+   ```
+   that would strongly suggest degrees.
+3. &#x20;Compare those ranges against the KUKA LWR4+ joint limits. The same configuration represented in radians versus degrees should make the interpretation obvious.&#x20;
+4. &#x20;Search the experiment's own metadata/scripts—not just Zenodo and the public preprocessing repo—for how `PosMsr` is logged.
+
+---
+
+Update the KUKA Part I TimeNet connector so that `PosMsr` is represented in **radians** instead of using the current `dimensionless` compatibility placeholder.
+
+This should be treated as a **high-confidence inferred unit**, not as an explicitly documented fact from the supplied Batch 01 archive.
+
+## Evidence
+
+The following evidence supports `PosMsr = rad`:
+
+- Across all five runs, observed `PosMsr` values are roughly within ±1.44.
+- Interpreted as radians, this corresponds to approximately ±82.5°, which is realistic for the KUKA LWR4+ trajectories and occupies a plausible fraction of the robot’s joint range.
+- Interpreted as degrees, the motion would be only about ±1.44°, which is implausibly small.
+- The variable naming is consistent with KUKA FRI conventions:
+  - `PosMsr`
+  - `MsrTrq`
+  - `MsrExtTrq`
+  - `CmdTrq`
+- KUKA FRI documentation uses radians for commanded joint positions.
+- Independent LWR literature using `GetMeasuredJointPositions()` reports joint positions in radians.
+- No supplied Batch 01 source file contains evidence of conversion to degrees:
+  - no `rad2deg`
+  - no `deg2rad`
+  - no `180/pi`
+  - no `pi/180`
+- The original logger implementation is not included, so direct experiment-level proof is unavailable.
+
+Assessment:
+```text
+PosMsr unit: rad
+confidence: high
+resolution type: inferred
+direct source statement: unavailable
+```
+
+## Required changes
+
+1. Change the TimeF unit for all `PosMsr` series from the current `dimensionless` placeholder to the proper radians unit supported by the pinned TimeNet/TimeF API.
+2. Remove the old compatibility metadata such as:
+```text
+status = unresolved
+timef_unit = dimensionless
+timef_unit_is_placeholder = true
+```
+
+where it is no longer appropriate.
+
+3. Preserve the fact that the unit was **inferred rather than directly documented**.
+
+If there is a clean metadata/provenance mechanism, represent something conceptually like:
+```json
+{
+  "spec_type": "measured_joint_position",
+  "unit": "rad",
+  "unit_resolution": "inferred",
+  "confidence": "high"
+}
+```
+
+Do not invent a complicated schema solely for this change. If the best place for this provenance is documentation rather than per-record metadata, document it clearly in `HUMAN_MAPPING_DECISIONS.md`.
+
+4. Update `HUMAN_MAPPING_DECISIONS.md` to explain:
+
+- why radians were selected;
+- the observed value ranges;
+- comparison against LWR4+ joint limits;
+- FRI convention evidence;
+- that the original logging code is absent;
+- why the conclusion is high-confidence but still inferred.
+
+5. Update any tests that currently expect `dimensionless`.
+6. Add an explicit regression test verifying that `PosMsr` series use radians.
+
+Conceptually:
+```python
+assert position_series.spec.unit == "rad"
+```
+
+Use the actual pinned TimeF API representation.
+
+## Validation
+
+After the change, rerun:
+
+- all project tests;
+- KUKA connector tests;
+- the 63-check real-data TimeF validation;
+- numerical raw-vs-TimeF spot checks;
+- any relevant TimeNet compatibility checks.
+
+Expected behavior:
+```text
+Numerical signal values: unchanged
+Record count: unchanged
+Series count: unchanged
+Collision annotations: unchanged
+Provenance: unchanged
+Sampling rate: unchanged
+Only position unit metadata changes
+```
+
+The 63/63 structural/data validation should still pass unless one of those checks explicitly encodes the old placeholder semantics, in which case update it appropriately.
+
+## Important
+
+Do not modify:
+
+- the raw position values;
+- channel ordering;
+- time axes;
+- collision annotations;
+- task definitions;
+- subject IDs;
+- provenance structure;
+- Part II support;
+- DatasetSpec;
+- LLM logic;
+- OpenTSLM integration.
+
+This is a narrow semantic correction to the known-good KUKA mapping.
+
+At completion, report:
+
+- files changed;
+- final TimeF representation of the `PosMsr` unit;
+- whether inferred-unit provenance is stored in metadata or documentation;
+- test results;
+- 63-check validation result;
+- confirmation that numerical output is otherwise unchanged.
+
+---
+
+Update the KUKA Part I TimeNet connector so that `PosMsr` is represented in **radians** instead of using the current `dimensionless` compatibility placeholder.
+
+This should be treated as a **high-confidence inferred unit**, not as an explicitly documented fact from the supplied Batch 01 archive.
+
+## Evidence
+
+The following evidence supports `PosMsr = rad`:
+
+- Across all five runs, observed `PosMsr` values are roughly within ±1.44.
+- Interpreted as radians, this corresponds to approximately ±82.5°, which is realistic for the KUKA LWR4+ trajectories and occupies a plausible fraction of the robot’s joint range.
+- Interpreted as degrees, the motion would be only about ±1.44°, which is implausibly small.
+- The variable naming is consistent with KUKA FRI conventions:
+  - `PosMsr`
+  - `MsrTrq`
+  - `MsrExtTrq`
+  - `CmdTrq`
+- KUKA FRI documentation uses radians for commanded joint positions.
+- Independent LWR literature using `GetMeasuredJointPositions()` reports joint positions in radians.
+- No supplied Batch 01 source file contains evidence of conversion to degrees:
+  - no `rad2deg`
+  - no `deg2rad`
+  - no `180/pi`
+  - no `pi/180`
+- The original logger implementation is not included, so direct experiment-level proof is unavailable.
+
+Assessment:
+```text
+PosMsr unit: rad
+confidence: high
+resolution type: inferred
+direct source statement: unavailable
+```
+
+## Required changes
+
+1. Change the TimeF unit for all `PosMsr` series from the current `dimensionless` placeholder to the proper radians unit supported by the pinned TimeNet/TimeF API.
+2. Remove the old compatibility metadata such as:
+```text
+status = unresolved
+timef_unit = dimensionless
+timef_unit_is_placeholder = true
+```
+
+where it is no longer appropriate.
+
+3. Preserve the fact that the unit was **inferred rather than directly documented**.
+
+If there is a clean metadata/provenance mechanism, represent something conceptually like:
+```json
+{
+  "spec_type": "measured_joint_position",
+  "unit": "rad",
+  "unit_resolution": "inferred",
+  "confidence": "high"
+}
+```
+
+Do not invent a complicated schema solely for this change. If the best place for this provenance is documentation rather than per-record metadata, document it clearly in `HUMAN_MAPPING_DECISIONS.md`.
+
+4. Update `HUMAN_MAPPING_DECISIONS.md` to explain:
+
+- why radians were selected;
+- the observed value ranges;
+- comparison against LWR4+ joint limits;
+- FRI convention evidence;
+- that the original logging code is absent;
+- why the conclusion is high-confidence but still inferred.
+
+5. Update any tests that currently expect `dimensionless`.
+6. Add an explicit regression test verifying that `PosMsr` series use radians.
+
+Conceptually:
+```python
+assert position_series.spec.unit == "rad"
+```
+
+Use the actual pinned TimeF API representation.
+
+## Validation
+
+After the change, rerun:
+
+- all project tests;
+- KUKA connector tests;
+- the 63-check real-data TimeF validation;
+- numerical raw-vs-TimeF spot checks;
+- any relevant TimeNet compatibility checks.
+
+Expected behavior:
+```text
+Numerical signal values: unchanged
+Record count: unchanged
+Series count: unchanged
+Collision annotations: unchanged
+Provenance: unchanged
+Sampling rate: unchanged
+Only position unit metadata changes
+```
+
+The 63/63 structural/data validation should still pass unless one of those checks explicitly encodes the old placeholder semantics, in which case update it appropriately.
+
+## Important
+
+Do not modify:
+
+- the raw position values;
+- channel ordering;
+- time axes;
+- collision annotations;
+- task definitions;
+- subject IDs;
+- provenance structure;
+- Part II support;
+- DatasetSpec;
+- LLM logic;
+- OpenTSLM integration.
+
+This is a narrow semantic correction to the known-good KUKA mapping.
+
+At completion, report:
+
+- files changed;
+- final TimeF representation of the `PosMsr` unit;
+- whether inferred-unit provenance is stored in metadata or documentation;
+- test results;
+- 63-check validation result;
+- confirmation that numerical output is otherwise unchanged.
