@@ -102,6 +102,20 @@ def deterministic_draft(request: CreateSourcingRun) -> PlanningDraft:
     )
 
 
+def make_review_hypothesis(
+    iteration: int,
+    feedback: str,
+    brief: str,
+) -> SearchHypothesis:
+    normalized_feedback = " ".join(feedback.split())[:180]
+    normalized_brief = " ".join(brief.split())[:160]
+    return SearchHypothesis(
+        id=f"hyp_review_refinement_{iteration}",
+        rationale="Search the reviewer's requested refinement within the remaining run budget.",
+        query=f"{normalized_brief} reviewer refinement: {normalized_feedback}"[:400],
+    )
+
+
 class RequirementPlanner:
     def __init__(self, settings: Settings):
         self.settings = settings

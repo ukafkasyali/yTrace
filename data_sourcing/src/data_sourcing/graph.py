@@ -30,7 +30,12 @@ from data_sourcing.models import (
     SourcingManifest,
     VerificationStatus,
 )
-from data_sourcing.planning import PlanningDraft, RequirementPlanner, make_gap_hypothesis
+from data_sourcing.planning import (
+    PlanningDraft,
+    RequirementPlanner,
+    make_gap_hypothesis,
+    make_review_hypothesis,
+)
 from data_sourcing.scoring import (
     apply_recommendation_confidence,
     assess_candidate,
@@ -61,6 +66,9 @@ class SourcingState(TypedDict, total=False):
     started_at: float
     allow_cached_demo: bool
     approval_decision: str | None
+    review_feedback: list[str]
+    review_iterations_used: int
+    active_research_seconds: float
     planning_draft: dict[str, Any]
 
 
@@ -92,6 +100,9 @@ def initial_state(
         "started_at": time.time(),
         "allow_cached_demo": allow_cached_demo,
         "approval_decision": None,
+        "review_feedback": [],
+        "review_iterations_used": 0,
+        "active_research_seconds": 0.0,
         "planning_draft": {},
     }
 
@@ -137,6 +148,7 @@ class DatasetScoutGraph:
         builder.add_node("gap_search", self.gap_search)
         builder.add_node("scoring", self.scoring)
         builder.add_node("approval", self.approval)
+        builder.add_node("review_refinement", self.review_refinement)
         builder.add_node("manifest_generation", self.manifest_generation)
         builder.add_edge(START, "requirements")
         builder.add_edge("requirements", "hypotheses")
@@ -158,13 +170,26 @@ class DatasetScoutGraph:
         builder.add_conditional_edges(
             "approval",
             self.route_after_approval,
-            {"manifest": "manifest_generation", "end": END},
+            {
+                "manifest": "manifest_generation",
+                "refinement": "review_refinement",
+                "end": END,
+            },
+        )
+        builder.add_conditional_edges(
+            "review_refinement",
+            self.route_after_review_refinement,
+            {"continue": "canonicalization", "end": END},
         )
         builder.add_edge("manifest_generation", END)
         return builder
 
     def _expired(self, state: SourcingState) -> bool:
-        return time.time() - state["started_at"] >= self.settings.run_timeout_seconds
+        active_seconds = state.get("active_research_seconds", 0.0)
+        return (
+            active_seconds + time.time() - state["started_at"]
+            >= self.settings.run_timeout_seconds
+        )
 
     def requirements(self, state: SourcingState) -> dict[str, Any]:
         request = _request(state)
@@ -350,6 +375,13 @@ class DatasetScoutGraph:
             "assessments": _json_list(ranked),
             "recommended_candidate_id": recommended.candidate_id if eligible else None,
             "report_markdown": report,
+            "active_research_seconds": min(
+                self.settings.run_timeout_seconds,
+                state.get("active_research_seconds", 0.0)
+                + time.time()
+                - state["started_at"],
+            ),
+            "started_at": time.time(),
         }
 
     def _report(
@@ -386,6 +418,15 @@ class DatasetScoutGraph:
                 )
         if state["errors"]:
             lines.extend(["", "## Retrieval notes", "", *[f"- {item}" for item in state["errors"]]])
+        if state.get("review_feedback"):
+            lines.extend(
+                [
+                    "",
+                    "## Reviewer refinements",
+                    "",
+                    *[f"- {item}" for item in state["review_feedback"]],
+                ]
+            )
         return "\n".join(lines) + "\n"
 
     @staticmethod
@@ -438,20 +479,67 @@ class DatasetScoutGraph:
                     "Approval candidate did not match the recommendation",
                 ],
             }
-        status = (
-            RunStatus.APPROVED
-            if approval.decision is ApprovalDecision.APPROVE
-            else RunStatus.REJECTED
-        )
-        return {"status": status.value, "approval_decision": approval.decision.value}
+        if approval.decision is ApprovalDecision.REJECT:
+            if state.get("review_iterations_used", 0) >= self.settings.review_iteration_limit:
+                return {
+                    "status": RunStatus.NEEDS_INPUT.value,
+                    "approval_decision": approval.decision.value,
+                    "errors": [
+                        *state["errors"],
+                        "Reviewer refinement limit reached; start a new run to continue",
+                    ],
+                }
+            return {
+                "status": RunStatus.DISCOVERING.value,
+                "approval_decision": approval.decision.value,
+                "review_feedback": [*state.get("review_feedback", []), approval.note],
+                "started_at": time.time(),
+            }
+        return {
+            "status": RunStatus.APPROVED.value,
+            "approval_decision": approval.decision.value,
+        }
 
     @staticmethod
     def route_after_approval(state: SourcingState) -> str:
+        if state["status"] == RunStatus.NEEDS_INPUT.value:
+            return "end"
         return (
             "manifest"
             if state.get("approval_decision") == ApprovalDecision.APPROVE.value
-            else "end"
+            else "refinement"
         )
+
+    def review_refinement(self, state: SourcingState) -> dict[str, Any]:
+        iteration = state.get("review_iterations_used", 0) + 1
+        errors = list(state["errors"])
+        if iteration > self.settings.review_iteration_limit:
+            errors.append("Reviewer refinement limit reached; start a new run to continue")
+            return {"status": RunStatus.NEEDS_INPUT.value, "errors": errors}
+        if (
+            self._expired(state)
+            or state["tavily_credits_used"] + 2 > self.settings.tavily_credit_limit
+        ):
+            errors.append(
+                "Reviewer refinement could not run within the remaining time or credit budget"
+            )
+            return {"status": RunStatus.NEEDS_INPUT.value, "errors": errors}
+        hypothesis = make_review_hypothesis(
+            iteration,
+            state["review_feedback"][-1],
+            state["brief"],
+        )
+        hypotheses = [SearchHypothesis.model_validate(item) for item in state["hypotheses"]]
+        hypotheses.append(hypothesis)
+        temporary_state = dict(state)
+        temporary_state["hypotheses"] = _json_list(hypotheses)
+        update = self._perform_searches(temporary_state, [hypothesis])
+        update["review_iterations_used"] = iteration
+        return update
+
+    @staticmethod
+    def route_after_review_refinement(state: SourcingState) -> str:
+        return "end" if state["status"] == RunStatus.NEEDS_INPUT.value else "continue"
 
     def manifest_generation(self, state: SourcingState) -> dict[str, Any]:
         candidate_id = state["recommended_candidate_id"]

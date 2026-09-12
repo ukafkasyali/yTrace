@@ -223,6 +223,8 @@ class ApprovalRequest(WireModel):
     def approved_candidate_is_required(self) -> ApprovalRequest:
         if self.decision is ApprovalDecision.APPROVE and not self.candidate_id:
             raise ValueError("candidateId is required when approving")
+        if self.decision is ApprovalDecision.REJECT and not self.note:
+            raise ValueError("note is required when rejecting for refinement")
         return self
 
 
@@ -254,6 +256,8 @@ class SourcingRun(WireModel):
     evidence: list[EvidenceRecord] = Field(default_factory=list)
     assessments: list[CandidateAssessment] = Field(default_factory=list)
     recommended_candidate_id: str | None = None
+    review_feedback: list[str] = Field(default_factory=list, max_length=3)
+    review_iterations_used: int = Field(default=0, ge=0, le=3)
     gap_queries_used: int = Field(default=0, ge=0, le=2)
     tavily_credits_used: int = Field(default=0, ge=0, le=12)
     execution_mode: ExecutionMode = ExecutionMode.LIVE

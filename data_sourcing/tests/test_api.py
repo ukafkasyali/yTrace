@@ -82,6 +82,25 @@ def test_create_is_idempotent_and_rejects_key_reuse(tmp_path: Path) -> None:
         assert len(list(settings.runs_dir.iterdir())) == 1
 
 
+def test_rejection_requires_feedback_before_refining(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        created = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "refinement-run"},
+            json={"brief": BRIEF},
+        )
+        run_id = created.json()["runId"]
+
+        rejection = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "REJECT"},
+        )
+
+        assert rejection.status_code == 422
+        assert rejection.json()["error"]["code"] == "INVALID_REQUEST"
+
+
 def test_api_returns_consistent_validation_and_not_found_errors(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:

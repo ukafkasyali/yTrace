@@ -61,6 +61,45 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
     connection.close()
 
 
+def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> None:
+    scout, connection = build_graph()
+    run_id = str(uuid4())
+    config = {"configurable": {"thread_id": run_id}}
+    scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief=(
+                    "Find robot collision and intentional contact time-series torque data from "
+                    "https://github.com/zhang-zengjie/robot-raw-collision-signals"
+                )
+            ),
+            allow_cached_demo=True,
+        ),
+        config,
+    )
+
+    refined = scout.graph.invoke(
+        Command(
+            resume={
+                "decision": "REJECT",
+                "note": "Prioritize datasets that include free-motion baseline recordings.",
+            }
+        ),
+        config,
+    )
+
+    assert refined["status"] == RunStatus.AWAITING_APPROVAL.value
+    assert refined["review_iterations_used"] == 1
+    assert refined["review_feedback"] == [
+        "Prioritize datasets that include free-motion baseline recordings."
+    ]
+    assert any(item["id"] == "hyp_review_refinement_1" for item in refined["hypotheses"])
+    assert scout.graph.get_state(config).next == ("approval",)
+    scout.close()
+    connection.close()
+
+
 def test_unresolved_free_motion_label_uses_two_gap_queries_and_abstains() -> None:
     scout, connection = build_graph()
     run_id = str(uuid4())
