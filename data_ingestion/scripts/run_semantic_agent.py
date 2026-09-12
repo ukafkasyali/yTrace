@@ -1,0 +1,58 @@
+"""Run the bounded semantic agent, then evaluate after generation."""
+from __future__ import annotations
+import argparse
+import json
+from pathlib import Path
+from dataset_profiler.evidence import DocumentationSource, EvidenceSession
+from dataset_profiler.semantic_agent import OpenAIChatClient, SemanticAgentError, generate_dataset_spec
+from dataset_profiler.semantic_agent.repair import run_repairs
+from dataset_profiler.semantic_agent.evaluation import compare_specs
+from dataset_profiler.semantic_agent.profile_io import read_dataset_profile
+from dataset_profiler.semantic_spec import load_kuka_collision_part1_spec, validate_dataset_spec
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", type=Path, required=True)
+    parser.add_argument("--documentation", type=Path, action="append", default=[])
+    parser.add_argument("--output-dir", type=Path, default=Path("outputs"))
+    parser.add_argument("--model", default="gpt-4.1-mini")
+    parser.add_argument("--reasoning-effort")
+    parser.add_argument("--repair", action="store_true")
+    parser.add_argument("--evaluate-kuka-part1", action="store_true")
+    args = parser.parse_args()
+    profile = read_dataset_profile(args.profile)
+    docs = [DocumentationSource(f"doc-{index + 1}", path, path.name) for index, path in enumerate(args.documentation)]
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    client = OpenAIChatClient(args.model, reasoning_effort=args.reasoning_effort)
+    try:
+        run = generate_dataset_spec(profile, EvidenceSession(profile, documentation_sources=docs), client)
+    except SemanticAgentError as exc:
+        if exc.trace:
+            (args.output_dir / "kuka_part1_agent_trace.json").write_text(json.dumps(exc.trace, indent=2) + "\n", encoding="utf-8")
+        raise
+    run.spec.write_json(args.output_dir / "kuka_part1_agent_spec.json")
+    run.write_trace(args.output_dir / "kuka_part1_agent_trace.json")
+    validation = validate_dataset_spec(profile, run.spec)
+    (args.output_dir / "kuka_part1_agent_validation.json").write_text(validation.to_json(), encoding="utf-8")
+    if args.repair:
+        run.spec.write_json(args.output_dir / "initial_spec.json")
+        (args.output_dir / "initial_validation.json").write_text(validation.to_json(), encoding="utf-8")
+        rounds, final_spec, final_validation = run_repairs(profile, docs, run.spec, client)
+        summary = []
+        for item in rounds:
+            prefix = args.output_dir / f"repair_round_{item['round']}"
+            item['spec'].write_json(str(prefix) + "_spec.json")
+            Path(str(prefix) + "_trace.json").write_text(json.dumps(item['trace'], indent=2) + "\n", encoding="utf-8")
+            Path(str(prefix) + "_validation.json").write_text(item['validation'].to_json(), encoding="utf-8")
+            summary.append({"round": item['round'], "input_issue_count": item['input_issue_count'], "output_issue_count": len(item['validation'].errors), "grouped_issues": item['grouped_issues']})
+        final_spec.write_json(args.output_dir / "final_spec.json")
+        (args.output_dir / "final_validation.json").write_text(final_validation.to_json(), encoding="utf-8")
+        (args.output_dir / "repair_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        if args.evaluate_kuka_part1:
+            report = compare_specs(final_spec, load_kuka_collision_part1_spec())
+            (args.output_dir / "final_evaluation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if args.evaluate_kuka_part1:  # intentionally only after generation has returned
+        report = compare_specs(run.spec, load_kuka_collision_part1_spec())
+        (args.output_dir / "kuka_part1_agent_evaluation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return 0
+if __name__ == "__main__": raise SystemExit(main())

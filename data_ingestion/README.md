@@ -163,3 +163,25 @@ and Part II remain separate datasets:
 
 The resulting dataset versions are written below the registry as `kuka/collision-part1` and
 `kuka/contact-part2`, respectively. The existing per-part build scripts remain available.
+
+## Semantic Agent v0.1
+
+The bounded semantic agent uses only `EvidenceSession` tools and calls OpenAI without an agent
+framework or SDK. Keep the key out of files and source control; export it in the launch shell:
+
+```bash
+export OPENAI_API_KEY='your-key'
+PYTHONPATH=src python scripts/run_semantic_agent.py \
+  --profile outputs/dataset_profile.json \
+  --documentation /trusted/KUKA_README.txt \
+  --output-dir outputs --evaluate-kuka-part1
+```
+
+If you launch through Codex and its process does not inherit your terminal environment, create
+`data_ingestion/.env` (which is gitignored) containing `OPENAI_API_KEY=your-key` instead.
+For a self-hosted OpenAI-compatible server, set `OPENAI_BASE_URL=http://localhost:PORT/v1` there
+as well; its model name is supplied with `--model`.
+
+Pass only original dataset documentation. Do not register this repository's inspection notes,
+human mapping decisions, semantic reference JSON, or connector files. The command writes the
+candidate, trace, validation result, and post-generation evaluation report.
