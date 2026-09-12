@@ -1,0 +1,1 @@
+also we want this to be conversational. In validation we always have intent as summary but maybe we have a query about only a part of the task, for example when did the onset occur, then the reasoning trace can change based on that. It doesnt look good that it has a fixed template for every output. If this is an easy fix, implemen tit
