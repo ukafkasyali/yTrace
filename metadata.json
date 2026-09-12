@@ -5,15 +5,6 @@
   "branch": "codex/dataset-scout",
   "checkpoints_count": 2,
   "files_touched": [
-    "data_sourcing/README.md",
-    "data_sourcing/src/data_sourcing/graph.py",
-    "data_sourcing/tests/test_graph.py",
-    "docs/DATA_SOURCING_API.md",
-    "frontend/src/services/sourcing.ts",
-    "frontend/src/sourcing/DecisionEvidence.test.tsx",
-    "frontend/src/sourcing/DecisionEvidence.tsx",
-    "frontend/src/styles.css",
-    "tasks/plan.md",
     "tasks/todo.md"
   ],
   "sessions": [
@@ -26,10 +17,10 @@
     }
   ],
   "token_usage": {
-    "input_tokens": 2163647,
+    "input_tokens": 2164453,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 130229775,
-    "output_tokens": 471152,
-    "api_call_count": 984
+    "cache_read_tokens": 130418904,
+    "output_tokens": 471785,
+    "api_call_count": 986
   }
 }
