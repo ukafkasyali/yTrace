@@ -6,8 +6,8 @@ targets:
   format: rationale_then_answer
   rationale_source: deterministic_signal_pseudolabels_v1
 precision: bfloat16
-batch_size: 4
-gradient_accumulation_steps: 4
+batch_size: 3
+gradient_accumulation_steps: 5
 epochs: 3
 early_stopping_patience: 3
 max_wall_time_hours: 3.0
@@ -22,9 +22,11 @@ lora:
   alpha: 32
   dropout: 0.0
 fit_probe:
-  batch_size: 4
+  train_examples: 48
+  validation_examples: 48
+  batch_size: 3
   validation_batch_size: 4
-  epochs: 20
+  epochs: 40
 validation:
   at_start: true
   every_steps: 50
@@ -35,6 +37,7 @@ validation:
   zero_signal_subset: 12
   examples_table_rows: 12
 observability:
+  generation_at_start: false
   tensorboard: true
   jsonl: true
   log_every_steps: 10
