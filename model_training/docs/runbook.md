@@ -135,6 +135,11 @@ record IDs are skipped; a truncated final JSONL line is repaired. Changing the m
 prepared records, prompt, plot, or decoding settings causes a manifest mismatch instead of silently
 mixing results.
 
+For an unattended remote run that must wait for the OpenTSLM post-evaluation to release the GPU, use
+`scripts/run_qwen_plot_benchmark.sh`. It defaults to port 8001, records atomic lifecycle status in
+`qwen3-vl-benchmark-status.json`, resumes a partial evaluation, and shuts down its vLLM server when
+the benchmark finishes.
+
 W&B receives progress metrics and a class-balanced `test/examples` table containing the rendered plot,
 target JSON, raw response, parsed prediction, per-task correctness/errors, and latency. `metrics.json` uses the same
 `evaluate_rows` metric names as the trained model and deterministic feature baseline.
