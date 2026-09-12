@@ -1,0 +1,1 @@
+Okay, please don't ask me for supervision. Just do everything you think that's highest value until you're finished, you will find a way. And at the end, report to me what you did. Pull from main, align with the different open PRs, latest commits and think about how we can make it perfect and maximize the chance that we win.
