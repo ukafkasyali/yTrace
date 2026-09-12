@@ -11,6 +11,7 @@ dependencies = [
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
   "pydantic>=2.10,<3",
+  "pyarrow>=14,<26",
   "numpy>=1.24",
   "scipy>=1.10",
   "timenet[build] @ git+https://github.com/OpenTSLM/TimeNet.git@c39ca32b64ad0c89ea54093dbcb285c1a93eb006#subdirectory=packages/timenet",
