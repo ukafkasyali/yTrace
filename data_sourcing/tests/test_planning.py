@@ -3,6 +3,8 @@ from data_sourcing.models import CreateSourcingRun, RequirementCategory
 from data_sourcing.planning import (
     PlanningDraft,
     RequirementPlanner,
+    _bounded_model_draft,
+    _ModelPlanningDraft,
     deterministic_draft,
     make_gap_hypothesis,
 )
@@ -71,3 +73,18 @@ def test_model_cannot_infer_internal_fault_from_collision_brief(monkeypatch) -> 
 
     assert "collision" in draft.task_labels
     assert "internal mechanical fault" not in draft.task_labels
+
+
+def test_model_draft_is_normalized_to_deterministic_bounds() -> None:
+    raw = _ModelPlanningDraft(
+        task_labels=[f"label-{index}" for index in range(10)],
+        minimum_sample_rate_hz=1_000,
+        modality_terms=[f"modality-{index}" for index in range(10)],
+        search_terms=[f"term-{index}" for index in range(14)],
+    )
+
+    bounded = _bounded_model_draft(raw)
+
+    assert bounded.task_labels == [f"label-{index}" for index in range(8)]
+    assert bounded.modality_terms == [f"modality-{index}" for index in range(8)]
+    assert bounded.search_terms == [f"term-{index}" for index in range(12)]

@@ -25,6 +25,30 @@ class PlanningDraft(BaseModel):
     search_terms: list[str] = Field(default_factory=list, max_length=12)
 
 
+class _ModelPlanningDraft(BaseModel):
+    """Loose structured-output boundary; deterministic limits are applied locally."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_labels: list[str] = Field(default_factory=list)
+    minimum_sample_rate_hz: float | None = None
+    modality_terms: list[str] = Field(default_factory=list)
+    search_terms: list[str] = Field(default_factory=list)
+
+
+def _bounded_model_draft(draft: _ModelPlanningDraft) -> PlanningDraft:
+    return PlanningDraft(
+        task_labels=draft.task_labels[:8],
+        minimum_sample_rate_hz=(
+            draft.minimum_sample_rate_hz
+            if draft.minimum_sample_rate_hz and draft.minimum_sample_rate_hz > 0
+            else None
+        ),
+        modality_terms=draft.modality_terms[:8],
+        search_terms=draft.search_terms[:12],
+    )
+
+
 _LABEL_PATTERNS = {
     "collision": r"\bcollisions?\b",
     "contact": r"\bcontacts?\b",
@@ -84,9 +108,11 @@ class RequirementPlanner:
                 },
                 {"role": "user", "content": request.model_dump_json(by_alias=True)},
             ],
-            text_format=PlanningDraft,
+            text_format=_ModelPlanningDraft,
         )
-        return response.output_parsed
+        if response.output_parsed is None:
+            return None
+        return _bounded_model_draft(response.output_parsed)
 
     def draft(self, request: CreateSourcingRun) -> PlanningDraft:
         fallback = deterministic_draft(request)
