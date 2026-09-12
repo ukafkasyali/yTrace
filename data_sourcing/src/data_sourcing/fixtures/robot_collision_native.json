@@ -1,0 +1,48 @@
+[
+  {
+    "source_url": "https://github.com/zhang-zengjie/robot-raw-collision-signals",
+    "source_kind": "GITHUB",
+    "name": "zhang-zengjie/robot-raw-collision-signals",
+    "revision": "ba1572b1bc291a4c1dac6aa4fa14124d02a22875",
+    "license_id": "MIT",
+    "text": "Raw torque sensor data from robot collision and intentional contact experiments. Dataset Structure: each part contains 42 compressed packages. Each package contains time-series torque data. The scripts document signal segmentation and seven joint channels. Part I: https://zenodo.org/records/21927431 Part II: https://zenodo.org/records/21941203",
+    "files": [
+      {"name": "PureSgn/DataStillSpl.mat", "size": 247},
+      {"name": "Scripts/GenSeqCSV.m", "size": 5285},
+      {"name": "README.md", "size": 7388}
+    ],
+    "related_urls": [
+      "https://zenodo.org/records/21927431",
+      "https://zenodo.org/records/21941203"
+    ],
+    "batch_count": 42
+  },
+  {
+    "source_url": "https://zenodo.org/records/21927431",
+    "source_kind": "ZENODO",
+    "name": "Raw Torque Data — Part I: Accidental Collisions",
+    "revision": "21927431.r4",
+    "license_id": "cc-by-4.0",
+    "text": "206 accidental collision sequences of raw torque sensor signals sampled at 1 kHz for all seven joints. Data are stored in MATLAB (.mat) format and archived as time-series batches. Dataset structure and units are documented.",
+    "files": [
+      {"name": "collision-batches-01-42.tar.zst", "size": 8750000000},
+      {"name": "ReadMe.md", "size": 2831}
+    ],
+    "related_urls": ["https://github.com/zhang-zengjie/robot-raw-collision-signals"],
+    "batch_count": 42
+  },
+  {
+    "source_url": "https://zenodo.org/records/21941203",
+    "source_kind": "ZENODO",
+    "name": "Raw Torque Data — Part II: Intentional Contacts",
+    "revision": "21941203.r4",
+    "license_id": "cc-by-4.0",
+    "text": "239 intentional contact sequences of raw torque sensor signals sampled at 1 kHz for all seven joints. Data are stored in MATLAB (.mat) format and archived as time-series batches. Dataset structure and units are documented.",
+    "files": [
+      {"name": "contact-batches-01-48.tar.zst", "size": 9000000000},
+      {"name": "ReadMe.md", "size": 2840}
+    ],
+    "related_urls": ["https://github.com/zhang-zengjie/robot-raw-collision-signals"],
+    "batch_count": 48
+  }
+]

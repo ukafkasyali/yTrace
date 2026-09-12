@@ -123,13 +123,22 @@ def assess_candidate(
     ]
 
     extensions = {extension.casefold() for extension in profile.file_extensions}
-    integration = 10 if extensions & {".csv", ".json", ".parquet"} else 7 if extensions & {
-        ".mat",
-        ".h5",
-        ".hdf5",
-        ".npy",
-        ".npz",
-    } else 4 if extensions & {".zip", ".tar", ".gz"} else 0
+    integration = (
+        10
+        if extensions & {".csv", ".json", ".parquet"}
+        else 7
+        if extensions
+        & {
+            ".mat",
+            ".h5",
+            ".hdf5",
+            ".npy",
+            ".npz",
+        }
+        else 4
+        if extensions & {".zip", ".tar", ".gz"}
+        else 0
+    )
     score = ScoreBreakdown(
         task_fit=round(35 * task_ratio) if task_requirements else 35,
         training_readiness=(12 if profile.labels else 0) + (8 if profile.schema_documented else 0),
