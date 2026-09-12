@@ -5,7 +5,7 @@ import type { PredictionCue } from './assistant/predictionBrief';
 import { loadDemoData, selectWindow } from './lib/data';
 import { intervalLabel, timecode } from './lib/format';
 import RecordingContext from './recordings/RecordingContext';
-import { createMarkerAnalysis, type AutomaticAnalysisRequest } from './recordings/markerAnalysis';
+import { markerWindow } from './recordings/markerAnalysis';
 import { useModelRegistry } from './services/useModelRegistry';
 import { useReplay } from './replay/useReplay';
 import { ApiError, createServices, type Recording } from './services';
@@ -86,8 +86,6 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   const [draftEnd, setDraftEnd] = useState(interval.end.toFixed(3));
   const [selectionError, setSelectionError] = useState('');
   const registry = useModelRegistry(services);
-  const [automaticAnalysis, setAutomaticAnalysis] = useState<AutomaticAnalysisRequest>();
-  const modelRevision = registry.models.find(model => model.id === 'assistant')?.revision;
   const availability = !services.connected ? 'Models not connected' : registry.loading ? 'Checking models…' : registry.error ? 'Model service unavailable' : registry.models.some(m => m.id === 'opentslm' && m.available) ? 'OpenTSLM connected' : 'Model unavailable';
   useEffect(() => { setDraftStart(interval.start.toFixed(3)); setDraftEnd(interval.end.toFixed(3)); }, [interval]);
   const previewChannels = useMemo(() => {
@@ -109,7 +107,17 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   function seek(value: number) {
     setReplayStop(undefined); replay.seek(value); setFollowing(true); setHighlighted([]); setSelectionError('');
   }
-  function marker(e: Marker) { setReplayStop(undefined); const analysis = createMarkerAnalysis(data, e, 0, modelRevision); replay.seek(analysis.interval.start); setInterval(analysis.interval); setAutomaticAnalysis(analysis); setVisualMode('robot'); setMobile('signals'); setFollowing(false); setHighlighted([]); setSelectionError(''); }
+  function marker(e: Marker) {
+    setReplayStop(undefined);
+    const context = markerWindow(e, data.recording.durationSeconds);
+    replay.seek(context.start);
+    setInterval(context);
+    setVisualMode('robot');
+    setMobile('signals');
+    setFollowing(false);
+    setHighlighted([]);
+    setSelectionError('');
+  }
   function navigateMarker(direction: number) {
     const target = direction > 0 ? data.events.find(e => e.timeSeconds > Math.max(interval.end, replay.playhead)) : [...data.events].reverse().find(e => e.timeSeconds < (effectiveInterval.start || replay.playhead));
     if (target) marker(target);
@@ -122,7 +130,7 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
         {(cases.length > 0 || caseError) && <div className="demo-cases"><label>Recording <select aria-label="Example case" disabled={caseLoading} value={data.demoCase?.id ?? ''} onChange={e => void onOpenCase(e.target.value)}><option value="" disabled>KUKA · original recording</option>{cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><details className="case-source"><summary>Source · {data.recording.id}</summary><p>{data.demoCase?.note ?? 'Original KUKA recording. Publisher markers are annotations, not verified contact onset. Raw model input is available from 4 to 9 seconds.'}</p></details>{(caseLoading || caseError) && <span role={caseError ? 'alert' : 'status'}>{caseLoading ? 'Loading raw telemetry…' : caseError}</span>}</div>}
         <div className="mobile-switch"><button className={mobile === 'signals' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('signals'); setVisualMode('signals'); }}>Replay</button><button className={mobile === 'assistant' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('assistant'); }}>Investigation</button></div>
         <div className={`inspect-grid mobile-${mobile}`} style={{ display: view === 'inspect' ? undefined : 'none' }}>
-          <div className="left-workspace"><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} automaticAnalysis={automaticAnalysis} onEvidence={evidence} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
+          <div className="left-workspace"><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
           <div className={`visual-workspace visual-${visualMode}`}>
             <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : 'Publisher markers'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
             {visualMode !== 'signals' && <RecordingContext prediction={visiblePrediction} display={visualMode === 'robot' ? 'robot' : 'overview'} datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/>}

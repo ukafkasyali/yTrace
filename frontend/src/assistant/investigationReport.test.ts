@@ -40,4 +40,33 @@ describe('investigation export', () => {
   it('rejects measurements beyond the snapshotted replay cursor', () => {
     expect(() => buildInvestigationReport(data, 'dataset', { ...answer, playhead: 1 })).toThrow('replay cursor');
   });
+  it('marks an assistant export incomplete when model input provenance is missing', () => {
+    const report = buildInvestigationReport(data, 'dataset', { ...answer, inputTrace: undefined });
+    expect(report.limitations.join(' ')).toContain('did not provide an input receipt');
+  });
+  it('requires canonical evidence before treating an assistant receipt as complete', () => {
+    const receipt = {
+      samplesPerChannel: 1024,
+      inputSha256: 'a'.repeat(64),
+      window: {
+        recordingId: data.recording.id,
+        startSec: answer.interval.start,
+        endSec: answer.interval.end,
+        channelIds: Array.from({ length: 7 }, (_, index) => `joint_${index + 1}`),
+      },
+    };
+    const report = buildInvestigationReport(data, 'dataset', { ...answer, inputTrace: receipt, modelOutput: 'Answer: {}' });
+    expect(report.limitations.join(' ')).not.toContain('input receipt does not');
+    expect(report.limitations.join(' ')).toContain('Raw model output is preserved');
+  });
+  it('flags a receipt from a different investigation interval', () => {
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      inputTrace: {
+        samplesPerChannel: 1024, inputSha256: 'a'.repeat(64),
+        window: { recordingId: data.recording.id, startSec: 0, endSec: 1.024, channelIds: Array.from({ length: 7 }, (_, index) => `joint_${index + 1}`) },
+      },
+    });
+    expect(report.limitations.join(' ')).toContain('does not match this recording and selected interval');
+  });
 });
