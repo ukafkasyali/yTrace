@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BEPFD69PSMCH4J17J2DX9A",
+  "session_id": "01a09636-4732-7010-81b0-79958f5daa26",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T18:39:55.620563676Z",
+  "branch": "codex/robot-observability-training",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "model_training/docs/runbook.md",
+    "model_training/scripts/run_qwen_plot_benchmark.sh"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "8add508447c1",
+  "checkpoint_transcript_start": 3786,
+  "transcript_lines_at_start": 3786,
+  "compact_transcript_start": 497,
+  "token_usage": {
+    "input_tokens": 20719,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4089856,
+    "output_tokens": 6859,
+    "api_call_count": 23
+  },
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T18:39:55.371740266Z",
+    "agent_lines": 70,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 70,
+    "total_lines_changed": 70,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+if you already didnt create, create the other baselines as well (qwen3 with plots without training for example)
+
+---
+
+ok, shall we kill this ongoing run if we have the necessary input from it. Analyze it, run the qwen3-vl benchmark and start the other benchmark
