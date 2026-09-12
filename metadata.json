@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BPJ5TMN3SVNNRYRW1HHJ3V",
+  "strategy": "manual-commit",
+  "branch": "codex/robot-observability-training",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "model_training/scripts/audit_prepared_equivalence.py",
+    "model_training/src/robot_observability/opentslm_dataset.py",
+    "model_training/src/robot_observability/train_opentslm.py",
+    "model_training/tests/test_training_observability.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 36827,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2773120,
+    "output_tokens": 11369,
+    "api_call_count": 31
+  }
+}
