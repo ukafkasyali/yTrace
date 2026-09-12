@@ -11,15 +11,13 @@ export type AutomaticAnalysisRequest = {
 };
 
 export function markerWindow(marker: Marker, durationSeconds: number): Interval {
-  return {
-    start: Math.max(0, marker.timeSeconds - .4),
-    end: Math.min(durationSeconds, marker.timeSeconds + .624),
-  };
+  const start = Math.round(Math.max(0, Math.min(marker.timeSeconds - .4, durationSeconds - 1.024)) * 1000) / 1000;
+  return { start, end: Math.min(durationSeconds, Math.round((start + 1.024) * 1000) / 1000) };
 }
 
 export function createMarkerAnalysis(data: DemoData, marker: Marker, playhead: number, modelRevision?: string): AutomaticAnalysisRequest {
   const interval = markerWindow(marker, data.recording.durationSeconds);
-  const hasRawWindow = interval.start >= data.detail.startSeconds && interval.end <= data.detail.endSeconds;
+  const hasRawWindow = Math.abs(interval.end - interval.start - 1.024) < 1e-8 && interval.start >= data.detail.startSeconds && interval.end <= data.detail.endSeconds;
   const mode = hasRawWindow ? 'assistant' : 'local';
   return {
     id: `${data.recording.id}:${marker.id}:${mode}:${mode === 'assistant' ? modelRevision ?? 'pending-model' : 'display'}`,

@@ -157,3 +157,23 @@ Keep model keys and credentials on the server, never in `VITE_*` variables or br
 5. Run comparison with a CNN and verify its classification labels/scores render alongside available language-model outputs.
 6. Import one supported source; show validation findings and open the resulting dataset only after `ready`.
 7. Retain “Real sample data” for the bundled recording and resolution labels for local calculations. Backend-loaded data must remain recorded replay unless an actual live source is implemented. Never remove disconnected-model notices just to stage a demo.
+
+
+## Deployed raw-replay extension (12 September 2026)
+
+The current bridge serves three recordings. `GET /demo-cases` returns
+`{ id, title, recordingId, interval: { start, end }, note }[]`. These are navigation
+presets; notes and titles never become model evidence. `GET /recordings/{id}/replay`
+returns the frontend `DemoData` contract: recording metadata, overview times/channels,
+publisher events, and a separate raw `detail` interval with its own times/channels.
+The viewer prefers this endpoint so loading an overview does not discard raw detail;
+404 falls back to the earlier signals/events adapter contract.
+
+Model queries require `joint_1` through `joint_7` in order, exactly 1.024 seconds,
+and 1,024 contiguous raw 1-kHz samples per joint, all before `playheadSec`.
+Invalid shape/cadence returns 422 `MODEL_INPUT_SHAPE`; unavailable raw coverage
+returns 422 `RAW_DATA_UNAVAILABLE`. Display and local calculation selections remain
+arbitrary. `answer.completed` includes `modelOutput` (original generation) and
+`inputTrace` with model revision, exact window, `samplesPerChannel`, `inputSha256`,
+normalization and generation latency. The UI retains these with the completed
+answer and its export, separately from current selection and publisher metadata.

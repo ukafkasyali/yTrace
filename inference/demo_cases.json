@@ -1,0 +1,71 @@
+{
+  "selection": "First publisher marker in each of two previously audited recordings (split disclosed); free interval fixed at [1, 2.024) before inference. No selection by model result.",
+  "recordings": [
+    "demo_data/03-15-12-53.json.gz",
+    "demo_data/03-22-11-18.json.gz"
+  ],
+  "cases": [
+    {
+      "id": "accidental",
+      "title": "Collision",
+      "recordingId": "03-15-12-53",
+      "interval": {
+        "start": 5.641,
+        "end": 6.665
+      },
+      "note": "Publisher accidental experiment \u00b7 train recording. The marker is an annotation; the model makes its own prediction."
+    },
+    {
+      "id": "intentional",
+      "title": "Intentional contact",
+      "recordingId": "03-22-11-18",
+      "interval": {
+        "start": 5.496,
+        "end": 6.52
+      },
+      "note": "Publisher intentional experiment \u00b7 test recording. The marker is an annotation; the model makes its own prediction."
+    },
+    {
+      "id": "free",
+      "title": "Normal / free motion",
+      "recordingId": "03-15-12-53",
+      "interval": {
+        "start": 1,
+        "end": 2.024
+      },
+      "note": "Annotation-free interval before the first contact marker \u00b7 training recording. Absence of a marker does not prove absence of contact."
+    }
+  ],
+  "provenance": [
+    {
+      "recordingId": "03-15-12-53",
+      "split": "train",
+      "fixtureSha256": "57c3db6d3594f429d9b6a0c7c1792d0f5bffa39bccd21a09b710ec5b4f1d6bef",
+      "sources": [
+        {
+          "path": "collision/03-15-12-53/JK_MsrExtTrq.mat",
+          "sha256": "c41126da7b26fc4aef6c4eea5470354ed2fa2156d87dce3ae5ce263fa1ee2d9e"
+        },
+        {
+          "path": "collision/03-15-12-53/JK_moments.mat",
+          "sha256": "a00e831dc522bd2bef34e21aff99a8b82a9552e3b71f3566e803420f9b07ae2e"
+        }
+      ]
+    },
+    {
+      "recordingId": "03-22-11-18",
+      "split": "test",
+      "fixtureSha256": "fdcb8482a59a85433fde4999fa5a94e1ac0327b110b903ee555c71b85b8b5c90",
+      "sources": [
+        {
+          "path": "contact/03-22-11-18/JK_MsrExtTrq.mat",
+          "sha256": "3c060303b9aaf9d1150fc0b699bbd478600cb5d81a282c0a0b29899126c2e988"
+        },
+        {
+          "path": "contact/03-22-11-18/JK_moments.mat",
+          "sha256": "83789a91b13f825a4bb0cf9bd9cba387217d9a42e7ecd4176b7bd37afe257525"
+        }
+      ]
+    }
+  ]
+}

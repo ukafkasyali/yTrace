@@ -105,8 +105,12 @@ replace a baseline comparison.
 
 The bundled frontend fixture has full raw 1 kHz samples only for `[4, 9)` seconds of
 one recording. Events outside that window can be displayed from reduced overview
-data but cannot be claimed as equivalent raw-model inference. More recordings require
-the data adapter to serve their raw windows through the existing integration contract.
+data but cannot be claimed as equivalent raw-model inference. The backend now also
+serves `[0,8)` raw excerpts for `03-15-12-53` and `03-22-11-18`, with collision,
+intentional-contact and annotation-free UI presets. All model requests enforce seven
+canonical channels × 1,024 contiguous raw samples at 1 kHz. See
+`docs/submission/UI_WALKTHROUGH.md` for actual responses, split disclosures and the
+input-receipt walkthrough. These examples are not a new benchmark.
 
 ## Submission evidence update (12 September 2026)
 

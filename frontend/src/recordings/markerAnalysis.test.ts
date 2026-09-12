@@ -6,12 +6,12 @@ const marker = (timeSeconds: number): Marker => ({ id: `event-${timeSeconds}`, t
 const data = { recording: { id: 'recording', durationSeconds: 10 }, detail: { startSeconds: 4, endSeconds: 9 } } as DemoData;
 
 describe('marker analysis context', () => {
-  it('creates a clipped 1.024 second context window', () => {
+  it('creates a shifted 1.024 second context window', () => {
     const beginning = markerWindow(marker(.2), 10);
     expect(beginning.start).toBe(0);
-    expect(beginning.end).toBeCloseTo(.824);
+    expect(beginning.end).toBeCloseTo(1.024);
     const ending = markerWindow(marker(9.8), 10);
-    expect(ending.start).toBeCloseTo(9.4);
+    expect(ending.start).toBeCloseTo(8.976);
     expect(ending.end).toBe(10);
   });
 

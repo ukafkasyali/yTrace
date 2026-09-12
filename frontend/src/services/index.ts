@@ -1,3 +1,5 @@
+import type { DemoCase } from '../types';
+import { validateDemoData } from '../lib/data';
 export type WindowRef = {
   datasetId: string; recordingId: string; startSec: number; endSec: number; channelIds: string[];
 };
@@ -194,6 +196,8 @@ export function createServices(baseUrl?: string) {
   }
   return {
     connected,
+    listDemoCases: () => request<DemoCase[]>('/demo-cases'),
+    getReplay: async (recordingId: string) => validateDemoData(await request(`/recordings/${encodeURIComponent(recordingId)}/replay`)),
     listDatasets: () => request<Dataset[]>('/datasets'),
     listRecordings: (datasetId: string) => request<Recording[]>(`/datasets/${encodeURIComponent(datasetId)}/recordings`),
     getWindow: async (recordingId: string, startSec: number, endSec: number, channelIds: string[], maxPoints: number) => {

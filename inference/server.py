@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import bisect
 import hashlib
+import gzip
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import logging
@@ -163,12 +164,34 @@ class Job:
 
 
 class Bridge:
-    def __init__(self, runtime, data_path):
+    def __init__(self, runtime, data_path, catalog_path=None):
         self.runtime = runtime
         raw = Path(data_path).read_bytes()
         self.data = json.loads(raw)
         validate_data(self.data)
-        self.revision = hashlib.sha256(raw).hexdigest()
+        self.recordings = {self.data["recording"]["id"]: self.data}
+        self.cases = []
+        identity = hashlib.sha256(raw)
+        if catalog_path is not None:
+            catalog_path = Path(catalog_path)
+            catalog_raw = catalog_path.read_bytes()
+            catalog = json.loads(catalog_raw)
+            identity.update(catalog_raw)
+            for filename in catalog["recordings"]:
+                content = gzip.decompress((catalog_path.parent / filename).read_bytes())
+                item = json.loads(content)
+                validate_data(item)
+                rid = item["recording"]["id"]
+                if rid in self.recordings:
+                    raise ValueError("Duplicate recording identity")
+                self.recordings[rid] = item
+                identity.update(content)
+            self.cases = catalog["cases"]
+            for case in self.cases:
+                self.validate_window({"datasetId": DATASET_ID, "recordingId": case["recordingId"],
+                    "startSec": case["interval"]["start"], "endSec": case["interval"]["end"],
+                    "channelIds": [f"joint_{i}" for i in range(1, 8)]}, raw_only=True)
+        self.revision = identity.hexdigest()
         self.lock = threading.Lock()
         self.jobs = {}
         self.active = None
@@ -196,28 +219,37 @@ class Bridge:
     def validate_window(self, window, raw_only=False):
         if not isinstance(window, dict):
             raise ApiError(400, "INVALID_WINDOW", "A telemetry window is required.")
-        if window.get("datasetId") != DATASET_ID or window.get("recordingId") != self.data["recording"]["id"]:
+        if window.get("datasetId") != DATASET_ID or window.get("recordingId") not in self.recordings:
             raise ApiError(404, "RECORDING_NOT_FOUND", "Unknown dataset or recording.")
+        data = self.recordings[window["recordingId"]]
         start, end = window.get("startSec"), window.get("endSec")
-        duration = self.data["recording"]["durationSeconds"]
+        duration = data["recording"]["durationSeconds"]
         if not finite(start) or not finite(end) or not 0 <= start < end <= duration:
             raise ApiError(400, "INVALID_WINDOW", "Choose a nonempty interval within the recording.")
         ids = window.get("channelIds")
-        known = {c["id"] for c in self.data["channels"]}
+        known = {c["id"] for c in data["channels"]}
         if not isinstance(ids, list) or not 1 <= len(ids) <= 7 or any(not isinstance(i, str) or i not in known for i in ids) or len(set(ids)) != len(ids):
             raise ApiError(400, "INVALID_CHANNELS", "Select one to seven distinct known channels.")
-        detail = self.data["detail"]
+        detail = data["detail"]
         if raw_only and (start < detail["startSeconds"] or end > detail["endSeconds"]):
-            raise ApiError(422, "RAW_DATA_UNAVAILABLE", "Inference requires a window entirely within the raw 4–9 second excerpt.")
-        if raw_only and end - start > 2 + 1e-9:
-            raise ApiError(422, "WINDOW_TOO_LONG", "Inference windows must be at most two seconds.")
-        return {"datasetId": DATASET_ID, "recordingId": self.data["recording"]["id"],
+            raise ApiError(422, "RAW_DATA_UNAVAILABLE", f"Inference requires raw samples within [{detail['startSeconds']:g}, {detail['endSeconds']:g}) seconds.")
+        if raw_only:
+            if ids != [f"joint_{i}" for i in range(1, 8)]:
+                raise ApiError(422, "MODEL_INPUT_SHAPE", "OpenTSLM requires Joint 1 through Joint 7 in order.")
+            if abs(end - start - 1.024) > 1e-8:
+                raise ApiError(422, "MODEL_INPUT_SHAPE", "Select exactly 1.024 seconds (1024 raw samples per joint).")
+            times = detail["times"][bisect.bisect_left(detail["times"], start):bisect.bisect_left(detail["times"], end)]
+            if (data["recording"]["sampleRateHz"] != 1000 or len(times) != 1024 or
+                    any(abs(t - (start + i / 1000)) > 1e-8 for i, t in enumerate(times))):
+                raise ApiError(422, "MODEL_INPUT_SHAPE", "OpenTSLM requires 1024 contiguous raw samples at 1 kHz, aligned to the selected start.")
+        return {"datasetId": DATASET_ID, "recordingId": data["recording"]["id"],
                 "startSec": start, "endSec": end, "channelIds": list(ids)}
 
     def signals(self, window, max_points=None):
-        detail = self.data["detail"]
+        data = self.recordings[window["recordingId"]]
+        detail = data["detail"]
         raw = window["startSec"] >= detail["startSeconds"] and window["endSec"] <= detail["endSeconds"]
-        source = detail if raw else self.data
+        source = detail if raw else data
         lo = bisect.bisect_left(source["times"], window["startSec"])
         hi = bisect.bisect_left(source["times"], window["endSec"])
         if hi <= lo:
@@ -249,7 +281,7 @@ class Bridge:
             raise ApiError(400, "INVALID_QUERY", "Enter a question of one to 4000 characters.")
         window = self.validate_window(request.get("window"), raw_only=True)
         playhead = request.get("playheadSec")
-        if not finite(playhead) or not window["endSec"] <= playhead <= self.data["recording"]["durationSeconds"]:
+        if not finite(playhead) or not window["endSec"] <= playhead <= self.recordings[window["recordingId"]]["recording"]["durationSeconds"]:
             raise ApiError(400, "FUTURE_CONTEXT", "The query window must not extend beyond the playback cursor.")
         if not self.runtime.ready:
             raise ApiError(503, "MODEL_NOT_READY", "The model is loading or unavailable. Check service health.", True)
@@ -380,19 +412,21 @@ class Handler(BaseHTTPRequestHandler):
         bridge = self.bridge
         data = bridge.data
         recording = data["recording"]
-        if route == ["health"]:
+        if route == ["demo-cases"]:
+            self.json_response(200, bridge.cases)
+        elif route == ["health"]:
             self.json_response(200, {"ready": bool(bridge.runtime.ready), "modelId": bridge.runtime.model_id,
                                     "revision": bridge.runtime.revision,
                                     "status": "ready" if bridge.runtime.ready else "unavailable" if bridge.runtime.error else "loading"})
         elif route == ["datasets"]:
-            self.json_response(200, [{"id": DATASET_ID, "name": "KUKA accidental collision telemetry",
+            self.json_response(200, [{"id": DATASET_ID, "name": "KUKA contact-event telemetry",
                                     "sourceUrl": recording["sourceUrl"], "revision": bridge.revision}])
         elif len(route) == 3 and route[0] == "datasets" and route[2] == "recordings":
             if route[1] != DATASET_ID:
                 raise ApiError(404, "DATASET_NOT_FOUND", "Unknown dataset.")
             self.json_response(200, [{"id": recording["id"], "datasetId": DATASET_ID, "name": recording["name"],
                      "durationSec": recording["durationSeconds"], "channels": [{"id": c["id"], "name": c["name"],
-                     "unit": c["unit"], "sampleRateHz": recording["sampleRateHz"]} for c in data["channels"]]}])
+                     "unit": c["unit"], "sampleRateHz": recording["sampleRateHz"]} for c in item["channels"]]} for item in bridge.recordings.values() for recording in [item["recording"]]])
         elif route == ["models"]:
             self.json_response(200, [{"id": "assistant", "label": "Telemetry assistant", "available": bool(bridge.runtime.ready),
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
@@ -401,9 +435,13 @@ class Handler(BaseHTTPRequestHandler):
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})}])
         elif len(route) == 3 and route[0] == "recordings":
-            if route[1] != recording["id"]:
+            if route[1] not in bridge.recordings:
                 raise ApiError(404, "RECORDING_NOT_FOUND", "Unknown recording.")
-            if route[2] == "events":
+            data = bridge.recordings[route[1]]
+            recording = data["recording"]
+            if route[2] == "replay":
+                self.json_response(200, data)
+            elif route[2] == "events":
                 self.json_response(200, [{"id": e["id"], "recordingId": recording["id"], "startSec": e["timeSeconds"],
                      "channelIds": [], "label": e["label"], "origin": "publisher_annotation", "source": e["source"]} for e in data["events"]])
             elif route[2] == "signals":
@@ -457,7 +495,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def make_server(runtime, host="127.0.0.1", port=8000, data_path=None, load_runtime=True):
     path = data_path or Path(__file__).resolve().parents[1] / "frontend/public/data/kuka-demo.json"
-    bridge = Bridge(runtime, path)
+    bridge = Bridge(runtime, path, Path(__file__).with_name("demo_cases.json") if data_path is None else None)
     server = ThreadingHTTPServer((host, port), Handler)
     server.daemon_threads = True
     server.bridge = bridge

@@ -72,11 +72,11 @@ The existing typed client is in `src/services/index.ts`; the wider handoff is
 before starting or building Vite, for example:
 
 ```sh
-VITE_API_BASE_URL=http://localhost:8000/api npm run dev
+VITE_API_BASE_URL=/api npm run dev
 ```
 
-Or set `VITE_API_BASE_URL=/api` when serving a same-origin API. Vite currently has
-**no API proxy**: a separate backend origin must provide appropriate CORS. The
+Vite proxies `/api` to `http://127.0.0.1:8000` (the local SSH tunnel). A separate
+backend origin must provide appropriate CORS. The
 client uses `credentials: 'same-origin'`; cross-origin cookie authentication is
 not configured. Never place model keys or other secrets in `VITE_*` variables.
 Setting the URL enables requests; it does not prove a service is healthy.
@@ -86,7 +86,7 @@ Setting the URL enables requests; it does not prove a service is healthy.
   finite-valued channels; recordings with missing samples or gaps are rejected
   with a message rather than silently repaired.
 - **Model team:** provide `/models`, `/queries`, query SSE streams and query
-  cancellation. Expected model IDs are `cnn-1d`, `direct-llm` and `opentslm`.
+  cancellation. The deployed model IDs are `assistant` and `opentslm`.
   Assistant requests allow server-side tool orchestration; comparison requests
   run available models directly. CNN labels have their own results rendering.
 - **Shared contract:** seconds from recording start, half-open intervals, stable
@@ -96,8 +96,8 @@ Setting the URL enables requests; it does not prove a service is healthy.
 
 The private Nebius bridge and Vite proxy have been verified against the real data
 endpoint: seven channels and exactly 1,024 raw samples per channel for the initial
-interval. Model loading is blocked by Hugging Face access to the Llama backbone;
-no actual generated answer or agentic ingestion run has passed acceptance yet.
+interval. The promoted canary-v4 checkpoint generates real answers through this
+path; ingestion/search capabilities are separate.
 See [inference setup](../inference/README.md) for authentication and resume steps.
 
 ## Design and ownership
@@ -120,3 +120,25 @@ labeled explicitly. Local analysis is selected initially so numerical tools work
 
 See the [verified browser export](../docs/submission/demo/investigation-example.json) and
 [two-minute demo](../docs/submission/DEMO.md).
+
+## Three-case walkthrough and exact model input
+
+Choose **Example → Collision**, **Intentional contact**, or **Normal / free motion**,
+then **Run OpenTSLM**. On mobile, switch to **Assistant** first. Cases load raw
+telemetry from the backend, with a fixed 1.024-second selection. **Show recording
+context** reveals publisher markers and torque ranges on desktop; collapsing it
+leaves space for the interpretation. Signals remain visible alongside it.
+
+The readiness line checks all seven joints in order, exactly 1,024 contiguous raw
+samples at 1 kHz, and the replay boundary. Other selections remain usable for local
+calculations; **Use 1.024 s window** fits a valid raw interval when possible.
+Open **Model input receipt** under an answer for its checkpoint, input SHA-256,
+samplesPerChannel, normalization and exact interval. The full checkpoint SHA is
+matched before the UI calls a model canary-v4. **Inspect 7 input channels** returns
+to the answer's interval; **Export investigation** saves its evidence.
+
+The backend catalogue adds `[0,8)` raw excerpts for two original recordings.
+Collision/free use training recording `03-15-12-53`; intentional contact uses test
+recording `03-22-11-18`. These fixed illustrative cases do not constitute a new
+accuracy benchmark. No annotation or case title is sent into the model prompt.
+See [the walkthrough and recorded responses](../docs/submission/UI_WALKTHROUGH.md).

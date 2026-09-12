@@ -14,7 +14,11 @@ function validateSeries(times: number[], channels: Channel[]) {
 export async function loadDemoData(): Promise<DemoData> {
   const response = await fetch('/data/kuka-demo.json');
   if (!response.ok) throw new Error(`Recording could not be loaded (${response.status}).`);
-  const data = await response.json() as DemoData;
+  return validateDemoData(await response.json());
+}
+
+export function validateDemoData(input: unknown): DemoData {
+  const data = input as DemoData;
   if (!data?.recording || !data.detail || !Array.isArray(data.events)) throw new Error('Invalid recording format.');
   const r = data.recording;
   if (!r.id || r.channelCount !== 7 || !finite(r.durationSeconds) || r.durationSeconds <= 0 || !finite(r.sampleRateHz) || r.sampleRateHz <= 0 || !finite(r.displaySampleRateHz) || r.displaySampleRateHz <= 0) throw new Error('Invalid recording metadata.');

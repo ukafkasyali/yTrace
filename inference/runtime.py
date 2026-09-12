@@ -74,20 +74,25 @@ def prepare_sample(request: dict, series: list[dict], normalization: str, normal
         raise ValueError("Invalid historical interval")
     if [s["channelId"] for s in series] != window["channelIds"]:
         raise ValueError("Channel order does not match query")
-    if not series:
-        raise ValueError("No input channels")
+    canonical_ids = [f"joint_{i}" for i in range(1, 8)]
+    if window["channelIds"] != canonical_ids or len(series) != 7:
+        raise ValueError("OpenTSLM requires all seven joints in canonical order")
+    if abs(window["endSec"] - window["startSec"] - 1.024) > 1e-8:
+        raise ValueError("OpenTSLM requires a 1.024-second window")
     canonical_question, schema_keys, intent = question_contract(request["question"])
     descriptions, values = [], []
     reference_times = series[0]["timeSec"]
     for channel in series:
         times, raw = channel["timeSec"], channel["values"]
-        if len(raw) < 2 or len(raw) != len(times) or times != reference_times:
-            raise ValueError("Input channels must be aligned and contain at least two samples")
+        if len(raw) != 1024 or len(raw) != len(times) or times != reference_times:
+            raise ValueError("Input channels must be aligned and contain exactly 1024 raw samples")
         if any(not math.isfinite(v) for v in raw):
             raise ValueError("Input contains missing/nonfinite values")
         if any(not math.isfinite(t) or not window["startSec"] <= t < window["endSec"]
                or (i and t <= times[i - 1]) for i, t in enumerate(times)):
             raise ValueError("Input extends outside selected half-open interval")
+        if any(abs(t - (window["startSec"] + i / 1000)) > 1e-8 for i, t in enumerate(times)):
+            raise ValueError("Input must contain contiguous raw 1 kHz samples aligned to the window")
         mean, std = statistics.mean(raw), statistics.stdev(raw)
         if normalization == "zscore_sample":
             encoded = [(v - mean) / (std + 1e-8) for v in raw]

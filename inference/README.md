@@ -23,7 +23,7 @@ that process only; the inference service does not automatically reload failed
 weights. From inside the VM:
 
 ```bash
-tmux respawn-pane -k -t trace-inference 'cd /home/samet/trace-inference && TRACE_DEVICE=cuda inference/.venv/bin/python -m inference.server > inference/server.log 2>&1'
+tmux respawn-pane -k -t trace-inference -c /home/samet/trace-inference 'exec env TRACE_MODEL_CONFIG=inference/kuka-sp-canary-v4.config.json TRACE_DEVICE=cuda inference/.venv/bin/python -m inference.server >> inference/server.log 2>&1'
 curl http://127.0.0.1:8000/api/health
 ```
 
@@ -252,3 +252,43 @@ Official references: [Nebius VM quickstart](https://docs.nebius.com/compute/quic
 [Nebius SSH connection](https://docs.nebius.com/compute/virtual-machines/connect),
 [OpenTSLM source](https://github.com/OpenTSLM/OpenTSLM/tree/2968f4b891baab4307f7e9d0043e87677b593a30),
 [TSQA checkpoint](https://huggingface.co/OpenTSLM/llama-3.2-1b-tsqa-sp).
+
+## Exact input contract and fixed UI examples
+
+Every inference request now requires `joint_1` through `joint_7` in that order,
+a half-open 1.024-second window, and exactly 1,024 contiguous raw samples at 1 kHz.
+Both the HTTP bridge and model preparation reject mismatches; no resampling or
+padding is used to repair a selection. Display endpoints still accept arbitrary
+intervals and channel subsets. All model input must precede the replay cursor.
+
+`demo_cases.json` adds three fixed UI examples and records original source hashes,
+fixture hashes and selection policy. The two gzip files in `demo_data/` preserve
+original torque values (no decimal rounding), a 100 Hz overview, and `[0,8)` raw
+detail. Build them with scipy/numpy installed:
+
+```sh
+python -m inference.build_demo_cases --raw-root /path/to/data/raw --splits /path/to/data/prepared/v1/splits.json
+```
+
+The files are checked in; serving them adds no scientific Python dependency.
+Default startup loads this catalogue; `--data` retains an isolated single-fixture
+server for tests. `GET /api/demo-cases` provides fixed navigation selections and
+notes. `GET /api/recordings/{id}/replay` returns the validated overview, raw detail,
+annotations and recording metadata without losing the raw excerpt. Existing
+recording signals/events endpoints resolve each recording independently.
+
+Verify each example through the same frontend proxy:
+
+```sh
+python -m inference.smoke --base-url http://127.0.0.1:5174/api --case accidental --output /tmp/collision.json
+python -m inference.smoke --base-url http://127.0.0.1:5174/api --case intentional --output /tmp/contact.json
+python -m inference.smoke --base-url http://127.0.0.1:5174/api --case free --output /tmp/free.json
+```
+
+These are connection checks, not evaluation. The intentional example's source
+recording belongs to the test split; collision/free belong to training. None is
+selected by model prediction, and no benchmark or model parameters are changed.
+The original `[4,9)` fixture and smoke command remain supported. The current
+private deployment retains canary-v4's exact promoted checkpoint and training
+normalization. A pre-change code backup is `inference-before-window-cases.tar`
+in the deployment directory; it does not contain weights or credentials.

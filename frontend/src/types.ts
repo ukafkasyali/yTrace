@@ -1,7 +1,9 @@
 export type Interval = { start: number; end: number };
 export type Channel = { id: string; name: string; unit: string; values: number[] };
 export type Marker = { id: string; timeSeconds: number; kind: 'publisher_annotation'; label: string; source: string };
+export type DemoCase = { id: string; title: string; recordingId: string; interval: Interval; note: string };
 export type DemoData = {
+  demoCase?: DemoCase;
   recording: { id: string; name: string; durationSeconds: number; sampleRateHz: number; displaySampleRateHz: number; sourceUrl: string; archive: string; channelCount: number; eventCount: number };
   times: number[];
   channels: Channel[];
