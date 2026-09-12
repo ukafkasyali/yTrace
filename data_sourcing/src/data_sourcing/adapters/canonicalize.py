@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections import defaultdict
 from urllib.parse import urlsplit
 
 from data_sourcing.models import DatasetCandidate, SearchResult, SourceKind
@@ -38,62 +37,80 @@ def _candidate_id(canonical_url: str) -> str:
     return f"ds_{hashlib.sha256(canonical_url.encode()).hexdigest()[:12]}"
 
 
+def candidate_from_source(
+    raw_url: str,
+    *,
+    name: str,
+    description: str = "",
+    discovery_depth: int = 0,
+    discovered_from_candidate_id: str | None = None,
+) -> DatasetCandidate | None:
+    source = canonical_source_url(raw_url)
+    if not source:
+        return None
+    canonical_url, source_kind = source
+    return DatasetCandidate(
+        id=_candidate_id(canonical_url),
+        name=name,
+        canonical_url=canonical_url,
+        source_kind=source_kind,
+        description=description,
+        discovery_depth=discovery_depth,
+        discovered_from_candidate_id=discovered_from_candidate_id,
+    )
+
+
 def canonicalize_results(results: list[SearchResult], limit: int = 8) -> list[DatasetCandidate]:
-    recognized: list[tuple[SearchResult, str, SourceKind, set[str]]] = []
-    for result in results:
+    ordered_results = sorted(results, key=lambda item: item.score, reverse=True)
+    primary: list[tuple[SearchResult, str, SourceKind, list[str]]] = []
+    linked_sources: list[tuple[SearchResult, str, SourceKind]] = []
+    for result in ordered_results:
         source = canonical_source_url(str(result.url))
         if not source:
             continue
-        linked = {
-            linked_source[0]
+        linked = list(
+            dict.fromkeys(
+                linked_source[0]
+                for match in _URL_PATTERN.findall(result.content)
+                if (linked_source := canonical_source_url(match))
+                and linked_source[0] != source[0]
+            )
+        )
+        primary.append((result, source[0], source[1], linked))
+        linked_sources.extend(
+            (result, linked_source[0], linked_source[1])
             for match in _URL_PATTERN.findall(result.content)
             if (linked_source := canonical_source_url(match))
-        }
-        recognized.append((result, source[0], source[1], linked | {source[0]}))
-
-    # Connected components group a code repository with native dataset records it cites.
-    parent: dict[str, str] = {}
-
-    def find(value: str) -> str:
-        parent.setdefault(value, value)
-        if parent[value] != value:
-            parent[value] = find(parent[value])
-        return parent[value]
-
-    def union(left: str, right: str) -> None:
-        left_root, right_root = find(left), find(right)
-        if left_root != right_root:
-            parent[right_root] = left_root
-
-    for _, canonical_url, _, linked_urls in recognized:
-        for linked_url in linked_urls:
-            union(canonical_url, linked_url)
-
-    grouped: dict[str, list[tuple[SearchResult, str, SourceKind, set[str]]]] = defaultdict(list)
-    for item in recognized:
-        grouped[find(item[1])].append(item)
+            and linked_source[0] != source[0]
+        )
 
     candidates: list[DatasetCandidate] = []
-    for items in grouped.values():
-        urls = sorted({url for item in items for url in item[3]})
-        kinds = {url: canonical_source_url(url)[1] for url in urls if canonical_source_url(url)}
-        github_urls = [url for url in urls if kinds[url] is SourceKind.GITHUB]
-        canonical_url = github_urls[0] if github_urls else urls[0]
-        source_kind = kinds[canonical_url]
-        best = max(items, key=lambda item: item[0].score)
-        description = "\n\n".join(
-            dict.fromkeys(item[0].content for item in items if item[0].content)
-        )
+    seen: set[str] = set()
+    for result, canonical_url, source_kind, related_urls in primary:
+        if canonical_url in seen:
+            continue
+        seen.add(canonical_url)
         candidates.append(
             DatasetCandidate(
                 id=_candidate_id(canonical_url),
-                name=best[0].title,
+                name=result.title,
                 canonical_url=canonical_url,
                 source_kind=source_kind,
-                description=description[:8_000],
-                related_urls=[url for url in urls if url != canonical_url],
+                description=result.content,
+                related_urls=related_urls,
             )
         )
-    return sorted(
-        candidates, key=lambda item: (item.source_kind is not SourceKind.ZENODO, item.name)
-    )[:limit]
+    for result, canonical_url, source_kind in linked_sources:
+        if canonical_url in seen:
+            continue
+        seen.add(canonical_url)
+        candidates.append(
+            DatasetCandidate(
+                id=_candidate_id(canonical_url),
+                name=f"Source linked from {result.title}",
+                canonical_url=canonical_url,
+                source_kind=source_kind,
+                description=result.content,
+            )
+        )
+    return candidates[:limit]

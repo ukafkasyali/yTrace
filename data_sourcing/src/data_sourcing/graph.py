@@ -8,7 +8,12 @@ import httpx
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from data_sourcing.adapters import NativeVerifier, TavilySearchAdapter, canonicalize_results
+from data_sourcing.adapters import (
+    NativeVerifier,
+    TavilySearchAdapter,
+    candidate_from_source,
+    canonicalize_results,
+)
 from data_sourcing.adapters.discovery import SearchAdapter, SourceUnavailable
 from data_sourcing.config import Settings
 from data_sourcing.models import (
@@ -282,7 +287,17 @@ class DatasetScoutGraph:
 
     def canonicalization(self, state: SourcingState) -> dict[str, Any]:
         results = [SearchResult.model_validate(item) for item in state["search_results"]]
-        candidates = canonicalize_results(results, self.settings.candidate_limit)
+        discovered = canonicalize_results(results, self.settings.candidate_limit)
+        existing = [DatasetCandidate.model_validate(item) for item in state["candidates"]]
+        candidates: list[DatasetCandidate] = []
+        seen: set[str] = set()
+        for candidate in [*discovered, *existing]:
+            if candidate.id in seen:
+                continue
+            seen.add(candidate.id)
+            candidates.append(candidate)
+            if len(candidates) == self.settings.source_inspection_limit:
+                break
         return {"candidates": _json_list(candidates)}
 
     def verification(self, state: SourcingState) -> dict[str, Any]:
@@ -301,9 +316,18 @@ class DatasetScoutGraph:
             if requirement.category is RequirementCategory.DOMAIN
             for value in requirement.expected_values
         ]
-        for candidate in candidates:
+        seen_candidate_ids = {candidate.id for candidate in candidates}
+        candidate_index = 0
+        inspections = 0
+        while (
+            candidate_index < len(candidates)
+            and inspections < self.settings.source_inspection_limit
+        ):
+            candidate = candidates[candidate_index]
+            candidate_index += 1
             if candidate.id in known_profiles or self._expired(state):
                 continue
+            inspections += 1
             try:
                 verified = self.verifier.verify(
                     candidate,
@@ -323,11 +347,30 @@ class DatasetScoutGraph:
             )
             evidence.extend([*verified.evidence, *relevance.evidence])
             errors.extend(relevance.warnings)
+            if (
+                verified.documents
+                and candidate.discovery_depth < self.settings.traversal_depth_limit
+            ):
+                primary_document = verified.documents[0]
+                for related_url in primary_document.related_urls:
+                    child = candidate_from_source(
+                        related_url,
+                        name=f"Source linked from {primary_document.name}",
+                        discovery_depth=candidate.discovery_depth + 1,
+                        discovered_from_candidate_id=candidate.id,
+                    )
+                    if child is None or child.id in seen_candidate_ids:
+                        continue
+                    seen_candidate_ids.add(child.id)
+                    candidates.append(child)
+                    if len(candidates) == self.settings.source_inspection_limit:
+                        break
         deduplicated_evidence = {item.id: item for item in evidence}
         return {
             "status": RunStatus.VERIFYING.value,
             "profiles": _json_list(list(known_profiles.values())),
             "evidence": _json_list(list(deduplicated_evidence.values())),
+            "candidates": _json_list(candidates),
             "errors": list(dict.fromkeys(errors)),
         }
 

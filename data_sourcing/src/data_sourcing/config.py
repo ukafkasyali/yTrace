@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     initial_query_limit: int = Field(default=3, ge=1, le=3)
     gap_query_limit: int = Field(default=2, ge=0, le=2)
     candidate_limit: int = Field(default=8, ge=1, le=8)
+    source_inspection_limit: int = Field(default=16, ge=1, le=24)
+    traversal_depth_limit: int = Field(default=2, ge=0, le=2)
     tavily_credit_limit: int = Field(default=12, ge=1, le=12)
     run_timeout_seconds: int = Field(default=90, ge=10, le=90)
     max_source_response_bytes: int = Field(default=2_000_000, ge=10_000, le=10_000_000)

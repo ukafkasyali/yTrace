@@ -64,6 +64,11 @@ class SourceKind(StrEnum):
     HUGGING_FACE = "HUGGING_FACE"
 
 
+class SourceRole(StrEnum):
+    DISCOVERY_LEAD = "DISCOVERY_LEAD"
+    DATASET_ARTIFACT = "DATASET_ARTIFACT"
+
+
 class HypothesisStatus(StrEnum):
     PLANNED = "PLANNED"
     SEARCHED = "SEARCHED"
@@ -148,6 +153,9 @@ class DatasetCandidate(WireModel):
     description: str = Field(default="", max_length=8_000)
     revision: str | None = Field(default=None, max_length=200)
     related_urls: list[HttpUrl] = Field(default_factory=list, max_length=20)
+    source_role: SourceRole = SourceRole.DISCOVERY_LEAD
+    discovery_depth: int = Field(default=0, ge=0, le=2)
+    discovered_from_candidate_id: str | None = None
 
 
 class DatasetProfile(WireModel):

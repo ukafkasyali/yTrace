@@ -25,6 +25,73 @@ def build_graph() -> tuple[DatasetScoutGraph, sqlite3.Connection]:
     return graph, connection
 
 
+def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> None:
+    guide_url = "https://github.com/example/dataset-guide"
+    dataset_url = "https://zenodo.org/records/123"
+
+    class GuideSearch:
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            return SearchBatch(
+                results=[SearchResult(title="Dataset guide", url=guide_url, query=query)],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class LinkedDatasetVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            is_dataset = str(candidate.canonical_url).rstrip("/") == dataset_url
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url).rstrip("/"),
+                source_kind=candidate.source_kind,
+                name="Robot collision dataset" if is_dataset else "Dataset guide",
+                revision="v1",
+                license_id="cc-by-4.0" if is_dataset else "MIT",
+                text=(
+                    "Robot collision signal dataset with documented columns."
+                    if is_dataset
+                    else f"A curated guide to datasets. Data record: {dataset_url}"
+                ),
+                files=[NativeFile(name="signals.csv", size=100)] if is_dataset else [],
+                related_urls=[] if is_dataset else [dataset_url],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=GuideSearch(),
+        verifier=LinkedDatasetVerifier(),
+    )
+    result = scout.graph.invoke(
+        initial_state(
+            str(uuid4()),
+            CreateSourcingRun(
+                brief="Find robot collision time-series data with downloadable signal files."
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": str(uuid4())}},
+    )
+
+    by_url = {
+        item["canonical_url"].rstrip("/"): item for item in result["candidates"]
+    }
+    assert set(by_url) == {guide_url, dataset_url}
+    assert by_url[dataset_url]["discovery_depth"] == 1
+    assert by_url[dataset_url]["discovered_from_candidate_id"] == by_url[guide_url]["id"]
+    scout.close()
+    connection.close()
+
+
 def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
     scout, connection = build_graph()
     run_id = str(uuid4())

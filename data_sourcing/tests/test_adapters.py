@@ -72,7 +72,7 @@ def test_live_search_failure_uses_cache_only_for_exact_demo() -> None:
     assert batch.credits_used == 0
 
 
-def test_canonicalization_groups_repo_and_linked_records() -> None:
+def test_canonicalization_preserves_repo_and_linked_record_identities() -> None:
     results = [
         SearchResult(
             title="Robot signals",
@@ -89,12 +89,34 @@ def test_canonicalization_groups_repo_and_linked_records() -> None:
 
     candidates = canonicalize_results(results)
 
-    assert len(candidates) == 1
-    assert str(candidates[0].canonical_url).rstrip("/") == "https://github.com/org/repo"
-    assert {str(url).rstrip("/") for url in candidates[0].related_urls} == {
+    assert len(candidates) == 3
+    by_url = {str(candidate.canonical_url).rstrip("/"): candidate for candidate in candidates}
+    assert set(by_url) == {
+        "https://github.com/org/repo",
         "https://zenodo.org/records/123",
         "https://zenodo.org/records/456",
     }
+    assert {str(url).rstrip("/") for url in by_url["https://github.com/org/repo"].related_urls} == {
+        "https://zenodo.org/records/123",
+        "https://zenodo.org/records/456",
+    }
+    assert len({candidate.id for candidate in candidates}) == 3
+
+
+def test_canonicalization_marks_every_unverified_source_as_a_lead() -> None:
+    candidates = canonicalize_results(
+        [
+            SearchResult(
+                title="Computer vision guide",
+                url="https://github.com/example/guide",
+                content="Dataset at https://zenodo.org/records/123",
+                score=0.9,
+            )
+        ]
+    )
+
+    assert all(candidate.source_role.value == "DISCOVERY_LEAD" for candidate in candidates)
+    assert all(candidate.discovery_depth == 0 for candidate in candidates)
 
 
 def test_canonicalization_caps_deep_candidates_at_eight() -> None:
