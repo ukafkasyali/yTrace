@@ -7,7 +7,7 @@ from langgraph.types import Command
 from data_sourcing.adapters.discovery import SearchBatch
 from data_sourcing.adapters.native import NativeDocument, NativeFile, build_verified_candidate
 from data_sourcing.config import Settings
-from data_sourcing.graph import DatasetScoutGraph, initial_state
+from data_sourcing.graph import DatasetScoutGraph, _markdown_text, initial_state
 from data_sourcing.models import (
     CreateSourcingRun,
     ExecutionMode,
@@ -91,6 +91,13 @@ def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> 
     assert by_url[dataset_url]["discovered_from_candidate_id"] == by_url[guide_url]["id"]
     assert by_url[guide_url]["source_role"] == "DISCOVERY_LEAD"
     assert by_url[dataset_url]["source_role"] == "DATASET_ARTIFACT"
+    report = result["report_markdown"]
+    dataset_ranking = report.split("## Dataset ranking", 1)[1].split(
+        "## Discovery leads excluded", 1
+    )[0]
+    assert by_url[dataset_url]["id"] in dataset_ranking
+    assert by_url[guide_url]["id"] not in dataset_ranking
+    assert "Dataset guide" in report.split("## Discovery leads excluded", 1)[1]
     guide_profile = next(
         item for item in result["profiles"] if item["candidate_id"] == by_url[guide_url]["id"]
     )
@@ -101,6 +108,15 @@ def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> 
     assert dataset_profile["is_dataset_artifact"] is True
     scout.close()
     connection.close()
+
+
+def test_excluded_lead_report_escapes_untrusted_markdown() -> None:
+    escaped = _markdown_text("[dataset](javascript:alert(1)) <script>\nsecond line")
+
+    assert "javascript:alert" in escaped
+    assert "[dataset](" not in escaped
+    assert "<script>" not in escaped
+    assert "\n" not in escaped
 
 
 def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:

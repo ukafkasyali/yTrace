@@ -18,14 +18,17 @@ function runFixture(): SourcingRun {
     candidates: [{
       id: 'ds_9be731e6fb6b', name: 'Robot joint torque measurements',
       canonicalUrl: 'https://zenodo.org/records/6461868', sourceKind: 'ZENODO',
-      description: '', revision: null, relatedUrls: [],
+      description: '', revision: null, relatedUrls: [], sourceRole: 'DATASET_ARTIFACT',
+      discoveryDepth: 0, discoveredFromCandidateId: null,
     }],
     profiles: [{
       candidateId: 'ds_9be731e6fb6b', name: 'Robot joint torque measurements',
       canonicalUrl: 'https://zenodo.org/records/6461868', sourceKinds: ['ZENODO'],
       revision: '6461868.r6', licenseId: 'cc-by-4.0', fileCount: 22, totalSizeBytes: 500,
       fileExtensions: ['.csv'], domains: ['robot'], labels: ['collision', 'contact', 'free'], sampleRateHz: 1_000,
-      channelCount: 7, hasTimeSeriesFiles: true, schemaDocumented: true,
+      channelCount: 7, isDatasetArtifact: true,
+      datasetIdentityReason: 'Primary source is a verified dataset artifact',
+      hasTimeSeriesFiles: true, schemaDocumented: true,
       acquisitionFeasible: true,
     }],
     evidence: [
@@ -44,7 +47,10 @@ function runFixture(): SourcingRun {
     ],
     assessments: [{
       candidateId: 'ds_9be731e6fb6b',
-      gates: [{ gate: 'license', passed: true, reason: 'Explicit allowed licence found', evidenceIds: ['ev_license'] }],
+      gates: [
+        { gate: 'dataset_identity', passed: true, reason: 'Primary source is a verified dataset artifact', evidenceIds: [] },
+        { gate: 'license', passed: true, reason: 'Explicit allowed licence found', evidenceIds: ['ev_license'] },
+      ],
       score: { taskFit: 35, trainingReadiness: 20, acquisitionIntegrity: 15, provenanceDocumentation: 10, integrationReadiness: 10, licenseClarity: 5, evidenceConsistency: 5 },
       totalScore: 100, tier: 'RECOMMEND', evidenceConfidence: 'HIGH',
       recommendationConfidence: 'HIGH', missingRequirementIds: [], conflicts: [],
@@ -67,9 +73,41 @@ describe('decision evidence', () => {
     expect(markup).toContain('Decision evidence');
     expect(markup).toContain('Recommendation: Robot joint torque measurements');
     expect(markup).toContain('All mandatory gates passed');
+    expect(markup).toContain('Dataset ranking');
     expect(markup).toContain('ZENODO: cc-by-4.0');
     expect(markup).not.toContain('GITHUB: MIT');
     expect(markup).not.toContain('# Dataset sourcing report');
+  });
+
+  it('keeps discovery guides out of dataset ranking while retaining their audit reason', () => {
+    const run = runFixture();
+    run.candidates.push({
+      ...run.candidates[0], id: 'ds_aaaaaaaaaaaa', name: 'Computer Vision Guide',
+      canonicalUrl: 'https://github.com/example/computer-vision-guide', sourceKind: 'GITHUB',
+      sourceRole: 'DISCOVERY_LEAD', discoveryDepth: 0,
+    });
+    run.profiles.push({
+      ...run.profiles[0], candidateId: 'ds_aaaaaaaaaaaa', name: 'Computer Vision Guide',
+      canonicalUrl: 'https://github.com/example/computer-vision-guide',
+      isDatasetArtifact: false, datasetIdentityReason: 'Primary source is a guide',
+    });
+    run.assessments.push({
+      ...run.assessments[0], candidateId: 'ds_aaaaaaaaaaaa', tier: 'REJECT', totalScore: 75,
+      score: { ...run.assessments[0].score, taskFit: 10, evidenceConsistency: 0 },
+      gates: [{
+        gate: 'dataset_identity', passed: false, reason: 'Primary source is a guide',
+        evidenceIds: [],
+      }],
+    });
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    const ranking = markup.slice(markup.indexOf('Dataset ranking'), markup.indexOf('Discovery leads excluded'));
+    expect(ranking).not.toContain('Computer Vision Guide');
+    expect(markup).toContain('Discovery leads excluded (1)');
+    expect(markup).toContain('Primary source is a guide');
   });
 
   it('turns historical transport errors into actionable source coverage notes', () => {

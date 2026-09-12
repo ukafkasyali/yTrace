@@ -20,17 +20,17 @@
 
 ## Task 3: Separate datasets from discovery leads in review
 
-- [ ] Rank promoted datasets only.
-- [ ] Render excluded leads and reasons as a separate audit section.
-- [ ] Verify: frontend tests and production build pass.
+- [x] Rank promoted datasets only.
+- [x] Render excluded leads and reasons as a separate audit section.
+- [x] Verify: frontend tests and production build pass.
 
 ## Task 4: Document and review
 
-- [ ] Update the sourcing API/README behavior.
-- [ ] Run security, compatibility and simplicity review.
-- [ ] Commit the completed slices and update the existing PR.
+- [x] Update the sourcing API/README behavior.
+- [x] Run security, compatibility and simplicity review.
+- [x] Commit the completed slices and update the existing PR.
 
 ## Checkpoint: Complete
 
-- [ ] All backend and frontend checks pass.
-- [ ] Original reported failure has explicit regression coverage.
+- [x] All backend and frontend checks pass.
+- [x] Original reported failure has explicit regression coverage.

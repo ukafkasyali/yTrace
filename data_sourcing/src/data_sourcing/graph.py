@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import time
 from datetime import UTC, datetime
 from typing import Any, TypedDict
@@ -56,6 +57,13 @@ from data_sourcing.scoring import (
 )
 
 _REVIEW_ITERATION_LIMIT = 2
+
+
+def _markdown_text(value: str) -> str:
+    escaped = html.escape(" ".join(value.split()))
+    for character in "\\`*_{}[]()#+-.!|>":
+        escaped = escaped.replace(character, f"\\{character}")
+    return escaped
 
 
 class SourcingState(TypedDict, total=False):
@@ -580,10 +588,25 @@ class DatasetScoutGraph:
             lines.extend(
                 ["## Mandatory evidence gaps", "", *[f"- `{item}`" for item in missing], ""]
             )
-        lines.extend(["## Deterministic ranking", ""])
+        artifact_assessments = []
+        discovery_leads = []
+        for assessment in ranked:
+            identity_gate = next(
+                (gate for gate in assessment.gates if gate.gate == "dataset_identity"),
+                None,
+            )
+            target = (
+                artifact_assessments
+                if identity_gate is None or identity_gate.passed
+                else discovery_leads
+            )
+            target.append(assessment)
+        lines.extend(["## Dataset ranking", ""])
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
         excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
-        for assessment in ranked:
+        if not artifact_assessments:
+            lines.append("- No native source was verified as directly publishing a dataset.")
+        for assessment in artifact_assessments:
             conflict = ", ".join(assessment.conflicts) or "none"
             review_status = (
                 "; excluded by reviewer"
@@ -597,6 +620,26 @@ class DatasetScoutGraph:
             for claim in assessment.conflicts:
                 lines.append(
                     f"  - {self._conflict_resolution(evidence, assessment.candidate_id, claim)}"
+                )
+        if discovery_leads:
+            lines.extend(["", "## Discovery leads excluded", ""])
+            candidates = {
+                item.id: item
+                for item in (
+                    DatasetCandidate.model_validate(raw) for raw in state["candidates"]
+                )
+            }
+            for assessment in discovery_leads:
+                identity_gate = next(
+                    gate for gate in assessment.gates if gate.gate == "dataset_identity"
+                )
+                candidate = candidates.get(assessment.candidate_id)
+                name = _markdown_text(
+                    candidate.name if candidate else assessment.candidate_id
+                )
+                lines.append(
+                    f"- {name} (`{assessment.candidate_id}`): "
+                    f"{_markdown_text(identity_gate.reason)}"
                 )
         if state["errors"]:
             lines.extend(["", "## Retrieval notes", "", *[f"- {item}" for item in state["errors"]]])

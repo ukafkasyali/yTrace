@@ -38,15 +38,15 @@ discovery pages that were inspected and rejected.
 
 ### Phase 3: Review presentation
 
-- [ ] Rank only promoted dataset artifacts.
-- [ ] Show inspected non-dataset leads separately with exclusion reasons.
-- [ ] Update API documentation and regression fixtures.
+- [x] Rank only promoted dataset artifacts.
+- [x] Show inspected non-dataset leads separately with exclusion reasons.
+- [x] Update API documentation and regression fixtures.
 
 ### Checkpoint: Complete
 
-- [ ] Frontend tests and production build pass.
-- [ ] Cached end-to-end sourcing flow reaches approval and manifest generation.
-- [ ] Diff review finds no evidence-boundary, security, or compatibility regressions.
+- [x] Frontend tests and production build pass.
+- [x] Cached end-to-end sourcing flow reaches approval and manifest generation.
+- [x] Diff review finds no evidence-boundary, security, or compatibility regressions.
 
 ## Risks and Mitigations
 

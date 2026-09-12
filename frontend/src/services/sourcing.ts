@@ -33,6 +33,9 @@ export type DatasetCandidate = {
   description: string;
   revision: string | null;
   relatedUrls: string[];
+  sourceRole?: 'DISCOVERY_LEAD' | 'DATASET_ARTIFACT';
+  discoveryDepth?: number;
+  discoveredFromCandidateId?: string | null;
 };
 
 export type DatasetProfile = {
@@ -52,6 +55,8 @@ export type DatasetProfile = {
   hasTimeSeriesFiles: boolean;
   schemaDocumented: boolean;
   acquisitionFeasible: boolean;
+  isDatasetArtifact?: boolean;
+  datasetIdentityReason?: string;
 };
 
 export type EvidenceRecord = {
@@ -162,6 +167,10 @@ export function compareCandidateAssessments(
   left: CandidateAssessment,
   right: CandidateAssessment,
 ) {
+  const identityMismatch = (candidate: CandidateAssessment) =>
+    candidate.gates.some(gate => gate.gate === 'dataset_identity' && !gate.passed);
+  const identityDifference = Number(identityMismatch(left)) - Number(identityMismatch(right));
+  if (identityDifference !== 0) return identityDifference;
   const domainMismatch = (candidate: CandidateAssessment) =>
     candidate.gates.some(gate => gate.gate === 'domain' && !gate.passed);
   const domainDifference = Number(domainMismatch(left)) - Number(domainMismatch(right));
@@ -218,10 +227,21 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
       && Array.isArray(item.evidenceIds))
     && Array.isArray(run.candidates) && Array.isArray(run.profiles)
     && run.candidates.every(item => isRecord(item) && typeof item.id === 'string'
-      && typeof item.name === 'string' && isNativeSourceUrl(item.canonicalUrl))
+      && typeof item.name === 'string' && isNativeSourceUrl(item.canonicalUrl)
+      && (item.sourceRole === undefined
+        || ['DISCOVERY_LEAD', 'DATASET_ARTIFACT'].includes(item.sourceRole as string))
+      && (item.discoveryDepth === undefined
+        || (Number.isInteger(item.discoveryDepth) && (item.discoveryDepth as number) >= 0
+          && (item.discoveryDepth as number) <= 2))
+      && (item.discoveredFromCandidateId === undefined
+        || item.discoveredFromCandidateId === null
+        || typeof item.discoveredFromCandidateId === 'string'))
     && run.profiles.every(item => isRecord(item) && typeof item.candidateId === 'string'
       && isNativeSourceUrl(item.canonicalUrl) && Array.isArray(item.domains)
-      && item.domains.every(domain => typeof domain === 'string') && Array.isArray(item.labels))
+      && item.domains.every(domain => typeof domain === 'string') && Array.isArray(item.labels)
+      && (item.isDatasetArtifact === undefined || typeof item.isDatasetArtifact === 'boolean')
+      && (item.datasetIdentityReason === undefined
+        || typeof item.datasetIdentityReason === 'string'))
     && Array.isArray(run.evidence) && Array.isArray(run.assessments)
     && run.evidence.every(item => isRecord(item) && typeof item.id === 'string' && isNativeSourceUrl(item.sourceUrl))
     && run.assessments.every(item => isRecord(item) && typeof item.candidateId === 'string'

@@ -57,6 +57,13 @@ candidate and evidence IDs, the recommendation before and after rescoring, and o
 or `NO_CHANGE`. `excludedCandidateIds` records reviewer exclusions separately from deterministic
 assessment results so clients can show the full audit trail without offering excluded choices.
 
+Candidates also expose additive source-exploration fields: `sourceRole` is `DISCOVERY_LEAD` or
+`DATASET_ARTIFACT`, `discoveryDepth` is zero to two, and `discoveredFromCandidateId` identifies the
+page that exposed a child native URL. Profiles expose `isDatasetArtifact` and
+`datasetIdentityReason`. Each URL remains a separate candidate identity; the service never merges
+a guide with a dataset it links to. Clients should rank only dataset artifacts and may show leads
+in a separate audit section. Older persisted payloads that predate these fields remain valid.
+
 When the brief explicitly names equipment or an application domain, requirements include a
 mandatory `DOMAIN` category. Verified profiles expose the native-source-supported terms in
 `domains`, and the associated evidence uses `claimKey: "domains"`. Domain matching may use the
@@ -112,8 +119,11 @@ transitions to `NEEDS_INPUT` if the final attempt still has no eligible alternat
 
 ### `GET /api/sourcing-runs/{runId}/report`
 
-Returns `text/markdown`. Contradictions list every native observation and precedence. Resolution
-uses the highest-precedence native value while `evidence.jsonl` retains all observations.
+Returns `text/markdown`. The dataset ranking contains only sources that pass the
+`dataset_identity` hard gate; inspected guides, papers, lists, catalogues and other non-dataset
+pages appear under `Discovery leads excluded` with their reason. Contradictions list every native
+observation and precedence. Resolution uses the highest-precedence native value while
+`evidence.jsonl` retains all observations.
 
 ### `GET /api/sourcing-runs/{runId}/manifest`
 
@@ -128,12 +138,16 @@ Errors use the shared envelope:
 ```
 
 One run has three initial hypotheses, at most two evidence-gap hypotheses, at most two
-review-directed refinements, eight deeply verified candidates, twelve Tavily credits and ninety
-seconds of active research time. Time spent waiting for human review does not consume the active
+review-directed refinements, eight deeply verified dataset artifacts, twelve Tavily credits and
+ninety seconds of active research time. The scout may inspect up to sixteen discovery leads over
+at most two native-link hops. Time spent waiting for human review does not consume the active
 research clock. Tavily advanced search costs two credits per query, so reviewer refinements use
-only the credits remaining after initial and gap searches. Mandatory gates are canonical
-provenance, explicit allowed licence, usable time-series files, requested task labels, schema
-documentation and bounded acquisition size.
+only the credits remaining after initial and gap searches. Mandatory gates are source-local
+dataset identity, canonical provenance, explicit allowed licence, usable time-series files,
+requested task labels, schema documentation and bounded acquisition size. Dataset identity first
+requires a direct, non-empty supported data or archive file on the candidate's own native source.
+Model-assisted semantic support must cite a verbatim excerpt from that same source and fails
+closed on model errors; linked pages cannot lend evidence to a parent.
 
 Server-side fetches accept only HTTPS native URLs on the exact GitHub, Zenodo and Hugging Face
 allowlist, reject embedded credentials and non-default ports, resolve only to public addresses,

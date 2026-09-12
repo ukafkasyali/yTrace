@@ -45,6 +45,25 @@ function candidateName(run: SourcingRun, candidateId: string | null) {
   return run.candidates.find(item => item.id === candidateId)?.name ?? candidateId;
 }
 
+function isDatasetArtifact(run: SourcingRun, candidateId: string) {
+  const assessment = run.assessments.find(item => item.candidateId === candidateId);
+  const identityGate = assessment?.gates.find(gate => gate.gate === 'dataset_identity');
+  if (identityGate) return identityGate.passed;
+  const profile = run.profiles.find(item => item.candidateId === candidateId);
+  // Runs persisted before dataset-identity evidence was introduced remain readable.
+  return profile?.isDatasetArtifact ?? true;
+}
+
+function discoveryLeadReason(run: SourcingRun, candidateId: string) {
+  const profile = run.profiles.find(item => item.candidateId === candidateId);
+  const identityGate = run.assessments
+    .find(item => item.candidateId === candidateId)
+    ?.gates.find(gate => gate.gate === 'dataset_identity');
+  return identityGate?.reason
+    ?? profile?.datasetIdentityReason
+    ?? 'The native source was not verified as directly publishing dataset files.';
+}
+
 function refinementMessage(run: SourcingRun, refinement: RefinementOutcome) {
   const current = candidateName(run, refinement.recommendedCandidateId);
   const candidateCount = refinement.newCandidateIds.length;
@@ -92,7 +111,12 @@ export default function DecisionEvidence({
   const recommendedAssessment = run.assessments.find(
     item => item.candidateId === run.recommendedCandidateId,
   );
-  const ranked = [...run.assessments].sort(compareCandidateAssessments);
+  const ranked = run.assessments
+    .filter(item => isDatasetArtifact(run, item.candidateId))
+    .sort(compareCandidateAssessments);
+  const discoveryLeads = run.assessments
+    .filter(item => !isDatasetArtifact(run, item.candidateId))
+    .sort(compareCandidateAssessments);
   const excludedCandidateIds = new Set(run.excludedCandidateIds);
   const eligibleAlternatives = ranked.filter(item =>
     candidateIsEligibleForApproval(item, excludedCandidateIds));
@@ -115,7 +139,7 @@ export default function DecisionEvidence({
     </p>
     <dl className="decision-metrics">
       <div><dt>Mandatory requirements</dt><dd>{verifiedRequirements}/{mandatory.length} verified</dd></div>
-      <div><dt>Candidates assessed</dt><dd>{run.assessments.length}/{run.candidates.length}</dd></div>
+      <div><dt>Datasets assessed</dt><dd>{ranked.length}</dd></div>
       <div><dt>Evidence confidence</dt><dd>{recommendedAssessment?.evidenceConfidence.toLowerCase() ?? 'not established'}</dd></div>
     </dl>
 
@@ -131,11 +155,11 @@ export default function DecisionEvidence({
       </table>
     </div>
 
-    <h4>Candidate ranking</h4>
+    <h4>Dataset ranking</h4>
     <div className="table-scroll">
       <table className="data-table evidence-table">
         <thead><tr><th>Candidate</th><th>Score</th><th>Hard gates</th><th>Decision reason</th></tr></thead>
-        <tbody>{ranked.map(assessment => {
+        <tbody>{ranked.length === 0 ? <tr><td colSpan={4}><span className="evidence-empty">No source was verified as a dataset artifact.</span></td></tr> : ranked.map(assessment => {
           const candidate = run.candidates.find(item => item.id === assessment.candidateId);
           const passed = assessment.gates.filter(gate => gate.passed).length;
           return <tr key={assessment.candidateId}>
@@ -147,5 +171,18 @@ export default function DecisionEvidence({
         })}</tbody>
       </table>
     </div>
+    {discoveryLeads.length > 0 && <details className="discovery-leads">
+      <summary>Discovery leads excluded ({discoveryLeads.length})</summary>
+      <p>These pages may lead to useful sources, but their native content did not prove that they directly publish a dataset. They are never approval options.</p>
+      <ul>{discoveryLeads.map(assessment => {
+        const candidate = run.candidates.find(item => item.id === assessment.candidateId);
+        return <li key={assessment.candidateId}>
+          {candidate
+            ? <a href={candidate.canonicalUrl} target="_blank" rel="noopener noreferrer">{candidate.name} <ArrowUpRight size={11} aria-hidden="true" /></a>
+            : assessment.candidateId}
+          <span>{discoveryLeadReason(run, assessment.candidateId)}</span>
+        </li>;
+      })}</ul>
+    </details>}
   </section>;
 }

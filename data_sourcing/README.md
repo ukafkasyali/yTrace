@@ -62,6 +62,15 @@ only when the model returns a verbatim excerpt that can be found in the fetched 
 Candidates without that evidence fail the domain gate and rank below candidates from the
 requested domain, regardless of their raw score.
 
+Search results begin as discovery leads. Each GitHub, Zenodo, or Hugging Face URL keeps a separate
+identity, and native links are followed for at most two hops within the run limits. A source is
+promoted to a dataset artifact only when its own native record directly exposes a non-empty
+supported data or archive file and its content supports that it publishes observations or
+measurements. Guides, papers, catalogues, awesome lists, tutorials, and code-only repositories
+remain auditable discovery leads: they may reveal a child dataset URL, but neither their score nor
+a linked source's evidence can make them approvable. Reports and the UI rank promoted artifacts
+and list rejected discovery leads separately with the dataset-identity reason.
+
 Runtime artifacts are written under `var/runs/<run-id>/`. SQLite checkpoints and idempotency keys
 remain under `var/`. Set `SOURCING_DATA_DIR` to relocate all runtime state.
 
