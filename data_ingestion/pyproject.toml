@@ -27,6 +27,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 dataset_profiler = [
   "py.typed",
+  "semantic_spec/specs/*.json",
   "timenet/kuka_contact/dataset.yaml",
   "timenet/kuka_collision/dataset.yaml",
 ]
