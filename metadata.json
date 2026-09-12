@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2B72RVG1516426HQP6CXBEB",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/FRONTEND_INTEGRATION.md",
+    "frontend/.env.example",
+    "frontend/README.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 905731,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 43959840,
+    "output_tokens": 196160,
+    "api_call_count": 352
+  }
+}
