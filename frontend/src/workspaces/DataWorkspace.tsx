@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight, Database, Download, Search } from 'lucide-react';
 import type { DemoData } from '../types';
 import type { Dataset, DatasetSearchResult, ImportJob, Recording, Services } from '../services';
+import DatasetScout from '../sourcing/DatasetScout';
 
 type Props = { services: Services; data: DemoData; onOpenRecording: (record: Recording) => Promise<void> };
 const stages = ['Inspect source', 'Map channels', 'Validate signals', 'Import into TimeNet'];
@@ -28,14 +29,14 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
     if (services.connected) services.listDatasets().then(items => {
       if (!alive) return;
       setDatasets(items); setDatasetId(current => items.some(item => item.id === current) ? current : items[0]?.id ?? '');
-    }).catch(reason => { if (alive) setError(errorText(reason)); });
+    }).catch(reason => { if (alive) setError(`Could not load backend catalog: ${errorText(reason)}`); });
     return () => { alive = false; };
   }, [services, catalogRevision]);
 
   useEffect(() => {
     let alive = true; setRecordings([]);
     if (services.connected && datasetId) services.listRecordings(datasetId).then(items => { if (alive) setRecordings(items); })
-      .catch(reason => { if (alive) setError(errorText(reason)); });
+      .catch(reason => { if (alive) setError(`Could not load recordings for this dataset: ${errorText(reason)}`); });
     return () => { alive = false; };
   }, [services, datasetId, catalogRevision]);
 
@@ -77,6 +78,8 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
       <div className="table-scroll"><table className="data-table"><caption>Loaded channel mapping</caption><thead><tr><th>Channel</th><th>Signal</th><th>Unit</th><th>Source sampling</th></tr></thead><tbody>{data.channels.map(channel => <tr key={channel.id}><td>{channel.id}</td><td>{channel.name}</td><td>{channel.unit}</td><td>{data.recording.sampleRateHz} Hz</td></tr>)}</tbody></table></div>
       <p className="status-note">Publisher markers are annotations, not verified physical collision-onset times. Original archive: {data.recording.archive}.</p>
     </section>
+
+    <DatasetScout services={services} onUseSource={setSourceUrl} />
 
     <section className="workspace-section"><h2>Dataset discovery</h2>
       {!services.connected && <p className="status-note">Discovery and ingestion require the team’s backend. The loaded recording remains available locally.</p>}
