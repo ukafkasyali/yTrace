@@ -34,6 +34,7 @@ from data_sourcing.models import (
     RunStatus,
     SearchHypothesis,
     SearchResult,
+    SourceRole,
     SourcingConstraints,
     SourcingManifest,
     VerificationStatus,
@@ -319,9 +320,11 @@ class DatasetScoutGraph:
         seen_candidate_ids = {candidate.id for candidate in candidates}
         candidate_index = 0
         inspections = 0
+        promoted_count = sum(profile.is_dataset_artifact for profile in known_profiles.values())
         while (
             candidate_index < len(candidates)
             and inspections < self.settings.source_inspection_limit
+            and promoted_count < self.settings.candidate_limit
         ):
             candidate = candidates[candidate_index]
             candidate_index += 1
@@ -337,16 +340,33 @@ class DatasetScoutGraph:
             except (SourceUnavailable, ValueError, OSError, httpx.HTTPError) as exc:
                 errors.append(f"Candidate {candidate.id} verification failed: {exc}")
                 continue
+            primary_document = verified.documents[0]
+            identity = self.relevance_judge.evaluate_dataset_identity(
+                candidate.id,
+                primary_document,
+            )
             relevance = self.relevance_judge.evaluate(
                 candidate.id,
                 verified.documents,
                 required_domain_terms,
             )
-            known_profiles[candidate.id] = verified.profile.model_copy(
-                update={"domains": relevance.matched_terms}
+            source_role = (
+                SourceRole.DATASET_ARTIFACT
+                if identity.is_dataset_artifact
+                else SourceRole.DISCOVERY_LEAD
             )
-            evidence.extend([*verified.evidence, *relevance.evidence])
-            errors.extend(relevance.warnings)
+            candidate = candidate.model_copy(update={"source_role": source_role})
+            candidates[candidate_index - 1] = candidate
+            promoted_count += int(identity.is_dataset_artifact)
+            known_profiles[candidate.id] = verified.profile.model_copy(
+                update={
+                    "domains": relevance.matched_terms,
+                    "is_dataset_artifact": identity.is_dataset_artifact,
+                    "dataset_identity_reason": identity.reason,
+                }
+            )
+            evidence.extend([*verified.evidence, *identity.evidence, *relevance.evidence])
+            errors.extend([*identity.warnings, *relevance.warnings])
             if (
                 verified.documents
                 and candidate.discovery_depth < self.settings.traversal_depth_limit
@@ -382,7 +402,8 @@ class DatasetScoutGraph:
             supporting_profiles = [
                 profile
                 for profile in profiles
-                if requirement_is_evidenced(requirement, profile, evidence)
+                if profile.is_dataset_artifact
+                and requirement_is_evidenced(requirement, profile, evidence)
             ]
             requirement.status = (
                 VerificationStatus.VERIFIED if supporting_profiles else VerificationStatus.MISSING

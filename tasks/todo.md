@@ -8,15 +8,15 @@
 
 ## Task 2: Promote only proven dataset artifacts
 
-- [ ] Evaluate dataset identity from the primary native record only.
-- [ ] Require direct data/archive files and validated semantic evidence.
-- [ ] Add a hard gate and regression tests for guides, lists and code-only repositories.
-- [ ] Verify: complete backend test suite and lint pass.
+- [x] Evaluate dataset identity from the primary native record only.
+- [x] Require direct data/archive files and validated semantic evidence.
+- [x] Add a hard gate and regression tests for guides, lists and code-only repositories.
+- [x] Verify: complete backend test suite and lint pass.
 
 ## Checkpoint: Backend integrity
 
-- [ ] Existing cached run still reaches approval.
-- [ ] No parent source inherits child identity evidence.
+- [x] Existing cached run still reaches approval.
+- [x] No parent source inherits child identity evidence.
 
 ## Task 3: Separate datasets from discovery leads in review
 

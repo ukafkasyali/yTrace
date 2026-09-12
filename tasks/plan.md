@@ -28,13 +28,13 @@ discovery pages that were inspected and rejected.
 
 ### Phase 2: Artifact verification
 
-- [ ] Add source-local dataset identity judgment and evidence.
-- [ ] Add the deterministic `dataset_identity` hard gate and artifact-first ranking.
-- [ ] Prove linked evidence cannot promote a guide or code-only repository.
+- [x] Add source-local dataset identity judgment and evidence.
+- [x] Add the deterministic `dataset_identity` hard gate and artifact-first ranking.
+- [x] Prove linked evidence cannot promote a guide or code-only repository.
 
 ### Checkpoint: Verification
 
-- [ ] Backend test suite and lint pass.
+- [x] Backend test suite and lint pass.
 
 ### Phase 3: Review presentation
 

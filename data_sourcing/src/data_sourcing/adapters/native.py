@@ -30,7 +30,7 @@ _BATCHES = re.compile(
     r"\b(?:containing|all)\s+(\d+)\s+(?:compressed\s+)?(?:packages|batches)\b", re.IGNORECASE
 )
 _TIME_SERIES_EXTENSIONS = {".csv", ".mat", ".parquet", ".h5", ".hdf5", ".npy", ".npz"}
-_ARCHIVE_EXTENSIONS = {".zip", ".tar", ".gz", ".zst"}
+_ARCHIVE_EXTENSIONS = {".zip", ".tar", ".gz", ".zst", ".tar.gz", ".tar.zst"}
 _REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 _MAX_NATIVE_DOCUMENTS = 8
 _MAX_REDIRECTS = 3
@@ -98,6 +98,13 @@ def _describes_dataset_repository(document: NativeDocument) -> bool:
     return bool(extensions & _TIME_SERIES_EXTENSIONS) or bool(
         "dataset structure" in text and re.search(r"\btime[- ]series\b", text)
     )
+
+
+def direct_data_files(document: NativeDocument) -> list[NativeFile]:
+    supported = _TIME_SERIES_EXTENSIONS | _ARCHIVE_EXTENSIONS
+    return [
+        file for file in document.files if file.size > 0 and _extension(file.name) in supported
+    ]
 
 
 def _evidence_id(candidate_id: str, source_url: str, claim: str, value: str) -> str:
@@ -319,14 +326,24 @@ class NativeVerifier:
         )
 
     def _fixture_documents(self, candidate: DatasetCandidate) -> list[NativeDocument]:
-        target = "https://github.com/zhang-zengjie/robot-raw-collision-signals"
-        urls = {str(candidate.canonical_url), *(str(url) for url in candidate.related_urls)}
-        if target not in urls:
-            raise SourceUnavailable("No cached native fixture exists for this candidate")
         fixture_path = Path(__file__).parent.parent / "fixtures" / "robot_collision_native.json"
-        return [
+        documents = [
             NativeDocument.model_validate(item)
             for item in json.loads(fixture_path.read_text(encoding="utf-8"))
+        ]
+        canonical_url = str(candidate.canonical_url).rstrip("/")
+        primary = next(
+            (item for item in documents if item.source_url.rstrip("/") == canonical_url),
+            None,
+        )
+        if primary is None:
+            raise SourceUnavailable("No cached native fixture exists for this candidate")
+        related_urls = (
+            set(primary.related_urls) if _describes_dataset_repository(primary) else set()
+        )
+        return [
+            primary,
+            *[item for item in documents if item.source_url in related_urls],
         ]
 
     def _get_bytes(
@@ -399,10 +416,7 @@ class NativeVerifier:
         return None if content is None else content.decode("utf-8", errors="replace")
 
     def _live_documents(self, candidate: DatasetCandidate) -> list[NativeDocument]:
-        queued = [
-            (str(candidate.canonical_url), 0),
-            *((str(url), 1) for url in candidate.related_urls),
-        ]
+        queued = [(str(candidate.canonical_url), 0)]
         documents: list[NativeDocument] = []
         visited: set[str] = set()
         while queued and len(documents) < _MAX_NATIVE_DOCUMENTS:

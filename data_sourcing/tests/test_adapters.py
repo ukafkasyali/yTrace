@@ -3,6 +3,7 @@ import pytest
 
 from data_sourcing.adapters import NativeVerifier, TavilySearchAdapter, canonicalize_results
 from data_sourcing.adapters.discovery import SourceUnavailable
+from data_sourcing.adapters.native import NativeDocument, NativeFile
 from data_sourcing.config import Settings
 from data_sourcing.models import DatasetCandidate, ExecutionMode, SearchResult, SourceKind
 from data_sourcing.relevance import EvidenceRelevanceJudge
@@ -149,6 +150,59 @@ def test_native_fixture_retains_batch_contradiction_and_coverage_limits() -> Non
     assert verified.profile.license_id == "cc-by-4.0"
     assert verified.profile.acquisition_feasible is True
     assert "batch_count_part_ii" in detect_conflicts(verified.evidence, candidate.id)
+
+
+def test_identity_judge_rejects_a_guide_even_when_it_contains_a_csv_index() -> None:
+    judge = EvidenceRelevanceJudge(settings())
+    document = NativeDocument(
+        source_url="https://github.com/example/computer-vision-guide",
+        source_kind=SourceKind.GITHUB,
+        name="Computer-Vision-Guide",
+        revision="v1",
+        text="A curated learning guide and paper list for computer vision datasets.",
+        files=[NativeFile(name="resources/datasets.csv", size=100)],
+    )
+
+    result = judge.evaluate_dataset_identity("ds_111111111111", document)
+
+    assert result.is_dataset_artifact is False
+    assert result.evidence == []
+    assert "discovery" in result.reason.casefold()
+
+
+def test_identity_judge_requires_source_local_files_and_ignores_linked_dataset_files() -> None:
+    judge = EvidenceRelevanceJudge(settings())
+    guide = NativeDocument(
+        source_url="https://github.com/example/dataset-guide",
+        source_kind=SourceKind.GITHUB,
+        name="Dataset guide",
+        revision="v1",
+        text="This guide links to a robot collision dataset.",
+        files=[],
+        related_urls=["https://zenodo.org/records/123"],
+    )
+
+    result = judge.evaluate_dataset_identity("ds_111111111111", guide)
+
+    assert result.is_dataset_artifact is False
+    assert "direct" in result.reason.casefold()
+
+
+def test_identity_judge_promotes_a_native_dataset_with_direct_measurements() -> None:
+    judge = EvidenceRelevanceJudge(settings())
+    document = NativeDocument(
+        source_url="https://zenodo.org/records/123",
+        source_kind=SourceKind.ZENODO,
+        name="Robot collision measurements",
+        revision="v1",
+        text="This dataset contains recorded robot collision torque signals.",
+        files=[NativeFile(name="signals.csv", size=100)],
+    )
+
+    result = judge.evaluate_dataset_identity("ds_111111111111", document)
+
+    assert result.is_dataset_artifact is True
+    assert result.evidence[0].claim_key == "dataset_identity"
 
 
 def test_acquisition_gate_fails_when_cached_data_exceeds_request_bound() -> None:
@@ -298,6 +352,51 @@ def test_github_missing_readme_keeps_repository_metadata() -> None:
 
     assert verified.profile.revision == "GITHUB:abc123"
     assert verified.profile.license_id == "MIT"
+
+
+def test_search_snippet_links_cannot_contribute_native_verification_evidence() -> None:
+    requested_hosts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested_hosts.append(request.url.host)
+        assert request.url.host == "api.github.com"
+        path = request.url.path
+        if path.endswith("/readme"):
+            return httpx.Response(200, text="A curated guide to useful robotics resources.")
+        if "/commits/" in path:
+            return httpx.Response(200, json={"sha": "abc123"})
+        if "/git/trees/" in path:
+            return httpx.Response(
+                200,
+                json={"tree": [{"path": "README.md", "type": "blob", "size": 200}]},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "full_name": "example/guide",
+                "description": "Robotics guide",
+                "default_branch": "main",
+                "license": {"spdx_id": "MIT"},
+            },
+        )
+
+    candidate = DatasetCandidate(
+        id="ds_777777777777",
+        name="Robotics guide",
+        canonical_url="https://github.com/example/guide",
+        source_kind=SourceKind.GITHUB,
+        related_urls=["https://zenodo.org/records/123"],
+    )
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(handler)),
+        validate_dns=False,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.source_kinds == [SourceKind.GITHUB]
+    assert set(requested_hosts) == {"api.github.com"}
 
 
 def test_oversized_github_tree_does_not_discard_linked_native_record() -> None:

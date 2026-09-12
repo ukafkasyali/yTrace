@@ -50,7 +50,8 @@ def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> 
                 revision="v1",
                 license_id="cc-by-4.0" if is_dataset else "MIT",
                 text=(
-                    "Robot collision signal dataset with documented columns."
+                    "This dataset contains recorded robot collision signals with documented "
+                    "columns."
                     if is_dataset
                     else f"A curated guide to datasets. Data record: {dataset_url}"
                 ),
@@ -88,6 +89,16 @@ def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> 
     assert set(by_url) == {guide_url, dataset_url}
     assert by_url[dataset_url]["discovery_depth"] == 1
     assert by_url[dataset_url]["discovered_from_candidate_id"] == by_url[guide_url]["id"]
+    assert by_url[guide_url]["source_role"] == "DISCOVERY_LEAD"
+    assert by_url[dataset_url]["source_role"] == "DATASET_ARTIFACT"
+    guide_profile = next(
+        item for item in result["profiles"] if item["candidate_id"] == by_url[guide_url]["id"]
+    )
+    dataset_profile = next(
+        item for item in result["profiles"] if item["candidate_id"] == by_url[dataset_url]["id"]
+    )
+    assert guide_profile["is_dataset_artifact"] is False
+    assert dataset_profile["is_dataset_artifact"] is True
     scout.close()
     connection.close()
 
@@ -230,8 +241,8 @@ def test_refinement_prioritizes_new_results_and_records_recommendation_change() 
                 revision="v1",
                 license_id="cc-by-4.0",
                 text=(
-                    "Industrial robot collision and intentional contact torque time-series at "
-                    "1 kHz. "
+                    "This dataset contains recorded industrial robot collision and "
+                    "intentional contact torque time-series at 1 kHz. "
                     "Dataset structure documents seven joints and signal columns."
                 ),
                 files=[NativeFile(name="signals.csv", size=100)],
@@ -314,9 +325,11 @@ def test_cnc_brief_cannot_recommend_an_unrelated_robot_collision_dataset() -> No
     class MixedDomainVerifier:
         def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
             domain_text = (
-                "CNC machining head accidental contact current time-series."
+                "This dataset contains recorded CNC machining head accidental contact "
+                "current time-series."
                 if "CNC" in candidate.name
-                else "Industrial robot joint accidental contact torque time-series."
+                else "This dataset contains recorded industrial robot joint accidental "
+                "contact torque time-series."
             )
             document = NativeDocument(
                 source_url=str(candidate.canonical_url),

@@ -47,6 +47,8 @@ def profile(candidate_id: str = "ds_0123456789ab") -> DatasetProfile:
         labels=["collision", "contact", "free"],
         sample_rate_hz=1_000,
         channel_count=7,
+        is_dataset_artifact=True,
+        dataset_identity_reason="Native record hosts measurement files",
         has_time_series_files=True,
         schema_documented=True,
         acquisition_feasible=True,
@@ -80,6 +82,7 @@ def complete_evidence(candidate_id: str) -> list[EvidenceRecord]:
         "sample_rate_hz": "1000",
         "schema": "documented",
         "total_size_bytes": "9100000000",
+        "dataset_identity": "dataset artifact",
     }
     return [
         EvidenceRecord(
@@ -276,4 +279,23 @@ def test_missing_license_and_unusable_files_fail_hard_gates() -> None:
 
     failed = {gate.gate for gate in assessment.gates if not gate.passed}
     assert {"license", "time_series_files"}.issubset(failed)
+    assert assessment.tier is CandidateTier.REJECT
+
+
+def test_non_dataset_source_fails_identity_gate_despite_an_otherwise_high_score() -> None:
+    guide = profile().model_copy(
+        update={
+            "is_dataset_artifact": False,
+            "dataset_identity_reason": "Primary source is a guide",
+        }
+    )
+
+    assessment = assess_candidate(
+        guide,
+        [requirement(RequirementCategory.TASK_LABELS, "collision")],
+        complete_evidence(guide.candidate_id),
+    )
+
+    identity = next(gate for gate in assessment.gates if gate.gate == "dataset_identity")
+    assert identity.passed is False
     assert assessment.tier is CandidateTier.REJECT

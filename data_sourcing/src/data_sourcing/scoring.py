@@ -136,6 +136,7 @@ def assess_candidate(
         requirement_is_evidenced(item, profile, evidence) for item in license_requirements
     )
     revision_evidence = _evidence_for(evidence, profile.candidate_id, "revision")
+    identity_evidence = _evidence_for(evidence, profile.candidate_id, "dataset_identity")
     file_evidence = _evidence_for(evidence, profile.candidate_id, "file_extensions")
     label_evidence = _evidence_for(evidence, profile.candidate_id, "labels")
     domain_evidence = _evidence_for(evidence, profile.candidate_id, "domains")
@@ -157,6 +158,16 @@ def assess_candidate(
         evidence_ids=license_evidence,
     )
     gates = [
+        GateResult(
+            gate="dataset_identity",
+            passed=profile.is_dataset_artifact and bool(identity_evidence),
+            reason=(
+                "Primary source is a verified dataset artifact"
+                if profile.is_dataset_artifact and identity_evidence
+                else profile.dataset_identity_reason
+            ),
+            evidence_ids=identity_evidence,
+        ),
         GateResult(
             gate="provenance",
             passed=provenance_passed,
@@ -311,7 +322,10 @@ def candidate_is_approvable(assessment: CandidateAssessment) -> bool:
     )
 
 
-def candidate_rank_key(assessment: CandidateAssessment) -> tuple[bool, int, int, str]:
+def candidate_rank_key(assessment: CandidateAssessment) -> tuple[bool, bool, int, int, str]:
+    identity_gate = next(
+        (gate for gate in assessment.gates if gate.gate == "dataset_identity"), None
+    )
     domain_gate = next((gate for gate in assessment.gates if gate.gate == "domain"), None)
     tier_rank = {
         CandidateTier.RECOMMEND: 0,
@@ -319,6 +333,7 @@ def candidate_rank_key(assessment: CandidateAssessment) -> tuple[bool, int, int,
         CandidateTier.REJECT: 2,
     }[assessment.tier]
     return (
+        identity_gate is None or not identity_gate.passed,
         domain_gate is not None and not domain_gate.passed,
         tier_rank,
         -assessment.total_score,

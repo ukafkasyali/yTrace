@@ -172,6 +172,11 @@ class DatasetProfile(WireModel):
     labels: list[str] = Field(default_factory=list)
     sample_rate_hz: float | None = Field(default=None, gt=0)
     channel_count: int | None = Field(default=None, ge=1)
+    is_dataset_artifact: bool = False
+    dataset_identity_reason: str = Field(
+        default="Dataset identity has not been verified",
+        max_length=500,
+    )
     has_time_series_files: bool = False
     schema_documented: bool = False
     acquisition_feasible: bool = False
