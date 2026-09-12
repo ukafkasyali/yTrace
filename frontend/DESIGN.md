@@ -32,3 +32,10 @@ rewrite model input or repeatedly shift the chat's validation controls. User-cre
 turns may scroll the conversation once; generation updates do not reset reading
 position. Robot articulation comes from per-recording measured angles, with mapping
 validation scope disclosed. Body and world frame remain schematic.
+
+Comparison is a fourth direct view. It leads with the largest measured change and
+a selectable seven-joint table, followed by a shared-scale torque overlay. Reference
+editing and methodological details are collapsed when a suggestion is available.
+The assistant offers comparison both for the current interval and an answer's saved
+window. Reference normality is never implied by missing publisher annotations;
+next steps ask the engineer to confirm comparable operating conditions.

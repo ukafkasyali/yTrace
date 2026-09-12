@@ -180,3 +180,24 @@ exports distinguish the analysis cutoff from that cursor. **Show onset in 3D**
 shows a valid generated contact onset and responding joint, never impact location.
 The active additional motion catalogue and deployment details are documented in
 [the walkthrough](../docs/submission/UI_WALKTHROUGH.md#deployment-handoff).
+
+## Compare an incident with a reference
+
+Choose **Compare with reference** beside Analyze interval, or open the **Compare**
+tab. The suggested earlier window has no nearby publisher annotation; this does
+not establish normal motion. **Change reference or compare another run** lets you
+choose another available recording and a start time. Both windows have the same
+duration. Match motion phase, payload and operating conditions yourself.
+
+The comparison ranks all seven joints by absolute change in torque range. Select
+a joint to overlay its signed torque and inspect its variability (population
+standard deviation) and mean shift. **Inspect selected signal** opens that joint's
+evidence. **Export comparison** downloads metrics, source intervals, annotations,
+sample counts, method and limitations. An existing answer's comparison button
+uses that answer's saved interval.
+
+Calculations run locally without model inference. Both windows use raw samples
+only when both have full raw coverage; otherwise both use overview samples, which
+can miss short peaks. Different sample rates, missing samples, unequal durations
+and overlapping windows in the same recording are rejected. This supports manual
+before/after investigation, not verified normality, fault diagnosis or repair success.

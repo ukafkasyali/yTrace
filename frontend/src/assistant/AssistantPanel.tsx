@@ -11,7 +11,7 @@ import type { ModelRegistry } from '../services/useModelRegistry';
 import type { AutomaticAnalysisRequest } from '../recordings/markerAnalysis';
 
 type Message = InvestigationAnswer & { id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
-type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; automaticAnalysis?: AutomaticAnalysisRequest; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
+type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; automaticAnalysis?: AutomaticAnalysisRequest; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
   return <div className="answer-brief">{blocks.map((block, index) => {
@@ -22,7 +22,7 @@ function AnswerText({ text }: { text: string }) {
       : <p key={`${heading}-${index}`}>{block.replace(/\n+/g, ' ')}</p>;
   })}</div>;
 }
-export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, automaticAnalysis, onEvidence, onModelWindow, onRobotPrediction }: Props) {
+export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, automaticAnalysis, onEvidence, onModelWindow, onRobotPrediction, onCompare }: Props) {
   const [question, setQuestion] = useState('');
   const [mode, setMode] = useState<'local' | 'assistant'>('assistant');
   const availableThrough = data.recording.durationSeconds;
@@ -98,6 +98,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
   return <section className="assistant-panel" aria-label="Telemetry assistant">
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span></header>
     <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={busy || !assistantAvailable || Boolean(windowIssue)} onClick={() => { setMode('assistant'); void submit('Analyze this robot telemetry window.', { id: crypto.randomUUID(), displayQuestion: 'What happened in this interval?', prompt: 'Analyze this robot telemetry window.', interval, playhead, mode: 'assistant', source: 'OpenTSLM + measurements' }); }}>{busy ? 'Analyzing…' : 'Analyze interval'}</button></div>
+    <button className="text-button compare-current" onClick={() => onCompare(interval)}>Compare with reference <ArrowUpRight size={12}/></button>
     {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Turn a contact event into an investigation.</h3><p>Analyze the selected interval to compare a model interpretation with measured joint signals. Then inspect the evidence and save your findings.</p><p className="intro-limit">Recorded telemetry can suggest what to investigate. It cannot verify a physical cause.</p></div>}
@@ -115,6 +116,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
             {m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}
             {cue && <button className="text-button robot-prediction-action" onClick={() => onRobotPrediction(cue)}>Show onset in 3D <ArrowUpRight size={12}/></button>}
             {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation</summary><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}</details>}
+            {m.status === 'complete' && <button className="text-button" onClick={() => onCompare(m.interval)}>Compare this answer’s window <ArrowUpRight size={12}/></button>}
             {m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export investigation</button>}
             {(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}
           </div></div>

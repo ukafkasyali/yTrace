@@ -281,3 +281,14 @@ compatibility; the old catalogue is `demo_cases.before-motion-replacement.json`.
 The existing canary-v4 service is temporarily on CPU with four compute threads
 following GPU OOM during reload; a teammate's v5b training job occupies the GPU.
 Do not interrupt that training job or claim inference is currently on GPU.
+
+## Reference comparison — 13 September
+
+The frontend supports deterministic incident/reference comparison within a recording
+or across backend-served recordings. Read `frontend/src/comparison/` and the UI
+walkthrough before extending it. Equal-duration windows use matched resolution:
+both raw when fully covered, otherwise both overview. Reference suggestions only
+exclude nearby publisher markers; they do not identify verified normal motion.
+Reports keep measurements and annotations distinct, preserve source intervals and
+describe the method. Manual before/after comparison does not establish causality,
+repair success or safety. This feature makes no new model or training requests.
