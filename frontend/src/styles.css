@@ -341,22 +341,16 @@ input,textarea{caret-color:var(--accent)}
 .view-data .main-workspace{overflow:hidden}
 .view-data .secondary-view{padding:22px 32px 42px;scroll-behavior:smooth}
 .view-data .back-inspect{margin-bottom:12px}
-.data-heading{margin-bottom:0;padding-bottom:22px}
-.pipeline-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));list-style:none;margin:0 0 26px;padding:16px 0;border-bottom:1px solid var(--line)}
-.pipeline-overview li{display:flex;gap:10px;min-width:0;padding:0 18px;border-right:1px solid var(--line)}
-.pipeline-overview li:first-child{padding-left:0}
-.pipeline-overview li:last-child{border-right:0}
-.pipeline-overview li>span{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;border:1px solid #52625b;color:var(--accent);font:500 10px 'IBM Plex Mono',monospace}
-.pipeline-overview li>div{display:flex;flex-direction:column;min-width:0}
-.pipeline-overview strong{font-size:12px;font-weight:500}
-.pipeline-overview small{color:var(--quiet);font-size:10px;line-height:1.4;margin-top:2px}
-.recording-summary,.catalog-summary{margin-bottom:28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.data-heading{margin-bottom:8px;padding-bottom:12px;border-bottom:0}
+.data-heading>svg,.view-data .section-heading>svg{color:var(--quiet)}
+.view-data .candidate-role{color:var(--quiet)!important}
+.recording-summary,.catalog-summary{margin-bottom:28px;border-bottom:1px solid var(--line)}
 .recording-summary>summary,.catalog-summary>summary{display:flex;align-items:center;justify-content:space-between;gap:18px;list-style:none;cursor:pointer;padding:13px 0;color:var(--text)}
 .recording-summary>summary::-webkit-details-marker,.catalog-summary>summary::-webkit-details-marker{display:none}
 .recording-summary>summary>span,.catalog-summary>summary>span{display:flex;align-items:baseline;gap:12px;min-width:0;color:#c8d1d3}
 .recording-summary>summary strong,.catalog-summary>summary strong{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap}
 .recording-summary>summary small,.catalog-summary>summary small{color:var(--quiet);font-size:10px;text-align:right}
-.recording-summary>summary::after,.catalog-summary>summary::after{content:'+';order:3;color:var(--accent);font-size:16px;line-height:1}
+.recording-summary>summary::after,.catalog-summary>summary::after{content:'+';order:3;color:var(--quiet);font-size:16px;line-height:1}
 .recording-summary[open]>summary::after,.catalog-summary[open]>summary::after{content:'−'}
 .recording-details,.catalog-details{padding:4px 0 20px}
 .recording-details>p:first-child{color:var(--quiet);font-size:12px;line-height:1.6}
@@ -367,10 +361,6 @@ input,textarea{caret-color:var(--accent)}
 .ingestion-handoff{scroll-margin-top:18px}
 .ingestion-handoff>form .field-row{margin-top:7px}
 .ingestion-handoff>form input{min-width:320px}
-.manual-source{margin:14px 0 0;border-top:1px solid var(--line)}
-.manual-source>summary{cursor:pointer;padding:12px 0;color:#cad4d6;font-size:12px}
-.manual-source>p{color:var(--quiet)!important;font-size:11px!important;margin-bottom:10px!important}
-.manual-source form>label{display:block;color:#cbd4d6;font-size:11px}
 .ingestion-progress{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
 .ingestion-progress h3{font-size:12px!important;margin-bottom:10px!important}
 .ingestion-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -385,11 +375,6 @@ input,textarea{caret-color:var(--accent)}
   .app-shell.view-data{height:100dvh;min-height:0;overflow:hidden;padding-bottom:0}
   .view-data .app-body{min-height:0}
   .view-data .secondary-view{padding:14px 16px 32px}
-  .pipeline-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-bottom:22px}
-  .pipeline-overview li{padding:10px 12px;border-bottom:1px solid var(--line)}
-  .pipeline-overview li:nth-child(2){border-right:0}
-  .pipeline-overview li:nth-child(3),.pipeline-overview li:nth-child(4){border-bottom:0}
-  .pipeline-overview li:nth-child(3){padding-left:0}
   .recording-summary>summary,.catalog-summary>summary{align-items:flex-start;flex-wrap:wrap;gap:5px 10px;padding:12px 0}
   .recording-summary>summary>span,.catalog-summary>summary>span{align-items:flex-start;flex-direction:column;gap:2px;max-width:calc(100% - 30px)}
   .recording-summary>summary small,.catalog-summary>summary small{width:100%;order:4;text-align:left}
