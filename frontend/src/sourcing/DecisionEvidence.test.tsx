@@ -51,6 +51,7 @@ function runFixture(): SourcingRun {
     }],
     recommendedCandidateId: 'ds_9be731e6fb6b', gapQueriesUsed: 0, tavilyCreditsUsed: 6,
     approvedCandidateId: null, reviewFeedback: [], reviewIterationsUsed: 0,
+    refinementOutcomes: [],
     executionMode: 'LIVE', errors: [],
     reportMarkdown: '# Dataset sourcing report — raw markdown', manifest: null,
     createdAt: '2026-09-12T12:00:00Z', updatedAt: '2026-09-12T12:01:00Z',
@@ -110,6 +111,31 @@ describe('decision evidence', () => {
     expect(markup).toContain('value="ds_aaaaaaaaaaaa"');
     expect(markup).toContain('What should the scout improve?');
     expect(markup).toContain('Reject and refine');
+  });
+
+  it('explains when refinement found no decision-changing evidence', () => {
+    const run = runFixture();
+    run.reviewFeedback = ['Prioritize free-motion baselines.'];
+    run.reviewIterationsUsed = 1;
+    run.refinementOutcomes = [{
+      iteration: 1,
+      feedback: 'Prioritize free-motion baselines.',
+      query: 'robot collision free-motion baseline dataset',
+      outcome: 'NO_CHANGE',
+      previousRecommendedCandidateId: run.recommendedCandidateId,
+      recommendedCandidateId: run.recommendedCandidateId,
+      newCandidateIds: [],
+      newEvidenceIds: [],
+    }];
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('Refinement 1: no decision change');
+    expect(markup).toContain('No new candidates or native evidence were found');
+    expect(markup).toContain('Robot joint torque measurements remains the recommendation');
+    expect(markup).toContain('robot collision free-motion baseline dataset');
   });
 
   it('keeps approval explicit when no candidate clears mandatory gates', () => {

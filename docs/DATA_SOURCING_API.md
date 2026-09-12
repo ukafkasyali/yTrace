@@ -50,7 +50,10 @@ The `202` response is:
 
 Returns requirements, bounded hypotheses, canonical candidates, verified profiles, evidence,
 deterministic assessments, separate evidence/recommendation confidence, retrieval errors and the
-current status. The frontend should treat IDs as opaque.
+current status. The frontend should treat IDs as opaque. After a reviewer refinement,
+`refinementOutcomes` makes the result explicit: it records the executed query, newly discovered
+candidate and evidence IDs, the recommendation before and after rescoring, and one of
+`RECOMMENDATION_CHANGED`, `EVIDENCE_EXPANDED`, `CANDIDATES_ADDED`, or `NO_CHANGE`.
 
 ### `POST /api/sourcing-runs/{runId}/approvals`
 
@@ -68,6 +71,25 @@ non-empty note is required. Rejection adds a review-directed query and resumes d
 same LangGraph thread, preserving prior candidates and evidence. Up to two reviewer refinements
 are allowed, subject to the original time and Tavily-credit budgets. Repeating the same successful
 approval is safe; other terminal-state approvals return `409 RUN_CONFLICT`.
+
+Reviewer feedback directs the next discovery query; it does not silently alter mandatory gates or
+the deterministic score weights. Newly discovered candidates are considered before previously
+unverified candidates while already verified choices remain available. Therefore a refinement can
+legitimately keep the same recommendation. In that case the response records `NO_CHANGE` rather
+than implying that feedback changed the decision.
+
+```json
+{
+  "iteration": 1,
+  "feedback": "Prioritize free-motion baseline recordings",
+  "query": "robot collision free-motion baseline dataset ...",
+  "outcome": "NO_CHANGE",
+  "previousRecommendedCandidateId": "ds_0123456789ab",
+  "recommendedCandidateId": "ds_0123456789ab",
+  "newCandidateIds": [],
+  "newEvidenceIds": []
+}
+```
 
 ### `GET /api/sourcing-runs/{runId}/report`
 

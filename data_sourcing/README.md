@@ -48,7 +48,9 @@ curl -X POST http://127.0.0.1:8000/api/sourcing-runs/RUN_ID/approvals \
 ```
 
 The reviewer can request at most two refinements, and all cycles share the original Tavily-credit
-and active-research-time budgets.
+and active-research-time budgets. Each resumed run returns a structured `refinementOutcomes`
+entry showing the executed query, evidence delta and whether the deterministic recommendation
+changed. Feedback guides discovery but does not rewrite hard gates or score weights.
 
 Runtime artifacts are written under `var/runs/<run-id>/`. SQLite checkpoints and idempotency keys
 remain under `var/`. Set `SOURCING_DATA_DIR` to relocate all runtime state.

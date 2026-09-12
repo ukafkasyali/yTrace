@@ -1,5 +1,5 @@
 import { ArrowUpRight, Check, CircleX } from 'lucide-react';
-import type { EvidenceRecord, SourcingRun } from '../services';
+import type { EvidenceRecord, RefinementOutcome, SourcingRun } from '../services';
 
 function label(value: string) {
   return value.replaceAll('_', ' ').toLowerCase();
@@ -38,6 +38,38 @@ function decisionReason(run: SourcingRun, candidateId: string) {
   return 'All mandatory gates passed';
 }
 
+function candidateName(run: SourcingRun, candidateId: string | null) {
+  if (!candidateId) return 'No eligible dataset';
+  return run.candidates.find(item => item.id === candidateId)?.name ?? candidateId;
+}
+
+function refinementMessage(run: SourcingRun, refinement: RefinementOutcome) {
+  const current = candidateName(run, refinement.recommendedCandidateId);
+  const candidateCount = refinement.newCandidateIds.length;
+  const evidenceCount = refinement.newEvidenceIds.length;
+  if (refinement.outcome === 'RECOMMENDATION_CHANGED') {
+    return <>{candidateName(run, refinement.previousRecommendedCandidateId)} was replaced by <strong>{current}</strong> after adding {candidateCount} candidate{candidateCount === 1 ? '' : 's'} and {evidenceCount} native evidence record{evidenceCount === 1 ? '' : 's'}.</>;
+  }
+  if (refinement.outcome === 'EVIDENCE_EXPANDED') {
+    return <>The scout added {evidenceCount} native evidence record{evidenceCount === 1 ? '' : 's'} across {candidateCount} new candidate{candidateCount === 1 ? '' : 's'}. <strong>{current} remains the recommendation</strong> after rescoring.</>;
+  }
+  if (refinement.outcome === 'CANDIDATES_ADDED') {
+    return <>{candidateCount} new candidate{candidateCount === 1 ? ' was' : 's were'} found, but no new native evidence cleared verification. <strong>{current} remains the recommendation</strong>.</>;
+  }
+  return <>No new candidates or native evidence were found. <strong>{current} remains the recommendation</strong>; deterministic gates and scores therefore did not change.</>;
+}
+
+function RefinementResults({ run }: { run: SourcingRun }) {
+  if (run.refinementOutcomes.length === 0) return null;
+  return <div className="refinement-results" aria-label="Refinement results">{run.refinementOutcomes.map(refinement =>
+    <article className={`refinement-result refinement-${refinement.outcome.toLowerCase()}`} key={refinement.iteration} role="status">
+      <strong>Refinement {refinement.iteration}: {refinement.outcome === 'RECOMMENDATION_CHANGED' ? 'recommendation changed' : refinement.outcome === 'EVIDENCE_EXPANDED' ? 'evidence expanded' : refinement.outcome === 'CANDIDATES_ADDED' ? 'candidates added' : 'no decision change'}</strong>
+      <p>{refinementMessage(run, refinement)}</p>
+      <details><summary>Search direction</summary><p><span>Reviewer feedback</span>{refinement.feedback}</p><p><span>Executed query</span>{refinement.query}</p></details>
+    </article>,
+  )}</div>;
+}
+
 export default function DecisionEvidence({
   run,
   candidateId = run.recommendedCandidateId ?? undefined,
@@ -61,6 +93,7 @@ export default function DecisionEvidence({
       </div>
       <span className="evidence-count">{run.evidence.length} total native records</span>
     </div>
+    <RefinementResults run={run} />
     <p className="decision-outcome">
       {recommended && recommendedAssessment
         ? <><strong>Recommendation: {recommended.name}</strong> scored {recommendedAssessment.totalScore}/100 and passed every mandatory gate. Verify the linked evidence before approval.</>

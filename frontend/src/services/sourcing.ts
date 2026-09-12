@@ -107,6 +107,17 @@ export type SourcingReview =
   | { decision: 'APPROVE'; candidateId: string; note?: string }
   | { decision: 'REJECT'; note: string };
 
+export type RefinementOutcome = {
+  iteration: number;
+  feedback: string;
+  query: string;
+  outcome: 'RECOMMENDATION_CHANGED' | 'EVIDENCE_EXPANDED' | 'CANDIDATES_ADDED' | 'NO_CHANGE';
+  previousRecommendedCandidateId: string | null;
+  recommendedCandidateId: string | null;
+  newCandidateIds: string[];
+  newEvidenceIds: string[];
+};
+
 export type SourcingRun = {
   runId: string;
   status: SourcingStatus;
@@ -122,6 +133,7 @@ export type SourcingRun = {
   approvedCandidateId: string | null;
   reviewFeedback: string[];
   reviewIterationsUsed: number;
+  refinementOutcomes: RefinementOutcome[];
   gapQueriesUsed: number;
   tavilyCreditsUsed: number;
   executionMode: 'LIVE' | 'CACHED' | 'PARTIAL';
@@ -195,6 +207,16 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
     && run.reviewFeedback.every(item => typeof item === 'string')
     && Number.isInteger(run.reviewIterationsUsed) && (run.reviewIterationsUsed as number) >= 0
     && (run.reviewIterationsUsed as number) <= 2
+    && Array.isArray(run.refinementOutcomes) && run.refinementOutcomes.length <= 2
+    && run.refinementOutcomes.every(item => isRecord(item)
+      && Number.isInteger(item.iteration) && (item.iteration as number) >= 1
+      && (item.iteration as number) <= 2 && typeof item.feedback === 'string'
+      && typeof item.query === 'string'
+      && ['RECOMMENDATION_CHANGED', 'EVIDENCE_EXPANDED', 'CANDIDATES_ADDED', 'NO_CHANGE'].includes(item.outcome as string)
+      && (item.previousRecommendedCandidateId === null || typeof item.previousRecommendedCandidateId === 'string')
+      && (item.recommendedCandidateId === null || typeof item.recommendedCandidateId === 'string')
+      && Array.isArray(item.newCandidateIds) && item.newCandidateIds.every(id => typeof id === 'string')
+      && Array.isArray(item.newEvidenceIds) && item.newEvidenceIds.every(id => typeof id === 'string'))
     && Array.isArray(run.errors) && typeof run.reportMarkdown === 'string'
     && (run.manifest === null || isSourcingManifest(run.manifest));
 }
