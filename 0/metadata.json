@@ -1,0 +1,62 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BWQMDFQTG07B7C4A5E71PR",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:45:14.908335Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "AGENTS.md",
+    "docs/submission/UI_WALKTHROUGH.md",
+    "docs/submission/demo/motion-activation.json",
+    "frontend/README.md",
+    "frontend/public/robot/kuka/POSITION_VALIDATION.md",
+    "inference/README.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "d199909e8a90",
+  "checkpoint_transcript_start": 1812,
+  "transcript_lines_at_start": 1812,
+  "compact_transcript_start": 224,
+  "token_usage": {
+    "input_tokens": 5285,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1558943,
+    "output_tokens": 2216,
+    "api_call_count": 9
+  },
+  "session_metrics": {
+    "turn_count": 12
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:45:14.582613Z",
+    "agent_lines": 208,
+    "agent_removed": 25,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 208,
+    "total_lines_changed": 233,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    }
+  ]
+}
