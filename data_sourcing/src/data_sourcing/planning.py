@@ -231,15 +231,7 @@ class RequirementPlanner:
                 priority=RequirementPriority.MUST,
                 category=RequirementCategory.PROVENANCE,
                 is_system_required=True,
-            ),
-            ResearchRequirement(
-                id="req_time_series",
-                label="Usable time-series files",
-                description="Downloadable files contain machine-readable telemetry.",
-                priority=RequirementPriority.MUST,
-                category=RequirementCategory.MODALITY,
-                is_system_required=True,
-            ),
+            )
         ]
 
     def confirm_requirements(
@@ -247,7 +239,7 @@ class RequirementPlanner:
         definitions: list[RequirementDefinition],
     ) -> list[ResearchRequirement]:
         system_requirements = self._system_requirements()
-        fixed_categories = {RequirementCategory.PROVENANCE, RequirementCategory.MODALITY}
+        fixed_categories = {RequirementCategory.PROVENANCE}
         fixed_ids = {item.id for item in system_requirements}
         configurable = [
             ResearchRequirement.model_validate(
@@ -303,6 +295,13 @@ class RequirementPlanner:
     ) -> list[ResearchRequirement]:
         requirements = [
             *self._system_requirements(),
+            ResearchRequirement(
+                id="req_time_series",
+                label="Usable time-series files",
+                description="Downloadable files contain machine-readable telemetry.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.MODALITY,
+            ),
             ResearchRequirement(
                 id="req_license",
                 label="Explicit licence",

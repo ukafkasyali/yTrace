@@ -65,6 +65,21 @@ def test_planner_always_adds_hard_gate_requirements() -> None:
     assert task.expected_values == ["collision", "free"]
 
 
+def test_time_series_requirement_is_configurable_in_preview() -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+
+    preview = planner.preview(
+        RequirementPreviewRequest(
+            brief="Find public robot collision telemetry for observability analysis."
+        )
+    )
+
+    time_series = next(item for item in preview.requirements if item.id == "req_time_series")
+    assert time_series.category is RequirementCategory.MODALITY
+    assert time_series.priority is RequirementPriority.MUST
+    assert time_series.is_system_required is False
+
+
 def test_preview_omits_an_empty_task_label_requirement_and_adds_custom_text() -> None:
     planner = RequirementPlanner(Settings(_env_file=None))
 

@@ -170,15 +170,20 @@ def assess_candidate(
             else "Canonical version or provenance missing",
             evidence_ids=revision_evidence,
         ),
-        GateResult(
-            gate="time_series_files",
-            passed=files_passed,
-            reason=(
-                "Time-series files found" if files_passed else "No usable time-series files found"
-            ),
-            evidence_ids=file_evidence,
-        ),
     ]
+    if any(item.category is RequirementCategory.MODALITY for item in required):
+        gates.append(
+            GateResult(
+                gate="time_series_files",
+                passed=files_passed,
+                reason=(
+                    "Time-series files found"
+                    if files_passed
+                    else "No usable time-series files found"
+                ),
+                evidence_ids=file_evidence,
+            )
+        )
     if license_requirements:
         gates.append(
             GateResult(

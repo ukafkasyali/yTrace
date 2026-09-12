@@ -324,6 +324,22 @@ def test_preferred_schema_and_license_requirements_do_not_create_hard_gates() ->
     assert {gate.gate for gate in assessment.gates} == {
         "dataset_identity",
         "provenance",
-        "time_series_files",
     }
+    assert assessment.missing_requirement_ids == []
+
+
+def test_preferred_time_series_requirement_does_not_create_a_hard_gate() -> None:
+    time_series = requirement(RequirementCategory.MODALITY).model_copy(
+        update={"priority": RequirementPriority.SHOULD}
+    )
+    incomplete = profile().model_copy(update={"has_time_series_files": False})
+    records = [
+        item
+        for item in complete_evidence(incomplete.candidate_id)
+        if item.claim_key != "file_extensions"
+    ]
+
+    assessment = assess_candidate(incomplete, [time_series], records)
+
+    assert "time_series_files" not in {gate.gate for gate in assessment.gates}
     assert assessment.missing_requirement_ids == []
