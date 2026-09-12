@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BHAZWAFCQW66RZCM29VQRQ",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "data_sourcing/src/data_sourcing/adapters/__init__.py",
+    "data_sourcing/src/data_sourcing/adapters/canonicalize.py",
+    "data_sourcing/src/data_sourcing/config.py",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/tests/test_adapters.py",
+    "data_sourcing/tests/test_graph.py",
+    "tasks/SPEC-dataset-source-integrity.md",
+    "tasks/plan.md",
+    "tasks/todo.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2050872,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 122696791,
+    "output_tokens": 444468,
+    "api_call_count": 929
+  }
+}
