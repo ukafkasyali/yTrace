@@ -1,0 +1,57 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BMGV4VPZ1BBTMXA0P7YYE7",
+  "session_id": "01a09729-0ec2-7121-b9b1-85cbd1053e64",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T20:21:43.302342Z",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "data_sourcing/README.md",
+    "data_sourcing/src/data_sourcing/api.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/src/data_sourcing/planning.py",
+    "data_sourcing/src/data_sourcing/service.py",
+    "data_sourcing/tests/test_api.py",
+    "data_sourcing/tests/test_planning.py",
+    "docs/DATA_SOURCING_API.md",
+    "frontend/src/services/index.test.ts",
+    "frontend/src/services/index.ts",
+    "frontend/src/services/sourcing.ts",
+    "frontend/src/sourcing/DatasetScout.tsx",
+    "frontend/src/sourcing/RequirementEditor.test.tsx",
+    "frontend/src/sourcing/RequirementEditor.tsx",
+    "frontend/src/styles.css",
+    "frontend/vite.config.ts",
+    "tasks/plan.md",
+    "tasks/todo.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "7fcb7ddecfd2",
+  "checkpoint_transcript_start": 316,
+  "transcript_lines_at_start": 316,
+  "compact_transcript_start": 41,
+  "token_usage": {
+    "input_tokens": 132826,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 9265176,
+    "output_tokens": 29495,
+    "api_call_count": 78
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T20:21:43.09424Z",
+    "agent_lines": 450,
+    "agent_removed": 41,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 450,
+    "total_lines_changed": 491,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
