@@ -94,12 +94,12 @@ function Workbench({ data, datasetId, onOpenRecording, cases, onOpenCase, caseLo
   function seek(value: number) {
     replay.seek(value); setFollowing(true); setHighlighted([]); setSelectionError('');
   }
-  function marker(e: Marker) { const analysis = createMarkerAnalysis(data, e, replay.playhead, modelRevision); replay.seek(analysis.playhead); setInterval(analysis.interval); setAutomaticAnalysis(analysis); setFollowing(false); setHighlighted([]); setSelectionError(''); }
+  function marker(e: Marker) { const analysis = createMarkerAnalysis(data, e, 0, modelRevision); replay.seek(analysis.playhead); setInterval(analysis.interval); setAutomaticAnalysis(analysis); setFollowing(false); setHighlighted([]); setSelectionError(''); }
   function navigateMarker(direction: number) {
     const target = direction > 0 ? data.events.find(e => e.timeSeconds > replay.playhead) : [...data.events].reverse().find(e => e.timeSeconds < (effectiveInterval.start || replay.playhead));
     if (target) marker(target);
   }
-  function evidence(e: EvidenceLink) { if (e.interval.start < 0 || e.interval.end > data.recording.durationSeconds || e.interval.end <= e.interval.start) return; replay.seek(Math.max(replay.playhead, e.interval.end)); setInterval({ ...e.interval }); setFollowing(false); setHighlighted(e.channelIds?.length ? e.channelIds : [e.channelId]); setView('inspect'); setMobile('signals'); setVisualMode('signals'); }
+  function evidence(e: EvidenceLink) { if (e.interval.start < 0 || e.interval.end > data.recording.durationSeconds || e.interval.end <= e.interval.start) return; replay.seek(e.interval.end); setInterval({ ...e.interval }); setFollowing(false); setHighlighted(e.channelIds?.length ? e.channelIds : [e.channelId]); setView('inspect'); setMobile('signals'); setVisualMode('signals'); }
   return <div className="app-shell">
     <header className="app-header"><a className="brand" href="#" onClick={e => { e.preventDefault(); setView('inspect'); }}><Activity size={23} strokeWidth={1.8}/><span>trace</span></a><div className="header-divider"/><span className="project-name">Investigate recorded contact</span><span className="replay-label"><RotateCcw size={11}/>Replay</span><div className="header-right"><span className="model-status"><CpuStatus/>{availability}</span><button className="btn btn-subtle" onClick={() => { replay.pause(); setView('data'); }}><Database size={14}/>Data source</button></div></header>
     <div className="app-body">

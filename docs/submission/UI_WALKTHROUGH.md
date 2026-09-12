@@ -15,7 +15,7 @@ not an additional accuracy benchmark.
 4. Read the compact generated prediction first and **Measured torque** beneath it.
    They remain different sources. **Model & input details** retains the full model
    response, raw generation, tool steps and the **1,024-sample input receipt**.
-5. Click **Inspect 7 input channels** to return to the answer's exact input window.
+5. Click **Inspect 7 input channels** to return to the answer's exact input window and move the robot cursor to its end.
    **Export investigation** saves the answer, annotations, calculations and receipt.
 6. Press **Play replay**. Recorded articulation and plots advance, while the answer
    and investigation interval stay fixed. **Select at cursor** explicitly changes
