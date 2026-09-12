@@ -2,7 +2,7 @@
 
 ## Scope and layout
 
-The inspected source is `/home/ugur/data/collision-batch-01`. It is already extracted; no archive is present inside that directory. It contains five timestamp-named run directories:
+The inspected source is referred to as `$KUKA_PART1_ROOT`. It is already extracted; no archive is present inside that directory. It contains five timestamp-named run directories:
 
 - `03-15-12-53`
 - `03-15-13-08`
