@@ -1,7 +1,9 @@
 import hashlib
+import io
 import json
 import tempfile
 import unittest
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,6 +23,7 @@ from dataset_profiler.ingestion import (
     IngestionService,
     IngestionState,
     ManifestContractError,
+    SafeArchiveExtractor,
     ZenodoAcquirer,
     parse_manifest,
 )
@@ -304,8 +307,9 @@ class FailingResolver:
 
 
 class FakeAcquirer:
-    def __init__(self, contents: dict[str, bytes]):
+    def __init__(self, contents: dict[str, bytes], cache_dir: Path):
         self.contents = contents
+        self.cache_dir = cache_dir
         self.calls: list[str] = []
         self.cached: set[str] = set()
         self.fail_once: set[str] = set()
@@ -318,10 +322,17 @@ class FakeAcquirer:
         content = self.contents[asset.asset_id]
         digest = hashlib.sha256(content).hexdigest()
         self.cached.add(digest)
-        return AcquiredAsset(asset.asset_id, len(content), digest, Path("unused"))
+        path = self.verified_content_path(digest)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+        return AcquiredAsset(asset.asset_id, len(content), digest, path)
 
     def has_verified_content(self, content_sha256: str, size_bytes: int) -> bool:
-        return content_sha256 in self.cached
+        path = self.verified_content_path(content_sha256)
+        return content_sha256 in self.cached and path.is_file() and path.stat().st_size == size_bytes
+
+    def verified_content_path(self, content_sha256: str) -> Path:
+        return self.cache_dir / "content" / content_sha256[:2] / content_sha256
 
 
 class AcquisitionWorkerTests(unittest.TestCase):
@@ -335,7 +346,10 @@ class AcquisitionWorkerTests(unittest.TestCase):
         self.job, _ = self.service.create(
             CreateIngestion(approved_source_id="src_0123456789abcdef01234567")
         )
-        self.acquirer = FakeAcquirer({"asset_0123456789abcdef": content})
+        self.acquirer = FakeAcquirer(
+            {"asset_0123456789abcdef": content},
+            Path(self.temporary.name) / "cache",
+        )
         self.worker = AcquisitionWorker(self.service.jobs, self.resolver, self.acquirer)
 
     def tearDown(self) -> None:
@@ -411,6 +425,56 @@ class AcquisitionWorkerTests(unittest.TestCase):
             self.service.jobs.get(claimed.ingestion_id).state,
             IngestionState.QUEUED,
         )
+
+    def test_worker_extracts_archive_before_inventory(self) -> None:
+        archive_buffer = io.BytesIO()
+        with zipfile.ZipFile(archive_buffer, "w") as archive:
+            archive.writestr("nested/signals.csv", "time,joint\n0,1\n")
+        content = archive_buffer.getvalue()
+        payload = json.loads(CONTRACT_FIXTURE.read_text(encoding="utf-8"))
+        payload["assets"][0].update(
+            {
+                "name": "signals.zip",
+                "sizeBytes": len(content),
+                "providerLocator": "zenodo:123:signals.zip",
+                "downloadUrl": "https://zenodo.org/api/files/123/signals.zip",
+                "sourceChecksum": {
+                    "algorithm": "md5",
+                    "value": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                },
+            }
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            resolver = FakeResolver(payload)
+            service = IngestionService(root, resolver)
+            job, _ = service.create(
+                CreateIngestion(approved_source_id="src_0123456789abcdef01234567")
+            )
+            acquirer = FakeAcquirer({"asset_0123456789abcdef": content}, root / "cache")
+            worker = AcquisitionWorker(
+                service.jobs,
+                resolver,
+                acquirer,
+                extractor=SafeArchiveExtractor(root / "cache"),
+            )
+
+            result = worker.run_once()
+
+            assert result is not None
+            self.assertEqual(result.state, IngestionState.INSPECTING)
+            receipt = service.jobs.list_receipts(job.ingestion_id)[0]
+            extracted = (
+                root
+                / "cache"
+                / "extracted"
+                / receipt.content_sha256[:2]
+                / receipt.content_sha256
+                / "nested"
+                / "signals.csv"
+            )
+            self.assertEqual(extracted.read_text(), "time,joint\n0,1\n")
+            service.close()
 
 
 class IngestionServiceTests(unittest.TestCase):

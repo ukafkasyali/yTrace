@@ -187,14 +187,14 @@ limits.
 
 **Acceptance criteria:**
 
-- [ ] Identical content is reused across jobs without conflating source receipts.
-- [ ] Traversal, absolute paths, symlinks, hard links, devices, bombs, and truncation are rejected.
-- [ ] Failed jobs leave no ready directory or ambiguous receipt.
+- [x] Identical content is reused across jobs without conflating source receipts.
+- [x] Traversal, absolute paths, symlinks, hard links, devices, bombs, and truncation are rejected.
+- [x] Failed jobs leave no ready directory or ambiguous receipt.
 
 **Verification:**
 
-- [ ] Synthetic archive tests cover all guards and valid nested data.
-- [ ] Cache retention and cleanup are documented before deployment.
+- [x] Synthetic archive tests cover all guards and valid nested data.
+- [x] Cache retention and cleanup are documented before deployment.
 
 **Dependencies:** Task 6
 

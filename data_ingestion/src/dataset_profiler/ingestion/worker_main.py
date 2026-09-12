@@ -5,6 +5,7 @@ import os
 import time
 from pathlib import Path
 
+from .archive import SafeArchiveExtractor
 from .jobs import IngestionJobStore
 from .providers import ProviderAcquirer
 from .service import HttpApprovedSourceResolver
@@ -29,7 +30,12 @@ def main() -> int:
         github_token=os.environ.get("GITHUB_TOKEN"),
         hugging_face_token=os.environ.get("HF_TOKEN"),
     )
-    worker = AcquisitionWorker(jobs, resolver, acquirer)
+    worker = AcquisitionWorker(
+        jobs,
+        resolver,
+        acquirer,
+        extractor=SafeArchiveExtractor(data_dir / "cache"),
+    )
     try:
         worker.recover_interrupted()
         while True:

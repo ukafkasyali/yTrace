@@ -83,6 +83,12 @@ class ProviderAcquirer:
     def has_verified_content(self, content_sha256: str, size_bytes: int) -> bool:
         return self.zenodo.has_verified_content(content_sha256, size_bytes)
 
+    def verified_content_path(self, content_sha256: str) -> Path:
+        path = self.content_dir / content_sha256[:2] / content_sha256
+        if not path.is_file():
+            raise AcquisitionError("Verified content is unavailable")
+        return path
+
     def acquire(self, manifest: ApprovedManifest, asset: ManifestAsset) -> AcquiredAsset:
         if manifest.source_kind is SourceKind.ZENODO:
             return self.zenodo.acquire(SourceKind.ZENODO, asset)

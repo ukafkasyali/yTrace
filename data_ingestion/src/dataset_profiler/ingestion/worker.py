@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Protocol
 
 from .acquisition import AcquiredAsset, AcquisitionError
+from .archive import ArchiveError, SafeArchiveExtractor
 from .contracts import ApprovedManifest, ManifestAsset
 from .jobs import (
     AssetReceipt,
@@ -24,6 +26,8 @@ class AssetAcquirer(Protocol):
 
     def has_verified_content(self, content_sha256: str, size_bytes: int) -> bool: ...
 
+    def verified_content_path(self, content_sha256: str) -> Path: ...
+
 
 class AcquisitionWorker:
     def __init__(
@@ -31,10 +35,12 @@ class AcquisitionWorker:
         jobs: IngestionJobStore,
         resolver: ApprovedSourceResolver,
         acquirer: AssetAcquirer,
+        extractor: SafeArchiveExtractor | None = None,
     ):
         self.jobs = jobs
         self.resolver = resolver
         self.acquirer = acquirer
+        self.extractor = extractor
 
     def recover_interrupted(self) -> int:
         return self.jobs.requeue_interrupted_acquisitions()
@@ -65,12 +71,30 @@ class AcquisitionWorker:
                 if acquired.asset_id != asset.asset_id or acquired.size_bytes != asset.size_bytes:
                     raise AcquisitionError("Acquirer returned content for another approved asset")
                 self.jobs.record_receipt(self._receipt(job, asset, acquired))
+            if self.extractor is not None:
+                receipts = {
+                    receipt.asset_id: receipt
+                    for receipt in self.jobs.list_receipts(job.ingestion_id)
+                }
+                for asset_id in job.asset_ids:
+                    asset = assets[asset_id]
+                    if self._is_archive(asset.name):
+                        receipt = receipts[asset_id]
+                        self.extractor.extract(
+                            self.acquirer.verified_content_path(receipt.content_sha256),
+                            receipt.content_sha256,
+                        )
             return self.jobs.set_state(
                 job.ingestion_id,
                 IngestionState.INSPECTING,
                 f"Verified {len(job.asset_ids)} approved asset(s); queued for inventory",
             )
-        except (AcquisitionError, ApprovedSourceResolutionError, IngestionJobConflict):
+        except (
+            AcquisitionError,
+            ApprovedSourceResolutionError,
+            ArchiveError,
+            IngestionJobConflict,
+        ):
             return self.jobs.set_state(
                 job.ingestion_id,
                 IngestionState.FAILED,
@@ -83,6 +107,11 @@ class AcquisitionWorker:
                 "Acquisition failed because the worker encountered an internal error",
             )
             raise
+
+    @staticmethod
+    def _is_archive(name: str) -> bool:
+        lower = name.casefold()
+        return lower.endswith((".zip", ".tar", ".tar.gz", ".tar.zst"))
 
     @staticmethod
     def _verify_job_manifest(job: IngestionJob, resolved: ResolvedApprovedSource) -> None:

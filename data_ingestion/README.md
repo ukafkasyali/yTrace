@@ -85,6 +85,19 @@ verifies LFS SHA-256 when present, and rejects unresolved LFS pointer text. Prov
 DNS are revalidated at every hop. Optional `GITHUB_TOKEN` and `HF_TOKEN` values are read only by the
 worker and never persisted in manifests or receipts.
 
+ZIP, TAR, TAR.GZ, and TAR.ZST assets are expanded into the same content-addressed cache before
+inventory. Extraction writes into isolated staging and atomically publishes only after every member
+passes file-count, size, expansion-ratio, path-depth, and path-length limits. Absolute/traversal
+paths, duplicate paths, encryption, symlinks, hard links, devices, and other special members are
+rejected. The extraction marker contains only relative paths, sizes, and hashes and is revalidated
+before reuse.
+
+The cache is intentionally retained while any ingestion receipt refers to it; there is no automatic
+age-based deletion. Operators may remove an unreferenced `cache/content/<prefix>/<sha256>` and its
+matching `cache/extracted/<prefix>/<sha256>` only while the API and worker are stopped. A later
+explicit retry safely reacquires missing content. Staging directories are temporary and are removed
+after success or failure.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and
