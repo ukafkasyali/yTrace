@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BC3VFRR9PQRWWTYE63ZD3E",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_sourcing/src/data_sourcing/config.py",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/src/data_sourcing/scoring.py",
+    "data_sourcing/tests/test_graph.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 76205,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 8836564,
+    "output_tokens": 21786,
+    "api_call_count": 48
+  }
+}
