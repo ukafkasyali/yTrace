@@ -1,0 +1,122 @@
+# Frontend integration handoff
+
+Samet owns the dashboard. Uğur and Atakan provide ingestion and recording access; Atakan, Uğur and Ece provide model inference. The frontend currently replays a real measured recording and calculates local numerical answers. Model inference, ingestion and their progress are not simulated. Service clients are implemented, but no real backend integration has been verified. Nothing here requires a backend framework change.
+
+The implementation contract is `frontend/src/services/index.ts`. Configure `VITE_API_BASE_URL` with the API prefix (for example `/api`); without it, backend controls remain disconnected. Setting a prefix enables requests but is not a health check. See `frontend/README.md` for development setup and CORS limitations.
+
+## Shared data contract
+
+Use opaque, stable string IDs. Times are **seconds from recording start**, including event times and evidence links. Units belong to each channel; torque is `Nm`. Never normalize the values sent for display without also supplying the transform. All intervals use `[startSec, endSec)`.
+
+```ts
+type WindowRef = {
+  datasetId: string;
+  recordingId: string;
+  startSec: number;
+  endSec: number;
+  channelIds: string[];
+};
+
+type Channel = { id: string; name: string; unit: string; sampleRateHz: number };
+type Dataset = { id: string; name: string; sourceUrl?: string; revision: string };
+type Recording = {
+  id: string; datasetId: string; name: string; durationSec: number;
+  channels: Channel[];
+};
+
+type SignalWindow = {
+  window: WindowRef;
+  series: { channelId: string; timeSec: number[]; values: (number | null)[] }[];
+  resolution: "raw" | "display";
+  aggregation?: string; // e.g. min/max envelope; never silently claim raw samples
+};
+
+type SignalEvent = {
+  id: string; recordingId: string; startSec: number; endSec?: number;
+  channelIds: string[]; label: string;
+  origin: "publisher_annotation" | "model_prediction" | "derived_statistic";
+  source: string; // annotation version, model/checkpoint, or calculation version
+  confidence?: number; // only when supplied and defined by the producer
+};
+
+type Evidence = {
+  id: string; window: WindowRef; eventId?: string;
+  label: string; value?: number; unit?: string;
+  source: string; // calculation version, annotation source, or model checkpoint
+};
+```
+
+Channel IDs must remain stable across retrieval, inference and chart rendering. The wire format preserves gaps as `null`, not zero; the current seven-channel viewer rejects gapped or unsynchronized recordings with an explicit message. Reject mismatched sample lengths and invalid intervals. A point annotation is not automatically an exact physical onset label. The current event strips render only `publisher_annotation` entries; prediction and derived-statistic overlays are a later UI addition. Evidence links act on the open recording's interval and channels; references to another recording are currently ignored rather than switching context.
+
+## Implemented client routes
+
+The routes below are requested by the implemented service client with `/api` as its configured prefix. The local JSON fixture has a separate loader and remains available without a backend. If the backend already has different routes, adapt this client explicitly.
+
+| Adapter method | Endpoint | Result |
+| --- | --- | --- |
+| `listDatasets()` | `GET /api/datasets` | `Dataset[]` |
+| `searchDatasets(query)` | `GET /api/datasets/search?query=…` | `{ id, name, sourceUrl, description?, revision? }[]` |
+| `listRecordings(datasetId)` | `GET /api/datasets/:id/recordings` | `Recording[]` |
+| `getWindow(recordingId, startSec, endSec, channelIds, maxPoints)` | `GET /api/recordings/:id/signals` | `SignalWindow`; query keys are `startSec`, `endSec`, comma-separated `channelIds`, and `maxPoints` |
+| `getEvents(recordingId)` | `GET /api/recordings/:id/events` | `SignalEvent[]` |
+| `listModels()` | `GET /api/models` | model IDs, labels, availability and capabilities |
+| `startQuery(request)` | `POST /api/queries` | `{ queryId, streamUrl }` |
+| `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
+| `startImport(sourceUrl)` | `POST /api/ingestions` | `{ ingestionId }` |
+| `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion progress and validation report |
+
+Signal decimation is for display only. Backend model inference and numerical evidence should use original data for the same window. Recording responses include total duration even when only a preview window is returned. The current viewer initially requests the whole recording with a 200,000-point budget; it does not yet retrieve raw windows on demand. Local analysis on a returned display series explicitly reports that reduced resolution.
+
+## Assistant and direct-model modes
+
+```ts
+type QueryRequest = {
+  mode: "assistant" | "direct";
+  modelId?: string; // required in direct mode
+  question: string;
+  window: WindowRef;
+  playheadSec: number; // finite; window.endSec must be <= this playback cursor
+  conversationId?: string;
+};
+```
+
+**Assistant mode:** the LLM can call TSLM inference, CNN classification, exact signal statistics and document/dataset retrieval. The server controls tool availability. Return the final answer and evidence separately. Display brief observable tool progress such as “Computing joint ranges”; do not expose private chain-of-thought.
+
+**Direct mode:** the comparison workspace submits the same captured question/window to every available model. Expected IDs are `cnn-1d`, `direct-llm` and `opentslm`. Model metadata is `{ id, label, available, capabilities, reason?, revision? }`, with capabilities drawn from `language`, `classification` and `localization`. OpenTSLM and a direct LLM may produce language; CNN results use typed labels/scores. Unavailable models are disabled with a reason. Do not fabricate confidence or present predictions as verified measurements.
+
+The frontend sends the selected window explicitly. Updating chart selection must not silently change an in-flight query; its answer retains the original window and model provenance.
+
+## Streaming and failure behavior
+
+After creating a query, consume its `streamUrl` as SSE. Its origin must match the configured API origin. Each JSON event contains an increasing decimal-string `id`, `queryId`, `type` and object `payload`. SSE `id` and `event` fields can supply the ID and type if omitted from JSON; when both IDs are present they must agree. All events in a stream must keep the same query identity.
+
+| Type | Payload |
+| --- | --- |
+| `tool.started` | `{ callId, tool, label }` |
+| `tool.completed` | `{ callId, summary, evidence?: Evidence[] }` |
+| `answer.delta` | `{ text }` |
+| `answer.completed` | `{ answer?, evidence?: Evidence[], modelId?, modelRevision?, labels?: { label, score? }[] }`; the final answer may use accumulated deltas |
+| `query.error` | `{ code, message, retryable }` |
+| `query.cancelled` | `{}` |
+
+Completion, error and cancellation are terminal. The client ignores duplicate/older IDs and late events from replaced queries. Closing the browser stream is not server cancellation: the frontend also calls the cancellation endpoint. Partial output stays visible with an error or cancellation state. Ending a stream before a terminal event raises “Connection lost before the answer completed.” There is no resume or `Last-Event-ID` implementation. “Use this question again” returns the text to the composer; sending it creates a new query with the current selection.
+
+Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP errors. Distinguish unavailable model, unsupported question, invalid window, missing recording and inference failure. No successful sample response should substitute for a failed live request.
+
+## Ingestion visibility and security
+
+Ingestion states: `queued → inspecting → mapping → validating → importing → ready`, with `needs_input`, `failed` and `cancelled` branches. `POST /ingestions` receives `{ sourceUrl }` and returns `{ ingestionId }`. Poll responses include `{ ingestionId, state, sourceUrl }` plus optional `sourceRevision`, `datasetId`, `datasetIds`, `progress`, `steps: { label, completed }[]`, `mappings: { source, channelId?, unit? }[]`, `warnings` and `message`. Only provide percentage progress when the backend can measure it. The UI polls jobs and displays reported states; it does not implement ingestion-job cancellation or interactive mapping edits yet.
+
+An ingestion agent proposes mappings; deterministic validators check them. Unknown units or ambiguous channels produce `needs_input`, not invented metadata. Retrieval results identify their source documents separately from signal evidence. Server-side URL fetching must reject private/local network targets and enforce size/type limits.
+
+Keep model keys and credentials on the server, never in `VITE_*` variables or browser code. Prefer a same-origin API with server-managed sessions. Do not log raw credentials or expose tracebacks in UI errors.
+
+## First integration acceptance check
+
+1. Load one real recording and verify seven synchronized channels, units and timing; confirm gaps are rejected rather than filled.
+2. Select an interval; confirm inference receives that exact window, playback cursor and model ID in direct mode.
+3. Render publisher annotations; clicking evidence highlights the correct time/channel on the open recording. Do not relabel a prediction as an annotation.
+4. Stream one real query through tool progress, final answer and evidence; test cancellation and a model error.
+5. Run comparison with a CNN and verify its classification labels/scores render alongside available language-model outputs.
+6. Import one supported source; show validation findings and open the resulting dataset only after `ready`.
+7. Retain “Real sample data” for the bundled recording and resolution labels for local calculations. Backend-loaded data must remain recorded replay unless an actual live source is implemented. Never remove disconnected-model notices just to stage a demo.
