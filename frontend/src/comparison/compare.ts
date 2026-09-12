@@ -1,5 +1,12 @@
 import type { DemoData, Interval } from '../types';
 
+/** Preserve the signed value and original timestamp of the largest absolute sample. */
+export function sampledPeak(times: number[], values: number[]) {
+  let index = 0;
+  for (let i = 1; i < values.length; i++) if (Math.abs(values[i]) > Math.abs(values[index])) index = i;
+  return { time: times[index], value: values[index] };
+}
+
 export function suggestReference(data: DemoData, selected: Interval): Interval | undefined {
   const length = selected.end - selected.start;
   if (!Number.isFinite(length) || length < .002) return;

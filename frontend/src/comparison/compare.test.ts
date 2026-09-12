@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compareWindows, comparisonReport, suggestReference } from './compare';
+import { compareWindows, comparisonReport, suggestReference, sampledPeak } from './compare';
 import type { DemoData } from '../types';
 function fixture(id = 'test'): DemoData {
   const times = Array.from({length: 6000}, (_, i) => i / 1000);
@@ -10,6 +10,10 @@ function fixture(id = 'test'): DemoData {
 }
 const current = {start:4,end:5.024}, reference = {start:1,end:2.024};
 describe('incident comparison', () => {
+  it('anchors graph callouts to the signed absolute peak and its original timestamp', () => {
+    expect(sampledPeak([4.001, 4.002, 4.003, 4.004], [1, -5, 3, 5])).toEqual({time: 4.002, value: -5});
+    expect(sampledPeak([1, 1.001], [0, 0])).toEqual({time: 1, value: 0});
+  });
   it('calculates signed differences on equal raw windows and ranks magnitude', () => {
     const r=compareWindows(fixture(),current,fixture(),reference);
     expect(r.sampleRateHz).toBe(1000); expect(r.selected.samplesPerChannel).toBe(1024); expect(r.reference.samplesPerChannel).toBe(1024);

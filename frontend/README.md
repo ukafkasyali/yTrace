@@ -189,8 +189,8 @@ not establish normal motion. **Change reference or compare another run** lets yo
 choose another available recording and a start time. Both windows have the same
 duration. Match motion phase, payload and operating conditions yourself.
 
-The comparison ranks all seven joints by absolute change in torque range. Select
-a joint to overlay its signed torque and inspect its variability (population
+The comparison ranks all seven joints by absolute change in torque range. Use
+**Inspect joint** above the graph to overlay its signed torque and inspect its variability (population
 standard deviation) and mean shift. **Inspect selected signal** opens that joint's
 evidence. **Export comparison** downloads metrics, source intervals, annotations,
 sample counts, method and limitations. An existing answer's comparison button
@@ -201,3 +201,8 @@ only when both have full raw coverage; otherwise both use overview samples, whic
 can miss short peaks. Different sample rates, missing samples, unequal durations
 and overlapping windows in the same recording are rejected. This supports manual
 before/after investigation, not verified normality, fault diagnosis or repair success.
+
+Graph callouts connect the selected and reference curves to their largest absolute
+sampled torque, preserving the signed value and original recording timestamp. These
+peaks are measured before display downsampling, not model onsets or fault forecasts.
+**All 7 joint measurements** expands the complete comparison table.

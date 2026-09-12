@@ -4,27 +4,41 @@ import type { DemoCase, DemoData, EvidenceLink, Interval } from '../types';
 import type { Services } from '../services';
 import { downsample, loadDemoData } from '../lib/data';
 import { intervalLabel } from '../lib/format';
-import { compareWindows, comparisonReport, suggestReference, type WindowComparison } from './compare';
+import { compareWindows, comparisonReport, suggestReference, sampledPeak, type WindowComparison } from './compare';
 
 type Props = { data: DemoData; interval: Interval; cases: DemoCase[]; services: Services; onEvidence: (e: EvidenceLink) => void };
 const fixed = (n: number) => n.toFixed(3);
 const signed = (n: number) => `${n >= 0 ? '+' : ''}${fixed(n)}`;
-function Overlay({ result, jointId }: { result: WindowComparison; jointId: string }) {
+function Overlay({ result, jointId, onJoint }: { result: WindowComparison; jointId: string; onJoint: (id: string) => void }) {
   const a = result.plot.selected, b = result.plot.reference;
   const av = a.channels.find(c => c.id === jointId)!.values, bv = b.channels.find(c => c.id === jointId)!.values;
   let low = Infinity, high = -Infinity;
   for (const values of [av, bv]) for (const v of values) { low = Math.min(low, v); high = Math.max(high, v); }
   const pad = Math.max((high - low) * .12, .01);
   const length = result.selected.interval.end - result.selected.interval.start;
+  const x = (time: number, start: number) => (time - start) / length * 600;
+  const y = (value: number) => 190 - (value - low + pad) / (high - low + 2 * pad) * 150;
   const path = (times: number[], values: number[], start: number) => downsample(times.map((t, i) => ({ x: t - start, y: values[i] })), 400)
-    .map((p, i) => `${i ? 'L' : 'M'}${(p.x / length * 600).toFixed(2)},${(132 - (p.y - low + pad) / (high - low + 2 * pad) * 120).toFixed(2)}`).join(' ');
-  return <figure className="comparison-plot"><figcaption><strong>{jointId.replace('joint_', 'Joint ')} · signed torque</strong><span><i/>Selected <i className="reference-key"/>Reference</span></figcaption>
-    <svg viewBox="0 0 600 148" role="img" aria-label={`Selected and reference ${jointId.replace('joint_', 'joint ')} torque, aligned by window start, shared Nm scale`}>
-      {[12, 72, 132].map(y => <line key={y} x1="0" x2="600" y1={y} y2={y} className="chart-grid"/>)}
-      <path d={path(b.times, bv, result.reference.interval.start)} fill="none" stroke="#d9ad70" strokeDasharray="6 4" strokeWidth="2"/>
-      <path d={path(a.times, av, result.selected.interval.start)} fill="none" stroke="#99d5bd" strokeWidth="2"/>
-    </svg><div className="comparison-axis"><span>0 ms</span><span>{fixed(low)} to {fixed(high)} Nm · shared scale</span><span>{Math.round(length * 1000)} ms</span></div>
-    <p>Aligned by window start; motion phases may differ.</p></figure>;
+    .map((p, i) => `${i ? 'L' : 'M'}${(p.x / length * 600).toFixed(2)},${y(p.y).toFixed(2)}`).join(' ');
+  const selectedPeak = sampledPeak(a.times, av), referencePeak = sampledPeak(b.times, bv);
+  const sx = x(selectedPeak.time, result.selected.interval.start), sy = y(selectedPeak.value);
+  const rx = x(referencePeak.time, result.reference.interval.start), ry = y(referencePeak.value);
+  return <figure className="comparison-plot annotated-comparison"><figcaption>
+    <label>Inspect joint<select aria-label="Comparison graph joint" value={jointId} onChange={e => onJoint(e.target.value)}>{a.channels.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+    <span>Signed torque · shared Nm scale</span></figcaption>
+    <div className="graph-callout selected-callout"><strong>Selected · sampled peak</strong><span>{signed(selectedPeak.value)} Nm at {fixed(selectedPeak.time)} s</span></div>
+    <svg viewBox="0 0 600 230" role="img" aria-label={`${jointId.replace('joint_', 'Joint ')}: selected signed peak ${fixed(selectedPeak.value)} Nm at ${fixed(selectedPeak.time)} seconds; reference signed peak ${fixed(referencePeak.value)} Nm at ${fixed(referencePeak.time)} seconds. Largest absolute sampled values, aligned by window start, shared Nm scale.`}>
+      {[40, 115, 190].map((lineY, i) => <g key={lineY}><line x1="0" x2="600" y1={lineY} y2={lineY} className="chart-grid"/><text x="0" y={lineY - 5} className="graph-scale">{fixed(high + pad - i * (high - low + 2 * pad) / 2)} Nm</text></g>)}
+      <path d={path(b.times, bv, result.reference.interval.start)} className="reference-wave"/>
+      <path d={path(a.times, av, result.selected.interval.start)} className="selected-wave"/>
+      <path d={`M24,0 L24,16 L${sx},${sy}`} className="graph-leader selected-leader"/>
+      <path d={`M576,230 L576,214 L${rx},${ry}`} className="graph-leader reference-leader"/>
+      <circle cx={rx} cy={ry} r="5" className="graph-point reference-point"/>
+      <circle cx={sx} cy={sy} r="5" className="graph-point selected-point"/>
+    </svg>
+    <div className="graph-callout reference-callout"><strong>Reference · sampled peak</strong><span>{signed(referencePeak.value)} Nm at {fixed(referencePeak.time)} s</span></div>
+    <div className="comparison-axis"><span>0 ms</span><span>Time from each window’s start</span><span>{Math.round(length * 1000)} ms</span></div>
+    <p>Circles mark each curve’s largest absolute sampled torque, with its signed value. {result.resolution === 'raw' ? 'Raw samples.' : 'Overview samples; brief peaks may be missed.'} Peaks are measurements, not detected collisions. Motion phases may differ.</p></figure>;
 }
 export default function ComparisonPanel({ data, interval, cases, services, onEvidence }: Props) {
   const [referenceData, setReferenceData] = useState(data);
@@ -84,8 +98,8 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
     {!reference && !loading && !error && <p className="comparison-empty">{referenceId === data.recording.id ? 'No suitable earlier reference was found. Enter another interval or choose a different recording.' : `Enter a reference start within 0–${fixed(referenceData.recording.durationSeconds)} s. This can be a matched window from a before/after run.`}</p>}
     {result && selectedJoint && <>
       <div className="comparison-finding"><span>Reference · {result.reference.recordingId} · {intervalLabel(result.reference.interval)}</span><h3>{result.joints[0].rangeDelta === 0 ? 'No change in sampled torque ranges' : `${result.joints[0].name} has the largest change in torque range`}</h3><p>{fixed(result.joints[0].reference.range)} → {fixed(result.joints[0].selected.range)} Nm <strong>({signed(result.joints[0].rangeDelta)} Nm)</strong></p><span>{result.resolution === 'raw' ? 'Both windows · raw' : 'Both windows · overview; brief peaks may be missed'} · {result.sampleRateHz} Hz · {result.reference.samplesPerChannel}/{result.selected.samplesPerChannel} samples</span></div>
-      <div className="comparison-table-wrap"><table className="comparison-table"><caption>Torque range · Nm. Select a joint to inspect both signals.</caption><thead><tr><th>Joint</th><th>Reference</th><th>Selected</th><th>Change</th></tr></thead><tbody>{result.joints.map(j => <tr key={j.id} className={selectedJoint.id === j.id ? 'selected' : ''}><th><button aria-pressed={selectedJoint.id === j.id} onClick={() => setJoint(j.id)}>{j.name}</button></th><td>{fixed(j.reference.range)}</td><td>{fixed(j.selected.range)}</td><td>{signed(j.rangeDelta)}</td></tr>)}</tbody></table></div>
-      <Overlay result={result} jointId={selectedJoint.id}/>
+      <Overlay result={result} jointId={selectedJoint.id} onJoint={setJoint}/>
+      <details className="comparison-all-joints"><summary>All 7 joint measurements</summary><div className="comparison-table-wrap"><table className="comparison-table"><caption>Torque range · Nm. Select a joint to inspect both signals.</caption><thead><tr><th>Joint</th><th>Reference</th><th>Selected</th><th>Change</th></tr></thead><tbody>{result.joints.map(j => <tr key={j.id} className={selectedJoint.id === j.id ? 'selected' : ''}><th><button aria-pressed={selectedJoint.id === j.id} onClick={() => setJoint(j.id)}>{j.name}</button></th><td>{fixed(j.reference.range)}</td><td>{fixed(j.selected.range)}</td><td>{signed(j.rangeDelta)}</td></tr>)}</tbody></table></div></details>
       <p className="comparison-secondary">{selectedJoint.name} variability: {fixed(selectedJoint.reference.variability)} → {fixed(selectedJoint.selected.variability)} Nm. Mean shift: {signed(selectedJoint.meanDelta)} Nm.</p>
       <div className="comparison-next"><h3>What to check next</h3><p>Inspect {selectedJoint.name} in both windows. Confirm the motion phase, payload and intended contact were comparable before attributing the change to a fault.</p><button className="text-button" onClick={() => onEvidence({ channelId: selectedJoint.id, channelIds: [selectedJoint.id], interval: { ...interval }, label: selectedJoint.name })}>Inspect selected signal <ArrowUpRight size={12}/></button><h3>How to verify a change</h3><p>After an engineer chooses an adjustment, compare a matched window from the new recording. Lower variation alone does not prove a repair worked or the robot is safe.</p></div>
       <details className="comparison-method"><summary>Method &amp; source windows</summary><p>Reference: {result.reference.recordingId}, {intervalLabel(result.reference.interval)}. Selected: {result.selected.recordingId}, {intervalLabel(result.selected.interval)}.</p><p>{result.method}</p><p>Publisher markers in reference: {result.reference.publisherAnnotations.length}; selected: {result.selected.publisherAnnotations.length}. These are annotations, not diagnoses.</p><p>{result.limitations.join(' ')}</p></details>

@@ -34,7 +34,11 @@ position. Robot articulation comes from per-recording measured angles, with mapp
 validation scope disclosed. Body and world frame remain schematic.
 
 Comparison is a fourth direct view. It leads with the largest measured change and
-a selectable seven-joint table, followed by a shared-scale torque overlay. Reference
+a shared-scale torque overlay; the seven-joint table expands on demand. A joint
+selector updates the graph. Mint and dashed amber leader lines connect short,
+readable peak callouts to actual source samples on the selected/reference curves.
+Callouts preserve signed values and original timestamps; they never imply onset,
+forecast probability or prescribed maintenance. Reference
 editing and methodological details are collapsed when a suggestion is available.
 The assistant offers comparison both for the current interval and an answer's saved
 window. Reference normality is never implied by missing publisher annotations;

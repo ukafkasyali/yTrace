@@ -164,8 +164,10 @@ verification on a train recording, not an accuracy or CPU/GPU equivalence result
    Both windows contain 1,024 raw samples per joint at 1 kHz. The browser showed J2
    torque range changing from approximately **0.075 to 2.914 Nm**. This is a measured
    difference, not a diagnosed fault or new model prediction.
-3. Select another joint in the table to inspect the shared-scale overlay, variability
+3. Use **Inspect joint** above the graph to inspect the shared-scale overlay, variability
    and mean shift. **Inspect selected signal** opens its selected-window evidence.
+   Peak callouts point to original samples and show signed torque and recording time.
+   **All 7 joint measurements** expands the table. A peak is not a model onset.
 4. Expand **Change reference or compare another run**. Choose a recording and enter
    its reference start, then **Compare windows**. Match motion phase, payload and
    intended contact. The app enforces equal duration but cannot verify those conditions.

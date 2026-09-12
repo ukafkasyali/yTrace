@@ -405,3 +405,32 @@ input,textarea{caret-color:var(--accent)}
 .reference-editor > summary { padding-block: 8px; cursor: pointer; color: var(--text); }
 .reference-editor[open] > summary { margin-bottom: 8px; }
 .comparison-finding > h3 { margin-top: 9px; }
+
+/* Measured callouts attach to source samples, inspired by the supplied signal graphic. */
+.annotated-comparison { margin-top: 12px; }
+.annotated-comparison figcaption { align-items: center; margin-bottom: 22px; }
+.annotated-comparison figcaption label { display: flex; gap: 9px; align-items: center; color: var(--quiet); }
+.annotated-comparison select { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; color: var(--text); padding: 7px 9px; }
+.annotated-comparison svg { margin-top: 0; overflow: visible; }
+.graph-callout { display: flex; flex-direction: column; gap: 5px; font-size: 12px; line-height: 1.5; }
+.graph-callout strong { font-weight: 500; }
+.graph-callout span { color: var(--text); font-variant-numeric: tabular-nums; }
+.selected-callout { color: var(--accent); padding-left: 4%; }
+.reference-callout { color: var(--amber); text-align: right; padding-right: 4%; }
+.selected-wave, .reference-wave { fill: none; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.selected-wave { stroke: var(--accent); }
+.reference-wave { stroke: var(--amber); stroke-dasharray: 5 4; }
+.graph-leader { fill: none; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.selected-leader, .selected-point { stroke: var(--accent); }
+.reference-leader, .reference-point { stroke: var(--amber); }
+.reference-leader { stroke-dasharray: 3 3; }
+.graph-point { fill: var(--panel); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.graph-scale { fill: #a2adb1; font-size: 13px; font-variant-numeric: tabular-nums; }
+.annotated-comparison .comparison-axis { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 10px; }
+.comparison-all-joints { margin-top: 22px; font-size: 12px; }
+.comparison-all-joints summary { cursor: pointer; padding-block: 10px; }
+.comparison-all-joints[open] summary { margin-bottom: 10px; }
+@media(max-width:850px) {
+  .annotated-comparison figcaption { flex-wrap: wrap; gap: 10px; }
+  .graph-scale { font-size: 18px; }
+}
