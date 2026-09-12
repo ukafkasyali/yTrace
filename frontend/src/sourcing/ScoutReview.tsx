@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowUpRight, Check, CircleX } from 'lucide-react';
 import type { CandidateAssessment, DatasetCandidate, DatasetProfile, SourcingManifest, SourcingRun } from '../services';
-import DecisionEvidence, { friendlyRetrievalNote } from './DecisionEvidence';
+import DecisionEvidence from './DecisionEvidence';
+import { friendlyRetrievalNote } from './retrievalNotes';
 
 type Props = {
   run: SourcingRun;
