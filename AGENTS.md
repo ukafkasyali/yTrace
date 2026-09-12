@@ -55,8 +55,9 @@ Current alignment:
   deployed privately on Nebius.
 - **Demo:** the React workbench replays real telemetry and links readable model
   interpretations to evidence.
-- **Main remaining requirement:** finish and present a fair held-out baseline
-  comparison. Then package dataset documentation, limitations, and the demo story.
+- **Submission proof:** an audited held-out comparison, clean TimeNet receipt,
+  dataset limitations and demo script are packaged in `docs/submission/`.
+- **Remaining:** measured user benefit and the challenge checkpoint/adapter handoff.
 
 ## Repository map
 
@@ -107,25 +108,39 @@ one recording. Events outside that window can be displayed from reduced overview
 data but cannot be claimed as equivalent raw-model inference. More recordings require
 the data adapter to serve their raw windows through the existing integration contract.
 
+## Submission evidence update (12 September 2026)
+
+The audited comparison is now in `docs/submission/evaluation/report/comparison.md`.
+Original predictions, targets, manifests and checksums are archived; rerun the dependency-free
+`robot_observability.comparison` module to verify all 512 windows from 67 held-out recordings.
+Signal-feature semantics macro-F1 is 0.9880 versus OpenTSLM 0.8845 and zero-shot Qwen plots
+0.6951. OpenTSLM usable-summary rate is 0.7793. Positive-contact F1 alone hides missing
+free-motion answers; use contact macro-F1 and answer coverage alongside it. Do not claim
+OpenTSLM superiority. Qwen often emitted null contact values; plain Llama was not evaluated.
+
+Both TimeNet parts passed a fresh build/load/raw-array validation for one original full recording
+per part. See `docs/submission/timenet/`. This is not a full-corpus rebuild or proof that the
+existing training run consumed those new TimeF artifacts.
+
+The frontend now exports investigations with separate annotations, measurements and predictions,
+plus available model/input receipts. The live checkpoint and browser export were verified.
+The demo recording has measured joint articulation from separately validated position data;
+geometry and global frame remain schematic. Torque alone does not reconstruct pose.
+
 ## Highest-priority next work
 
-Unless the user changes priorities, proceed in this order:
+1. Run the prepared timed engineer pilot in `docs/submission/PILOT.md`; reduced debugging time
+   is still a hypothesis. Do not invent participants, user quotes, results or ROI.
+2. Complete the challenge's checkpoint/adapter handoff through an approved submission channel;
+   weights are private on the VM, and the live service currently reports an unknown backbone revision.
+3. Improve model output reliability on validation, then reserve new recording groups for confirmation.
+   The current test set has already been inspected; do not optimize against it and call it untouched.
+4. Expand raw-window access through the existing adapter before adding cross-run incident retrieval.
+5. Integrate the dataset-scout PR through its existing contracts, without duplicating sourcing or
+   the newly merged bounded documentation search. Add runtime RAG only for a demonstrated need.
 
-1. Establish a reproducible baseline on the same recording-grouped held-out split.
-   Start with the transparent signal-feature baseline already specified in
-   `model_training/`; include another model only if it is ready and comparable.
-2. Produce one compact comparison table: task, metric, baseline, OpenTSLM, test size,
-   and limitation. Do not mix validation and test results.
-3. Verify one complete TimeNet build/load/validation path from a clean environment and
-   capture the commands and resulting artifact identities for the submission.
-4. Polish the event investigation flow: marker meaning, measured facts, generated
-   interpretation, and clickable evidence must be understandable without narration.
-5. Prepare a two-minute demo and presentation: problem -> data/TimeNet -> model ->
-   real event -> evidence -> evaluation -> limitations.
-
-Do not spend priority time on live telemetry, robot control, exact 3D animation, broad
-agentic ingestion, or additional chat models before the baseline and submission proof
-are complete.
+The submission index, two-minute demo, verification and limitations are in `docs/submission/`.
+Do not prioritize live telemetry, robot control, exact 3D reconstruction or more chat models.
 
 ## Repository setup checks
 

@@ -39,7 +39,7 @@ class KukaParserTests(unittest.TestCase):
             savemat(run / "JK_PosMsr.mat", {"PosMsr": matrix})
             savemat(run / "JK_moments.mat", {"JK_moments": np.array([[1], [3], [5]])})
 
-            self.assertEqual(discover_kuka_runs(directory), [run])
+            self.assertEqual(discover_kuka_runs(directory), [run.resolve()])
             parsed_time = parse_time_axis(run)
             parsed = parse_timed_joint_matrix(
                 run / "JK_MsrExtTrq.mat",

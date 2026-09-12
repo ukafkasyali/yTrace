@@ -199,3 +199,4 @@ input,textarea{caret-color:var(--accent)}
 /* Assistant replies separate measured facts, generated interpretation and next action. */
 .answer-brief{display:grid;gap:13px}.answer-brief section{padding-left:11px;border-left:1px solid #40564b}.answer-brief section:first-child{border-left-color:var(--accent)}.answer-brief h3{color:#dce8e1;font-size:11px;font-weight:600;letter-spacing:.02em;margin:0 0 3px;text-transform:uppercase}.answer-brief p{margin:0}.assistant-answer .answer-brief section:last-child p{color:#aebdb6}
 .assistant-capability{color:var(--quiet);font-size:10px}
+.report-export{margin-top:12px;gap:6px}.report-status{margin:0;padding:8px 16px;color:var(--text);font-size:12px;border-top:1px solid var(--border)}

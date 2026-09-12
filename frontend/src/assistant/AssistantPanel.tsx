@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, ArrowUpRight, Check, ChevronDown, CircleStop, Cpu, MessageSquare, RotateCcw, SlidersHorizontal, Terminal, Waves } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Check, ChevronDown, CircleStop, Cpu, Download, MessageSquare, RotateCcw, SlidersHorizontal, Terminal, Waves } from 'lucide-react';
+import { downloadInvestigationReport, type InvestigationAnswer } from './investigationReport';
 import { analyzeWindow } from '../lib/data';
 import { intervalLabel } from '../lib/format';
 import type { DemoData, EvidenceLink, Interval } from '../types';
@@ -7,7 +8,7 @@ import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 import type { AutomaticAnalysisRequest } from '../recordings/markerAnalysis';
 
-type Message = { id: string; question: string; interval: Interval; playhead: number; text: string; source: string; tools: string[]; evidence: EvidenceLink[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
+type Message = InvestigationAnswer & { id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
 type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; automaticAnalysis?: AutomaticAnalysisRequest; onEvidence: (e: EvidenceLink) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
@@ -21,7 +22,8 @@ function AnswerText({ text }: { text: string }) {
 }
 export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, automaticAnalysis, onEvidence }: Props) {
   const [question, setQuestion] = useState('');
-  const [mode, setMode] = useState('assistant');
+  const [mode, setMode] = useState<'local' | 'assistant'>('local');
+  const [exportStatus, setExportStatus] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
   const assistantAvailable = services.connected && !registry.loading && !registry.error && registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
@@ -51,7 +53,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     const snapshot = automatic ? { ...automatic.interval } : { ...interval }, horizon = automatic?.playhead ?? playhead;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
-    setMessages(ms => [...ms, { id, question: automatic?.displayQuestion ?? prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: automatic?.source ?? (runMode === 'local' ? 'Local numerical analysis' : 'Assistant'), tools: [], evidence: [], status: 'running' }]);
+    setMessages(ms => [...ms, { id, mode: runMode, question: automatic?.displayQuestion ?? prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: automatic?.source ?? (runMode === 'local' ? 'Local numerical analysis' : 'Assistant'), tools: [], evidence: [], status: 'running' }]);
     if (!automatic) setQuestion('');
     setBusy(true);
     try {
@@ -69,7 +71,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
           if (event.type === 'tool.started') update(id, m => ({ tools: [...m.tools, p.label ?? p.tool ?? 'Tool started'] }));
           if (event.type === 'tool.completed') update(id, m => ({ tools: [...m.tools, p.summary ?? 'Tool completed'] }));
           if (event.type === 'answer.delta') update(id, m => ({ text: m.text + (p.text ?? '') }));
-          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, source: automatic ? `${automatic.source} · ${p.modelId ?? 'OpenTSLM'}` : `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
+          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput: typeof p.modelOutput === 'string' ? p.modelOutput : undefined, source: automatic ? `${automatic.source} · ${p.modelId ?? 'OpenTSLM'}` : `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
           if (event.type === 'query.error') { completed.current = true; update(id, m => ({ status: 'error', text: `${m.text}${m.text ? '\n\n' : ''}${p.message ?? 'Inference failed.'}` })); }
           if (event.type === 'query.cancelled') { completed.current = true; update(id, { status: 'cancelled' }); }
         }, controller.signal);
@@ -77,6 +79,10 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     } catch (error) {
       update(id, m => ({ status: controller.signal.aborted ? 'cancelled' : 'error', text: `${m.text}${m.text ? '\n\n' : ''}${controller.signal.aborted ? 'Stopped. This answer is incomplete.' : error instanceof Error ? error.message : 'The request failed.'}` }));
     } finally { if (active.current?.id === id) { active.current = null; setBusy(false); } }
+  }
+  function exportReport(message: Message) {
+    try { downloadInvestigationReport(data, datasetId, message); setExportStatus('Investigation report downloaded as JSON.'); }
+    catch (error) { setExportStatus(error instanceof Error ? error.message : 'The report could not be exported.'); }
   }
   async function stop() {
     const job = active.current; if (!job) return;
@@ -87,9 +93,10 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Ask the signal</h2></div><span className="assistant-capability">OpenTSLM + measurements</span></header>
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><div className="assistant-emblem"><Waves size={22}/></div><h3>Investigate this interval</h3><p>Choose an analysis or ask a question about the selected signals.</p><div className="suggestion-list">{['Which joints have the largest torque range?', 'Where is the strongest absolute peak?', 'How does variability change in this interval?'].map(q => <button key={q} disabled={busy || modeUnavailable} onClick={() => void submit(q)}><span>{q === "Which joints have the largest torque range?" ? "Compare joint ranges" : q === "Where is the strongest absolute peak?" ? "Find the strongest peak" : "Compare variability"}</span><ArrowUpRight size={14}/></button>)}</div><div className="connection-note"><Terminal size={13}/><span>{connectionNote}</span></div></div>}
-      {messages.map(m => <article className="conversation-turn" key={m.id}><div className="user-question"><span className="avatar">S</span><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)} · replay at {m.playhead.toFixed(3)} s</small></div></div><div className="assistant-answer"><Waves size={17}/><div><div className="answer-source">{m.source}{m.status !== 'complete' && <span>{m.status === 'running' ? 'Working' : m.status}</span>}</div>{m.tools.length > 0 && <details className="tool-log"><summary><Check size={12}/>{m.tools.length} tool steps<ChevronDown size={12}/></summary>{m.tools.map((t, i) => <div key={i}><Check size={11}/>{t}</div>)}</details>}<div className={m.status === 'error' ? 'error-message' : ''}>{m.text ? <AnswerText text={m.text}/> : <p>Waiting for the analysis service…</p>}</div>{m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}{(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}</div></div></article>)}
+      {messages.map(m => <article className="conversation-turn" key={m.id}><div className="user-question"><span className="avatar">S</span><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)} · replay at {m.playhead.toFixed(3)} s</small></div></div><div className="assistant-answer"><Waves size={17}/><div><div className="answer-source">{m.source}{m.status !== 'complete' && <span>{m.status === 'running' ? 'Working' : m.status}</span>}</div>{m.tools.length > 0 && <details className="tool-log"><summary><Check size={12}/>{m.tools.length} tool steps<ChevronDown size={12}/></summary>{m.tools.map((t, i) => <div key={i}><Check size={11}/>{t}</div>)}</details>}<div className={m.status === 'error' ? 'error-message' : ''}>{m.text ? <AnswerText text={m.text}/> : <p>Waiting for the analysis service…</p>}</div>{m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}{m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export investigation</button>}{(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}</div></div></article>)}
     </div>
+    {exportStatus && <p className="report-status" role="status">{exportStatus}</p>}
     {modeUnavailable && <p className="status-note" role="status">The telemetry assistant is unavailable. Select Local analysis or check model status in Compare models.</p>}
-    <form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><div className="composer-context"><span className="selection-dot"/><span>Selected interval</span><strong className="mono">{intervalLabel(interval)}</strong><span>7 joints</span></div><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="What do you notice in this interval?" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value)}><option value="assistant" disabled={!assistantAvailable}>Telemetry assistant{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Local analysis</option></select></label>{busy ? <button className="send-button" type="button" aria-label="Stop analysis" onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > playhead}><ArrowUp size={18}/></button>}</div></form>
+    <form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><div className="composer-context"><span className="selection-dot"/><span>Selected interval</span><strong className="mono">{intervalLabel(interval)}</strong><span>7 joints</span></div><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="What do you notice in this interval?" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Telemetry assistant{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Local analysis</option></select></label>{busy ? <button className="send-button" type="button" aria-label="Stop analysis" onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > playhead}><ArrowUp size={18}/></button>}</div></form>
   </section>;
 }

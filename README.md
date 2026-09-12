@@ -1,5 +1,7 @@
-# ysamet
-Our working repo for the EHL Zurich Hackathon 
+# Trace
+Replay-only robot contact-event investigation for the EHL Zurich Temporal AI Challenge.
+
+Start with the [submission evidence pack](docs/submission/README.md), [audited comparison](docs/submission/evaluation/report/comparison.md), and [two-minute demo](docs/submission/DEMO.md).
 
 
 ## Trace replay workbench

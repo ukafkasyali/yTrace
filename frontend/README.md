@@ -109,3 +109,14 @@ explorer and measured 3D articulation. See
 check and its calibration limits.
 “Trace” is a provisional interface name. Samet owns this frontend; ingestion and
 model-training implementations stay in the team's separately owned modules.
+
+## Investigation reports
+
+Each completed assistant or local analysis has an **Export investigation** button. It downloads
+a JSON report with the snapshotted recording/window, publisher annotations, all seven sampled
+channel measurements, answer, evidence links and available model revision/input receipt. Exports
+retain the original answer interval even after replay moves. Reduced overview measurements are
+labeled explicitly. Local analysis is selected initially so numerical tools work without a model.
+
+See the [verified browser export](../docs/submission/demo/investigation-example.json) and
+[two-minute demo](../docs/submission/DEMO.md).
