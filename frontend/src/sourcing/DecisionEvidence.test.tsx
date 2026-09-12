@@ -50,7 +50,7 @@ function runFixture(): SourcingRun {
       recommendationConfidence: 'HIGH', missingRequirementIds: [], conflicts: [],
     }],
     recommendedCandidateId: 'ds_9be731e6fb6b', gapQueriesUsed: 0, tavilyCreditsUsed: 6,
-    approvedCandidateId: null, reviewFeedback: [], reviewIterationsUsed: 0,
+    approvedCandidateId: null, excludedCandidateIds: [], reviewFeedback: [], reviewIterationsUsed: 0,
     refinementOutcomes: [],
     executionMode: 'LIVE', errors: [],
     reportMarkdown: '# Dataset sourcing report — raw markdown', manifest: null,
@@ -122,6 +122,7 @@ describe('decision evidence', () => {
       feedback: 'Prioritize free-motion baselines.',
       query: 'robot collision free-motion baseline dataset',
       outcome: 'NO_CHANGE',
+      rejectedCandidateId: null,
       previousRecommendedCandidateId: run.recommendedCandidateId,
       recommendedCandidateId: run.recommendedCandidateId,
       newCandidateIds: [],
@@ -136,6 +137,36 @@ describe('decision evidence', () => {
     expect(markup).toContain('No new candidates or native evidence were found');
     expect(markup).toContain('Robot joint torque measurements remains the recommendation');
     expect(markup).toContain('robot collision free-motion baseline dataset');
+  });
+
+  it('withholds a rejected recommendation instead of recommending it again', () => {
+    const run = runFixture();
+    run.recommendedCandidateId = null;
+    run.excludedCandidateIds = ['ds_9be731e6fb6b'];
+    run.reviewFeedback = ["I don't want this dataset. Find an alternative."];
+    run.reviewIterationsUsed = 1;
+    run.refinementOutcomes = [{
+      iteration: 1,
+      feedback: run.reviewFeedback[0],
+      query: 'robot collision dataset alternative',
+      outcome: 'RECOMMENDATION_WITHHELD',
+      rejectedCandidateId: 'ds_9be731e6fb6b',
+      previousRecommendedCandidateId: 'ds_9be731e6fb6b',
+      recommendedCandidateId: null,
+      newCandidateIds: [],
+      newEvidenceIds: [],
+    }];
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('Refinement 1: recommendation withheld');
+    expect(markup).toContain('was excluded from this run');
+    expect(markup).toContain('No eligible alternative was found');
+    expect(markup).toContain('Excluded by reviewer');
+    expect(markup).toContain('No eligible datasets');
+    expect(markup).not.toContain('remains the recommendation');
   });
 
   it('keeps approval explicit when no candidate clears mandatory gates', () => {

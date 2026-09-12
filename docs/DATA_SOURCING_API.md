@@ -53,7 +53,9 @@ deterministic assessments, separate evidence/recommendation confidence, retrieva
 current status. The frontend should treat IDs as opaque. After a reviewer refinement,
 `refinementOutcomes` makes the result explicit: it records the executed query, newly discovered
 candidate and evidence IDs, the recommendation before and after rescoring, and one of
-`RECOMMENDATION_CHANGED`, `EVIDENCE_EXPANDED`, `CANDIDATES_ADDED`, or `NO_CHANGE`.
+`RECOMMENDATION_CHANGED`, `RECOMMENDATION_WITHHELD`, `EVIDENCE_EXPANDED`, `CANDIDATES_ADDED`,
+or `NO_CHANGE`. `excludedCandidateIds` records reviewer exclusions separately from deterministic
+assessment results so clients can show the full audit trail without offering excluded choices.
 
 ### `POST /api/sourcing-runs/{runId}/approvals`
 
@@ -66,26 +68,34 @@ response retains `recommendedCandidateId` for auditability and records the revie
 {"decision": "APPROVE", "candidateId": "ds_0123456789ab", "note": "Team review"}
 ```
 
-Reject with `{"decision":"REJECT","note":"Prioritize free-motion baseline recordings"}`. A
-non-empty note is required. Rejection adds a review-directed query and resumes discovery in the
-same LangGraph thread, preserving prior candidates and evidence. Up to two reviewer refinements
-are allowed, subject to the original time and Tavily-credit budgets. Repeating the same successful
-approval is safe; other terminal-state approvals return `409 RUN_CONFLICT`.
+Reject with
+`{"decision":"REJECT","candidateId":"ds_0123456789ab","note":"Find an alternative"}`. A
+non-empty note is required. `candidateId` identifies the candidate to exclude; for compatibility,
+the server uses the current recommendation when older clients omit it. Rejection adds a
+review-directed query and resumes discovery in the same LangGraph thread, preserving prior
+candidates and evidence. The excluded candidate remains visible in assessments and reports for
+auditability, but cannot be recommended or approved later in the run. Attempts to approve it
+return `409 RUN_CONFLICT`. Up to two reviewer refinements are allowed, subject to the original
+time and Tavily-credit budgets. Repeating the same successful approval is safe; other
+terminal-state approvals also return `409 RUN_CONFLICT`.
 
 Reviewer feedback directs the next discovery query; it does not silently alter mandatory gates or
 the deterministic score weights. Newly discovered candidates are considered before previously
-unverified candidates while already verified choices remain available. Therefore a refinement can
-legitimately keep the same recommendation. In that case the response records `NO_CHANGE` rather
-than implying that feedback changed the decision.
+unverified candidates while already verified, non-excluded choices remain available. When the
+reviewer rejects the current recommendation and the search finds no eligible replacement, the
+response records `RECOMMENDATION_WITHHELD` and sets `recommendedCandidateId` to `null`; it never
+selects the rejected candidate again. The run pauses again while another refinement remains, then
+transitions to `NEEDS_INPUT` if the final attempt still has no eligible alternative.
 
 ```json
 {
   "iteration": 1,
-  "feedback": "Prioritize free-motion baseline recordings",
-  "query": "robot collision free-motion baseline dataset ...",
-  "outcome": "NO_CHANGE",
+  "feedback": "Find an alternative",
+  "query": "robot collision dataset alternative ...",
+  "outcome": "RECOMMENDATION_WITHHELD",
+  "rejectedCandidateId": "ds_0123456789ab",
   "previousRecommendedCandidateId": "ds_0123456789ab",
-  "recommendedCandidateId": "ds_0123456789ab",
+  "recommendedCandidateId": null,
   "newCandidateIds": [],
   "newEvidenceIds": []
 }

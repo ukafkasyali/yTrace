@@ -137,8 +137,16 @@ class SourcingService:
             ),
             None,
         )
+        if (
+            approval.decision is ApprovalDecision.REJECT
+            and approval.candidate_id
+            and selected is None
+        ):
+            raise RunConflict("Rejected candidate must be assessed in this run")
         if approval.decision is ApprovalDecision.APPROVE and (
-            selected is None or not candidate_is_approvable(selected)
+            selected is None
+            or not candidate_is_approvable(selected)
+            or selected.candidate_id in run.excluded_candidate_ids
         ):
             raise RunConflict("Approved candidate must pass every mandatory gate")
         try:

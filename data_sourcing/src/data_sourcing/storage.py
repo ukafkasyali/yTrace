@@ -82,6 +82,7 @@ class ArtifactStore:
             assessments=state.get("assessments", []),
             recommended_candidate_id=state.get("recommended_candidate_id"),
             approved_candidate_id=state.get("approved_candidate_id"),
+            excluded_candidate_ids=state.get("excluded_candidate_ids", []),
             review_feedback=state.get("review_feedback", []),
             review_iterations_used=state.get("review_iterations_used", 0),
             refinement_outcomes=state.get("refinement_outcomes", []),

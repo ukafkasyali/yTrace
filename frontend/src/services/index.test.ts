@@ -117,7 +117,7 @@ describe('service contracts', () => {
     const run = {
       runId: 'run-1', status: 'AWAITING_APPROVAL', brief: 'Find robot collision time-series data.',
       requirements: [], candidates: [], profiles: [], evidence: [], assessments: [], errors: [], reportMarkdown: '# Report',
-      executionMode: 'CACHED', manifest: null, approvedCandidateId: null,
+      executionMode: 'CACHED', manifest: null, approvedCandidateId: null, excludedCandidateIds: [],
       reviewFeedback: [], reviewIterationsUsed: 0, refinementOutcomes: [],
     };
     const fetch = vi.fn()

@@ -94,6 +94,7 @@ class ApprovalDecision(StrEnum):
 
 class RefinementOutcomeStatus(StrEnum):
     RECOMMENDATION_CHANGED = "RECOMMENDATION_CHANGED"
+    RECOMMENDATION_WITHHELD = "RECOMMENDATION_WITHHELD"
     EVIDENCE_EXPANDED = "EVIDENCE_EXPANDED"
     CANDIDATES_ADDED = "CANDIDATES_ADDED"
     NO_CHANGE = "NO_CHANGE"
@@ -240,6 +241,7 @@ class RefinementOutcome(WireModel):
     feedback: str = Field(min_length=1, max_length=1_000)
     query: str = Field(min_length=3, max_length=400)
     outcome: RefinementOutcomeStatus
+    rejected_candidate_id: str | None = None
     previous_recommended_candidate_id: str | None = None
     recommended_candidate_id: str | None = None
     new_candidate_ids: list[str] = Field(default_factory=list)
@@ -275,6 +277,7 @@ class SourcingRun(WireModel):
     assessments: list[CandidateAssessment] = Field(default_factory=list)
     recommended_candidate_id: str | None = None
     approved_candidate_id: str | None = None
+    excluded_candidate_ids: list[str] = Field(default_factory=list, max_length=2)
     review_feedback: list[str] = Field(default_factory=list, max_length=2)
     review_iterations_used: int = Field(default=0, ge=0, le=2)
     refinement_outcomes: list[RefinementOutcome] = Field(default_factory=list, max_length=2)

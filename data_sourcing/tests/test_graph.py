@@ -66,7 +66,7 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
     scout, connection = build_graph()
     run_id = str(uuid4())
     config = {"configurable": {"thread_id": run_id}}
-    scout.graph.invoke(
+    paused = scout.graph.invoke(
         initial_state(
             run_id,
             CreateSourcingRun(
@@ -84,6 +84,7 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
         Command(
             resume={
                 "decision": "REJECT",
+                "candidateId": paused["recommended_candidate_id"],
                 "note": "Prioritize datasets that include free-motion baseline recordings.",
             }
         ),
@@ -105,13 +106,17 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
                 for item in refined["hypotheses"]
                 if item["id"] == "hyp_review_refinement_1"
             ),
-            "outcome": "NO_CHANGE",
-            "previous_recommended_candidate_id": refined["recommended_candidate_id"],
-            "recommended_candidate_id": refined["recommended_candidate_id"],
+            "outcome": "RECOMMENDATION_WITHHELD",
+            "rejected_candidate_id": paused["recommended_candidate_id"],
+            "previous_recommended_candidate_id": paused["recommended_candidate_id"],
+            "recommended_candidate_id": None,
             "new_candidate_ids": [],
             "new_evidence_ids": [],
         }
     ]
+    assert refined["recommended_candidate_id"] is None
+    assert refined["excluded_candidate_ids"] == [paused["recommended_candidate_id"]]
+    assert "excluded by reviewer" in refined["report_markdown"]
     assert scout.graph.get_state(config).next == ("approval",)
 
     second_refinement = scout.graph.invoke(
@@ -123,20 +128,8 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
         ),
         config,
     )
-    exhausted = scout.graph.invoke(
-        Command(
-            resume={
-                "decision": "REJECT",
-                "note": "Search one more time.",
-            }
-        ),
-        config,
-    )
-
-    assert second_refinement["status"] == RunStatus.AWAITING_APPROVAL.value
+    assert second_refinement["status"] == RunStatus.NEEDS_INPUT.value
     assert second_refinement["review_iterations_used"] == 2
-    assert exhausted["status"] == RunStatus.NEEDS_INPUT.value
-    assert exhausted["review_feedback"] == second_refinement["review_feedback"]
     scout.close()
     connection.close()
 
@@ -206,6 +199,7 @@ def test_refinement_prioritizes_new_results_and_records_recommendation_change() 
         Command(
             resume={
                 "decision": "REJECT",
+                "candidateId": paused["recommended_candidate_id"],
                 "note": "Find another independently published dataset.",
             }
         ),
@@ -216,6 +210,8 @@ def test_refinement_prioritizes_new_results_and_records_recommendation_change() 
     assert paused["recommended_candidate_id"] == "ds_9be731e6fb6b"
     assert refined["recommended_candidate_id"] == "ds_7d0f10684c2e"
     assert outcome["outcome"] == "RECOMMENDATION_CHANGED"
+    assert outcome["rejected_candidate_id"] == "ds_9be731e6fb6b"
+    assert refined["excluded_candidate_ids"] == ["ds_9be731e6fb6b"]
     assert outcome["previous_recommended_candidate_id"] == "ds_9be731e6fb6b"
     assert outcome["recommended_candidate_id"] == "ds_7d0f10684c2e"
     assert outcome["new_candidate_ids"] == ["ds_7d0f10684c2e"]

@@ -105,13 +105,14 @@ export type SourcingManifest = {
 
 export type SourcingReview =
   | { decision: 'APPROVE'; candidateId: string; note?: string }
-  | { decision: 'REJECT'; note: string };
+  | { decision: 'REJECT'; candidateId?: string; note: string };
 
 export type RefinementOutcome = {
   iteration: number;
   feedback: string;
   query: string;
-  outcome: 'RECOMMENDATION_CHANGED' | 'EVIDENCE_EXPANDED' | 'CANDIDATES_ADDED' | 'NO_CHANGE';
+  outcome: 'RECOMMENDATION_CHANGED' | 'RECOMMENDATION_WITHHELD' | 'EVIDENCE_EXPANDED' | 'CANDIDATES_ADDED' | 'NO_CHANGE';
+  rejectedCandidateId: string | null;
   previousRecommendedCandidateId: string | null;
   recommendedCandidateId: string | null;
   newCandidateIds: string[];
@@ -131,6 +132,7 @@ export type SourcingRun = {
   assessments: CandidateAssessment[];
   recommendedCandidateId: string | null;
   approvedCandidateId: string | null;
+  excludedCandidateIds: string[];
   reviewFeedback: string[];
   reviewIterationsUsed: number;
   refinementOutcomes: RefinementOutcome[];
@@ -143,6 +145,17 @@ export type SourcingRun = {
   createdAt: string;
   updatedAt: string;
 };
+
+export function candidateIsEligibleForApproval(
+  candidate: CandidateAssessment,
+  excludedCandidateIds: ReadonlySet<string>,
+) {
+  return !excludedCandidateIds.has(candidate.candidateId)
+    && candidate.totalScore >= 65
+    && candidate.tier !== 'REJECT'
+    && candidate.missingRequirementIds.length === 0
+    && candidate.gates.every(gate => gate.passed);
+}
 
 export type RunAccepted = { runId: string; status: SourcingStatus; statusUrl: string };
 
@@ -203,6 +216,8 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.recommendationConfidence as string)
       && Array.isArray(item.conflicts) && Array.isArray(item.missingRequirementIds))
     && (run.approvedCandidateId === null || typeof run.approvedCandidateId === 'string')
+    && Array.isArray(run.excludedCandidateIds) && run.excludedCandidateIds.length <= 2
+    && run.excludedCandidateIds.every(item => typeof item === 'string')
     && Array.isArray(run.reviewFeedback) && run.reviewFeedback.length <= 2
     && run.reviewFeedback.every(item => typeof item === 'string')
     && Number.isInteger(run.reviewIterationsUsed) && (run.reviewIterationsUsed as number) >= 0
@@ -212,7 +227,8 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
       && Number.isInteger(item.iteration) && (item.iteration as number) >= 1
       && (item.iteration as number) <= 2 && typeof item.feedback === 'string'
       && typeof item.query === 'string'
-      && ['RECOMMENDATION_CHANGED', 'EVIDENCE_EXPANDED', 'CANDIDATES_ADDED', 'NO_CHANGE'].includes(item.outcome as string)
+      && ['RECOMMENDATION_CHANGED', 'RECOMMENDATION_WITHHELD', 'EVIDENCE_EXPANDED', 'CANDIDATES_ADDED', 'NO_CHANGE'].includes(item.outcome as string)
+      && (item.rejectedCandidateId === null || typeof item.rejectedCandidateId === 'string')
       && (item.previousRecommendedCandidateId === null || typeof item.previousRecommendedCandidateId === 'string')
       && (item.recommendedCandidateId === null || typeof item.recommendedCandidateId === 'string')
       && Array.isArray(item.newCandidateIds) && item.newCandidateIds.every(id => typeof id === 'string')

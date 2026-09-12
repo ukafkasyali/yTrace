@@ -63,6 +63,8 @@ class SourcingState(TypedDict, total=False):
     assessments: list[dict[str, Any]]
     recommended_candidate_id: str | None
     approved_candidate_id: str | None
+    excluded_candidate_ids: list[str]
+    review_rejected_candidate_id: str | None
     gap_queries_used: int
     tavily_credits_used: int
     execution_mode: str
@@ -100,6 +102,8 @@ def initial_state(
         "assessments": [],
         "recommended_candidate_id": None,
         "approved_candidate_id": None,
+        "excluded_candidate_ids": [],
+        "review_rejected_candidate_id": None,
         "gap_queries_used": 0,
         "tavily_credits_used": 0,
         "execution_mode": ExecutionMode.LIVE.value,
@@ -370,9 +374,25 @@ class DatasetScoutGraph:
         ]
         requirements = [ResearchRequirement.model_validate(item) for item in state["requirements"]]
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
-        assessments = apply_recommendation_confidence(
-            [assess_candidate(profile, requirements, evidence) for profile in profiles]
+        excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
+        raw_assessments = [
+            assess_candidate(profile, requirements, evidence) for profile in profiles
+        ]
+        active_assessments = apply_recommendation_confidence(
+            [
+                item
+                for item in raw_assessments
+                if item.candidate_id not in excluded_candidate_ids
+            ]
         )
+        assessments = [
+            *active_assessments,
+            *[
+                item
+                for item in raw_assessments
+                if item.candidate_id in excluded_candidate_ids
+            ],
+        ]
         ranked = sorted(assessments, key=lambda item: (-item.total_score, item.candidate_id))
         missing_mandatory = [
             item.id
@@ -380,12 +400,23 @@ class DatasetScoutGraph:
             if item.priority.value == "MUST" and item.status is not VerificationStatus.VERIFIED
         ]
         recommended = next(
-            (item for item in ranked if item.tier is CandidateTier.RECOMMEND),
+            (
+                item
+                for item in ranked
+                if item.candidate_id not in excluded_candidate_ids
+                and item.tier is CandidateTier.RECOMMEND
+            ),
             None,
         )
-        eligible = recommended is not None and not missing_mandatory
-        status = RunStatus.AWAITING_APPROVAL if eligible else RunStatus.NEEDS_INPUT
-        recommended_candidate_id = recommended.candidate_id if eligible else None
+        approvable = [
+            item
+            for item in ranked
+            if item.candidate_id not in excluded_candidate_ids
+            and candidate_is_approvable(item)
+        ]
+        recommended_candidate_id = (
+            recommended.candidate_id if recommended and not missing_mandatory else None
+        )
         refinement_outcomes = list(state.get("refinement_outcomes", []))
         pending = state.get("pending_refinement")
         if pending:
@@ -393,7 +424,13 @@ class DatasetScoutGraph:
                 {item.id for item in evidence} - set(pending["previous_evidence_ids"])
             )
             new_candidate_ids = pending["new_candidate_ids"]
-            if pending["previous_recommended_candidate_id"] != recommended_candidate_id:
+            if (
+                pending["rejected_candidate_id"]
+                == pending["previous_recommended_candidate_id"]
+                and recommended_candidate_id is None
+            ):
+                outcome_status = RefinementOutcomeStatus.RECOMMENDATION_WITHHELD
+            elif pending["previous_recommended_candidate_id"] != recommended_candidate_id:
                 outcome_status = RefinementOutcomeStatus.RECOMMENDATION_CHANGED
             elif new_evidence_ids:
                 outcome_status = RefinementOutcomeStatus.EVIDENCE_EXPANDED
@@ -406,6 +443,7 @@ class DatasetScoutGraph:
                 feedback=pending["feedback"],
                 query=pending["query"],
                 outcome=outcome_status,
+                rejected_candidate_id=pending["rejected_candidate_id"],
                 previous_recommended_candidate_id=pending[
                     "previous_recommended_candidate_id"
                 ],
@@ -414,6 +452,13 @@ class DatasetScoutGraph:
                 new_evidence_ids=new_evidence_ids,
             )
             refinement_outcomes.append(outcome.model_dump(mode="json"))
+        can_refine_again = bool(pending) and (
+            state.get("review_iterations_used", 0) < _REVIEW_ITERATION_LIMIT
+            and state["tavily_credits_used"] + 2 <= self.settings.tavily_credit_limit
+            and not self._expired(state)
+        )
+        can_review = not missing_mandatory and (bool(approvable) or can_refine_again)
+        status = RunStatus.AWAITING_APPROVAL if can_review else RunStatus.NEEDS_INPUT
         report = self._report(state, ranked, missing_mandatory)
         return {
             "status": status.value,
@@ -421,6 +466,7 @@ class DatasetScoutGraph:
             "recommended_candidate_id": recommended_candidate_id,
             "refinement_outcomes": refinement_outcomes,
             "pending_refinement": None,
+            "review_rejected_candidate_id": None,
             "report_markdown": report,
             "active_research_seconds": min(
                 self.settings.run_timeout_seconds,
@@ -453,11 +499,17 @@ class DatasetScoutGraph:
             )
         lines.extend(["## Deterministic ranking", ""])
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
+        excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
         for assessment in ranked:
             conflict = ", ".join(assessment.conflicts) or "none"
+            review_status = (
+                "; excluded by reviewer"
+                if assessment.candidate_id in excluded_candidate_ids
+                else ""
+            )
             lines.append(
                 f"- `{assessment.candidate_id}` — {assessment.total_score}/100, "
-                f"{assessment.tier.value}; conflicts: {conflict}"
+                f"{assessment.tier.value}; conflicts: {conflict}{review_status}"
             )
             for claim in assessment.conflicts:
                 lines.append(
@@ -506,6 +558,7 @@ class DatasetScoutGraph:
         return "approval" if state["status"] == RunStatus.AWAITING_APPROVAL.value else "end"
 
     def approval(self, state: SourcingState) -> dict[str, Any]:
+        excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
         payload = interrupt(
             {
                 "runId": state["run_id"],
@@ -517,6 +570,7 @@ class DatasetScoutGraph:
                         for item in state["assessments"]
                     )
                     if candidate_is_approvable(assessment)
+                    and assessment.candidate_id not in excluded_candidate_ids
                 ],
                 "message": "Approve the evidence-backed dataset manifest?",
             }
@@ -530,7 +584,9 @@ class DatasetScoutGraph:
             None,
         )
         if approval.decision is ApprovalDecision.APPROVE and (
-            selected is None or not candidate_is_approvable(selected)
+            selected is None
+            or not candidate_is_approvable(selected)
+            or selected.candidate_id in excluded_candidate_ids
         ):
             return {
                 "status": RunStatus.NEEDS_INPUT.value,
@@ -550,10 +606,17 @@ class DatasetScoutGraph:
                         "Reviewer refinement limit reached; start a new run to continue",
                     ],
                 }
+            rejected_candidate_id = (
+                approval.candidate_id or state.get("recommended_candidate_id")
+            )
+            if rejected_candidate_id:
+                excluded_candidate_ids.add(rejected_candidate_id)
             return {
                 "status": RunStatus.DISCOVERING.value,
                 "approval_decision": approval.decision.value,
                 "review_feedback": [*state.get("review_feedback", []), approval.note],
+                "excluded_candidate_ids": sorted(excluded_candidate_ids),
+                "review_rejected_candidate_id": rejected_candidate_id,
                 "started_at": time.time(),
             }
         return {
@@ -626,6 +689,7 @@ class DatasetScoutGraph:
             "iteration": iteration,
             "feedback": state["review_feedback"][-1],
             "query": hypothesis.query,
+            "rejected_candidate_id": state.get("review_rejected_candidate_id"),
             "previous_recommended_candidate_id": state.get("recommended_candidate_id"),
             "previous_evidence_ids": [item["id"] for item in state["evidence"]],
             "new_candidate_ids": new_candidate_ids,

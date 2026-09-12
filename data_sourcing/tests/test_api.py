@@ -110,21 +110,30 @@ def test_refinement_response_persists_an_explicit_decision_delta(tmp_path: Path)
             json={"brief": BRIEF},
         )
         run_id = created.json()["runId"]
+        candidate_id = client.get(
+            f"/api/sourcing-runs/{run_id}"
+        ).json()["recommendedCandidateId"]
 
         refinement = client.post(
             f"/api/sourcing-runs/{run_id}/approvals",
             json={
                 "decision": "REJECT",
+                "candidateId": candidate_id,
                 "note": "Prioritize free-motion baseline recordings.",
             },
         )
 
         assert refinement.status_code == 200
         outcome = refinement.json()["refinementOutcomes"][0]
-        assert outcome["outcome"] == "NO_CHANGE"
-        assert outcome["previousRecommendedCandidateId"] == outcome[
-            "recommendedCandidateId"
-        ]
+        assert outcome["outcome"] == "RECOMMENDATION_WITHHELD"
+        assert outcome["rejectedCandidateId"] == candidate_id
+        assert refinement.json()["recommendedCandidateId"] is None
+        assert refinement.json()["excludedCandidateIds"] == [candidate_id]
+        excluded_approval = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "APPROVE", "candidateId": candidate_id},
+        )
+        assert excluded_approval.status_code == 409
         persisted = json.loads(
             (settings.runs_dir / run_id / "run.json").read_text(encoding="utf-8")
         )

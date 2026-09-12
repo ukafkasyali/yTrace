@@ -1,4 +1,5 @@
 import { ArrowUpRight, Check, CircleX } from 'lucide-react';
+import { candidateIsEligibleForApproval } from '../services';
 import type { EvidenceRecord, RefinementOutcome, SourcingRun } from '../services';
 
 function label(value: string) {
@@ -25,6 +26,7 @@ function EvidenceLinks({ records }: { records: EvidenceRecord[] }) {
 }
 
 function decisionReason(run: SourcingRun, candidateId: string) {
+  if (run.excludedCandidateIds.includes(candidateId)) return 'Excluded by reviewer';
   const assessment = run.assessments.find(item => item.candidateId === candidateId);
   if (!assessment) return 'Not assessed';
   const missing = assessment.missingRequirementIds
@@ -47,6 +49,13 @@ function refinementMessage(run: SourcingRun, refinement: RefinementOutcome) {
   const current = candidateName(run, refinement.recommendedCandidateId);
   const candidateCount = refinement.newCandidateIds.length;
   const evidenceCount = refinement.newEvidenceIds.length;
+  if (refinement.outcome === 'RECOMMENDATION_WITHHELD') {
+    const rejected = candidateName(run, refinement.rejectedCandidateId);
+    const excludedCandidateIds = new Set(run.excludedCandidateIds);
+    const alternatives = run.assessments.filter(item =>
+      candidateIsEligibleForApproval(item, excludedCandidateIds));
+    return <><strong>{rejected} was excluded from this run.</strong> {alternatives.length > 0 ? `${alternatives.length} eligible alternative${alternatives.length === 1 ? ' remains' : 's remain'}, but none reached the recommendation threshold.` : 'No eligible alternative was found; the agent recommendation is withheld.'}</>;
+  }
   if (refinement.outcome === 'RECOMMENDATION_CHANGED') {
     return <>{candidateName(run, refinement.previousRecommendedCandidateId)} was replaced by <strong>{current}</strong> after adding {candidateCount} candidate{candidateCount === 1 ? '' : 's'} and {evidenceCount} native evidence record{evidenceCount === 1 ? '' : 's'}.</>;
   }
@@ -63,7 +72,7 @@ function RefinementResults({ run }: { run: SourcingRun }) {
   if (run.refinementOutcomes.length === 0) return null;
   return <div className="refinement-results" aria-label="Refinement results">{run.refinementOutcomes.map(refinement =>
     <article className={`refinement-result refinement-${refinement.outcome.toLowerCase()}`} key={refinement.iteration} role="status">
-      <strong>Refinement {refinement.iteration}: {refinement.outcome === 'RECOMMENDATION_CHANGED' ? 'recommendation changed' : refinement.outcome === 'EVIDENCE_EXPANDED' ? 'evidence expanded' : refinement.outcome === 'CANDIDATES_ADDED' ? 'candidates added' : 'no decision change'}</strong>
+      <strong>Refinement {refinement.iteration}: {refinement.outcome === 'RECOMMENDATION_CHANGED' ? 'recommendation changed' : refinement.outcome === 'RECOMMENDATION_WITHHELD' ? 'recommendation withheld' : refinement.outcome === 'EVIDENCE_EXPANDED' ? 'evidence expanded' : refinement.outcome === 'CANDIDATES_ADDED' ? 'candidates added' : 'no decision change'}</strong>
       <p>{refinementMessage(run, refinement)}</p>
       <details><summary>Search direction</summary><p><span>Reviewer feedback</span>{refinement.feedback}</p><p><span>Executed query</span>{refinement.query}</p></details>
     </article>,
@@ -84,6 +93,9 @@ export default function DecisionEvidence({
     item => item.candidateId === run.recommendedCandidateId,
   );
   const ranked = [...run.assessments].sort((left, right) => right.totalScore - left.totalScore);
+  const excludedCandidateIds = new Set(run.excludedCandidateIds);
+  const eligibleAlternatives = ranked.filter(item =>
+    candidateIsEligibleForApproval(item, excludedCandidateIds));
 
   return <section className="decision-evidence" aria-labelledby="decision-evidence-title">
     <div className="decision-evidence-heading">
@@ -97,7 +109,9 @@ export default function DecisionEvidence({
     <p className="decision-outcome">
       {recommended && recommendedAssessment
         ? <><strong>Recommendation: {recommended.name}</strong> scored {recommendedAssessment.totalScore}/100 and passed every mandatory gate. Verify the linked evidence before approval.</>
-        : <><strong>No candidate is ready for approval.</strong> Review the missing requirements and rejection reasons below.</>}
+        : eligibleAlternatives.length > 0
+          ? <><strong>No agent recommendation.</strong> You may still approve one of the eligible shortlisted datasets.</>
+          : <><strong>No eligible alternative is ready for approval.</strong> Continue refinement if another search remains.</>}
     </p>
     <dl className="decision-metrics">
       <div><dt>Mandatory requirements</dt><dd>{verifiedRequirements}/{mandatory.length} verified</dd></div>

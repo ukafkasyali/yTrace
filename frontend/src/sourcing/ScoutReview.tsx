@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, CircleX } from 'lucide-react';
+import { candidateIsEligibleForApproval } from '../services';
 import type { CandidateAssessment, DatasetCandidate, DatasetProfile, SourcingManifest, SourcingReview, SourcingRun } from '../services';
 import DecisionEvidence from './DecisionEvidence';
 import { friendlyRetrievalNote } from './retrievalNotes';
@@ -44,8 +45,9 @@ function Manifest({ manifest, onUseSource }: { manifest: SourcingManifest; onUse
 }
 
 export default function ScoutReview({ run, busy, onReview, onUseSource }: Props) {
-  const eligible = run.assessments.filter(item => item.totalScore >= 65 && item.tier !== 'REJECT'
-    && item.missingRequirementIds.length === 0 && item.gates.every(gate => gate.passed));
+  const excludedCandidateIds = new Set(run.excludedCandidateIds);
+  const eligible = run.assessments.filter(item =>
+    candidateIsEligibleForApproval(item, excludedCandidateIds));
   const eligibleKey = eligible.map(item => item.candidateId).join('|');
   const defaultCandidateId = run.approvedCandidateId ?? run.recommendedCandidateId
     ?? eligible[0]?.candidateId ?? '';
@@ -87,7 +89,7 @@ export default function ScoutReview({ run, busy, onReview, onUseSource }: Props)
           <label htmlFor={`refinement-feedback-${run.runId}`}>What should the scout improve?</label>
           <textarea id={`refinement-feedback-${run.runId}`} rows={3} value={feedback} onChange={event => setFeedback(event.target.value)} placeholder="Example: prioritize datasets with free-motion baselines and CSV files" disabled={Boolean(busy) || !refinementAvailable} />
           <small>{refinementAvailable ? `${run.reviewIterationsUsed}/2 refinement searches used. Feedback is added to the next bounded query.` : hasRefinementSlot ? 'The Tavily credit budget is exhausted; start a new run to continue.' : 'The refinement limit is reached; start a new run to continue.'}</small>
-          <button className="btn" disabled={Boolean(busy) || !refinementAvailable || normalizedFeedback.length < 3} onClick={() => onReview({ decision: 'REJECT', note: normalizedFeedback })}>{busy === 'REJECT' ? 'Refining…' : 'Reject and refine'}</button>
+          <button className="btn" disabled={Boolean(busy) || !refinementAvailable || normalizedFeedback.length < 3} onClick={() => onReview({ decision: 'REJECT', candidateId: selectedCandidateId || undefined, note: normalizedFeedback })}>{busy === 'REJECT' ? 'Refining…' : 'Reject and refine'}</button>
         </div>
       </div>
       {run.reviewFeedback.length > 0 && <details className="scout-review-history"><summary>Applied reviewer feedback ({run.reviewFeedback.length})</summary><ol>{run.reviewFeedback.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol></details>}
