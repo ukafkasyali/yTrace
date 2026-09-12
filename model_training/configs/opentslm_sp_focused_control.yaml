@@ -3,7 +3,7 @@ base_model: meta-llama/Llama-3.2-1B
 warm_start: OpenTSLM/llama-3.2-1b-har-sp
 upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
 experiment:
-  hypothesis: focused_three_intent_curriculum_without_channel_permutation
+  hypothesis: conversational_all_intent_curriculum_without_channel_permutation
   comparison_run: llama-har-sp-timef-rationale-v5b
 targets:
   format: rationale_then_answer
