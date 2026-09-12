@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowLeft, Database, FileText, Pause, Play, Radio, RotateCcw, SkipBack, SkipForward, Waves } from 'lucide-react';
 import AssistantPanel from './assistant/AssistantPanel';
 import { loadDemoData } from './lib/data';
 import { intervalLabel, timecode } from './lib/format';
 import RecordingContext from './recordings/RecordingContext';
+import { createMarkerAnalysis, type AutomaticAnalysisRequest } from './recordings/markerAnalysis';
 import { useModelRegistry } from './services/useModelRegistry';
 import { useReplay } from './replay/useReplay';
 import { createServices, type Recording } from './services';
@@ -51,8 +52,17 @@ function Workbench({ data, datasetId, onOpenRecording }: { data: DemoData; datas
   const [draftEnd, setDraftEnd] = useState(interval.end.toFixed(3));
   const [selectionError, setSelectionError] = useState('');
   const registry = useModelRegistry(services);
+  const [automaticAnalysis, setAutomaticAnalysis] = useState<AutomaticAnalysisRequest>();
+  const initialAnalysisQueued = useRef(false);
+  const modelRevision = registry.models.find(model => model.id === 'assistant')?.revision;
   const availability = !services.connected ? 'Models not connected' : registry.loading ? 'Checking models…' : registry.error ? 'Model service unavailable' : `${registry.models.filter(m => m.available).length} models available`;
   useEffect(() => { setDraftStart(interval.start.toFixed(3)); setDraftEnd(interval.end.toFixed(3)); }, [interval]);
+  useEffect(() => {
+    if (initialAnalysisQueued.current || registry.loading) return;
+    initialAnalysisQueued.current = true;
+    const event = data.events.find(candidate => candidate.timeSeconds >= interval.start && candidate.timeSeconds < interval.end);
+    if (event) setAutomaticAnalysis(createMarkerAnalysis(data, event, replay.playhead, modelRevision));
+  }, [data, interval, modelRevision, registry.loading, replay.playhead]);
   const viewport = useMemo(() => {
     if (following) return { start: zoom ? Math.max(0, replay.playhead-zoom) : 0, end: Math.max(.01, replay.playhead) };
     const padding = (interval.end-interval.start)*.18;
@@ -65,7 +75,7 @@ function Workbench({ data, datasetId, onOpenRecording }: { data: DemoData; datas
     replay.seek(value); setFollowing(true); setHighlighted([]); setSelectionError('');
     setInterval({ start: Math.max(0, value-1.024), end: value });
   }
-  function marker(e: Marker) { const end = Math.min(data.recording.durationSeconds, e.timeSeconds+.624); replay.seek(Math.max(replay.playhead, end)); setInterval({ start: Math.max(0, e.timeSeconds-.4), end }); setFollowing(false); setHighlighted([]); setSelectionError(''); }
+  function marker(e: Marker) { const analysis = createMarkerAnalysis(data, e, replay.playhead, modelRevision); replay.seek(analysis.playhead); setInterval(analysis.interval); setAutomaticAnalysis(analysis); setFollowing(false); setHighlighted([]); setSelectionError(''); }
   function navigateMarker(direction: number) {
     const target = direction > 0 ? data.events.find(e => e.timeSeconds > replay.playhead) : [...data.events].reverse().find(e => e.timeSeconds < (effectiveInterval.start || replay.playhead));
     if (target) marker(target);
@@ -77,7 +87,7 @@ function Workbench({ data, datasetId, onOpenRecording }: { data: DemoData; datas
       <main className="main-workspace"><div className="workspace-toolbar"><div className="breadcrumb"><span>{datasetId === SAMPLE_DATASET ? "KUKA experiments" : "Recordings"}</span><ChevronSeparator/><strong>{view === 'inspect' ? `Recording ${data.recording.id}` : 'Data sources'}</strong></div><span className="toolbar-source">{datasetId === SAMPLE_DATASET ? 'Real sample data' : 'Backend recording'}<span className="separator-dot">·</span>{data.recording.channelCount} channels</span></div>
         <div className="mobile-switch"><button className={mobile === 'signals' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('signals'); }}>Signals</button><button className={mobile === 'assistant' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('assistant'); }}>Assistant</button></div>
         <div className={`inspect-grid mobile-${mobile}`} style={{ display: view === 'inspect' ? undefined : 'none' }}>
-          <div className="left-workspace"><RecordingContext datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence}/></div>
+          <div className="left-workspace"><RecordingContext datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/><AssistantPanel registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} automaticAnalysis={automaticAnalysis} onEvidence={evidence}/></div>
           <SignalViewer data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>
         </div>
         {view === 'data' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><DataWorkspace services={services} data={data} onOpenRecording={onOpenRecording}/></div>}

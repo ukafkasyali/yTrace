@@ -5,18 +5,21 @@ import { intervalLabel } from '../lib/format';
 import type { DemoData, EvidenceLink, Interval } from '../types';
 import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
+import type { AutomaticAnalysisRequest } from '../recordings/markerAnalysis';
 
 type Message = { id: string; question: string; interval: Interval; playhead: number; text: string; source: string; tools: string[]; evidence: EvidenceLink[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
-type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void };
+type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; automaticAnalysis?: AutomaticAnalysisRequest; onEvidence: (e: EvidenceLink) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
-  if (blocks.length < 2) return <p>{text}</p>;
   return <div className="answer-brief">{blocks.map((block, index) => {
     const [heading, ...body] = block.split('\n');
-    return <section key={`${heading}-${index}`}><h3>{heading}</h3>{body.length > 0 && <p>{body.join(' ')}</p>}</section>;
+    const structured = body.length > 0 && /^(Measured in this selected window|OpenTSLM interpretation)$/i.test(heading.trim());
+    return structured
+      ? <section key={`${heading}-${index}`}><h3>{heading}</h3><p>{body.join(' ')}</p></section>
+      : <p key={`${heading}-${index}`}>{block.replace(/\n+/g, ' ')}</p>;
   })}</div>;
 }
-export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, onEvidence }: Props) {
+export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, automaticAnalysis, onEvidence }: Props) {
   const [question, setQuestion] = useState('');
   const [mode, setMode] = useState('assistant');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -28,6 +31,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
   const active = useRef<{ id: string; controller: AbortController; queryId?: string } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
+  const handledAutomatic = useRef(new Set<string>());
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'smooth' }); }, [messages]);
   useEffect(() => () => { const job = active.current; job?.controller.abort(); if (job?.queryId) void services.cancelQuery(job.queryId).catch(() => undefined); active.current = null; }, [services]);
   function update(id: string, changes: Partial<Message> | ((m: Message) => Partial<Message>)) { setMessages(ms => ms.map(m => m.id === id ? { ...m, ...(typeof changes === 'function' ? changes(m) : changes) } : m)); }
@@ -36,15 +40,22 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     if (!e.window.channelIds.length) return [];
     return [{ channelId: e.window.channelIds[0], channelIds: e.window.channelIds, label: `Inspect ${e.window.channelIds.length} input channels`, interval: { start: e.window.startSec, end: e.window.endSec } }];
   }
-  async function submit(prompt = question) {
-    if (!prompt.trim() || busy || modeUnavailable) return;
-    const snapshot = { ...interval }, horizon = playhead;
+  useEffect(() => {
+    if (!automaticAnalysis || busy || handledAutomatic.current.has(automaticAnalysis.id) || (automaticAnalysis.mode === 'assistant' && !assistantAvailable)) return;
+    handledAutomatic.current.add(automaticAnalysis.id);
+    void submit(automaticAnalysis.prompt, automaticAnalysis);
+  }, [assistantAvailable, automaticAnalysis, busy]);
+  async function submit(prompt = question, automatic?: AutomaticAnalysisRequest) {
+    const runMode = automatic?.mode ?? mode;
+    if (!prompt.trim() || busy || (runMode === 'assistant' && !assistantAvailable)) return;
+    const snapshot = automatic ? { ...automatic.interval } : { ...interval }, horizon = automatic?.playhead ?? playhead;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
-    setMessages(ms => [...ms, { id, question: prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: mode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
-    setQuestion(''); setBusy(true);
+    setMessages(ms => [...ms, { id, question: automatic?.displayQuestion ?? prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: automatic?.source ?? (runMode === 'local' ? 'Local numerical analysis' : 'Assistant'), tools: [], evidence: [], status: 'running' }]);
+    if (!automatic) setQuestion('');
+    setBusy(true);
     try {
-      if (mode === 'local') {
+      if (runMode === 'local') {
         const result = analyzeWindow(data, snapshot, prompt, horizon);
         update(id, { text: result.text, tools: result.tools, evidence: result.evidence, status: 'complete' });
       } else {
@@ -58,7 +69,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
           if (event.type === 'tool.started') update(id, m => ({ tools: [...m.tools, p.label ?? p.tool ?? 'Tool started'] }));
           if (event.type === 'tool.completed') update(id, m => ({ tools: [...m.tools, p.summary ?? 'Tool completed'] }));
           if (event.type === 'answer.delta') update(id, m => ({ text: m.text + (p.text ?? '') }));
-          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
+          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, source: automatic ? `${automatic.source} · ${p.modelId ?? 'OpenTSLM'}` : `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
           if (event.type === 'query.error') { completed.current = true; update(id, m => ({ status: 'error', text: `${m.text}${m.text ? '\n\n' : ''}${p.message ?? 'Inference failed.'}` })); }
           if (event.type === 'query.cancelled') { completed.current = true; update(id, { status: 'cancelled' }); }
         }, controller.signal);

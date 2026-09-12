@@ -188,6 +188,7 @@ input,textarea{caret-color:var(--accent)}
 .marker-explainer{min-width:0}.marker-explainer summary{display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer;color:#b9c3c6}.marker-explainer summary::-webkit-details-marker{display:none}.marker-explainer summary:hover{color:var(--text)}
 .marker-detail{position:absolute;z-index:8;left:12px;right:12px;bottom:28px;padding:12px 13px;border:1px solid #4e5558;border-radius:4px;background:#202629;box-shadow:0 10px 28px rgba(0,0,0,.38);color:#c8d1d3}
 .marker-detail strong{font-size:12px;font-weight:600}.marker-detail p{max-width:70ch;margin:5px 0 7px;font-size:11px;line-height:1.5;color:#aeb9bc}.marker-detail .text-button{font-size:10px;color:#d8c59e}
+.marker-detail .marker-analysis-status{padding-top:7px;border-top:1px solid #394246;color:#c3d6ce}
 .range-bars{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(7,minmax(0,1fr));justify-content:stretch;gap:0}
 .range-row{min-height:0;line-height:1.2}
 .range-title{flex-shrink:0}
