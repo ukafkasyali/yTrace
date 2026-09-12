@@ -136,16 +136,19 @@
       "details": {}
     },
     {
-      "check": "run:03-15-12-53:position_unit_marked_unresolved",
+      "check": "run:03-15-12-53:position_unit_radian_high_confidence_inference",
       "passed": true,
       "expected": true,
       "actual": true,
       "details": {
+        "timef_units": [
+          "radian"
+        ],
         "unit_resolution": {
           "spec_type": "measured_joint_position",
-          "status": "unresolved",
-          "timef_unit": "dimensionless",
-          "timef_unit_is_placeholder": true
+          "unit": "radian",
+          "unit_resolution": "inferred",
+          "confidence": "high"
         }
       }
     },
@@ -285,16 +288,19 @@
       "details": {}
     },
     {
-      "check": "run:03-15-13-08:position_unit_marked_unresolved",
+      "check": "run:03-15-13-08:position_unit_radian_high_confidence_inference",
       "passed": true,
       "expected": true,
       "actual": true,
       "details": {
+        "timef_units": [
+          "radian"
+        ],
         "unit_resolution": {
           "spec_type": "measured_joint_position",
-          "status": "unresolved",
-          "timef_unit": "dimensionless",
-          "timef_unit_is_placeholder": true
+          "unit": "radian",
+          "unit_resolution": "inferred",
+          "confidence": "high"
         }
       }
     },
@@ -434,16 +440,19 @@
       "details": {}
     },
     {
-      "check": "run:03-15-13-13:position_unit_marked_unresolved",
+      "check": "run:03-15-13-13:position_unit_radian_high_confidence_inference",
       "passed": true,
       "expected": true,
       "actual": true,
       "details": {
+        "timef_units": [
+          "radian"
+        ],
         "unit_resolution": {
           "spec_type": "measured_joint_position",
-          "status": "unresolved",
-          "timef_unit": "dimensionless",
-          "timef_unit_is_placeholder": true
+          "unit": "radian",
+          "unit_resolution": "inferred",
+          "confidence": "high"
         }
       }
     },
@@ -583,16 +592,19 @@
       "details": {}
     },
     {
-      "check": "run:03-15-13-18:position_unit_marked_unresolved",
+      "check": "run:03-15-13-18:position_unit_radian_high_confidence_inference",
       "passed": true,
       "expected": true,
       "actual": true,
       "details": {
+        "timef_units": [
+          "radian"
+        ],
         "unit_resolution": {
           "spec_type": "measured_joint_position",
-          "status": "unresolved",
-          "timef_unit": "dimensionless",
-          "timef_unit_is_placeholder": true
+          "unit": "radian",
+          "unit_resolution": "inferred",
+          "confidence": "high"
         }
       }
     },
@@ -732,16 +744,19 @@
       "details": {}
     },
     {
-      "check": "run:03-15-13-24:position_unit_marked_unresolved",
+      "check": "run:03-15-13-24:position_unit_radian_high_confidence_inference",
       "passed": true,
       "expected": true,
       "actual": true,
       "details": {
+        "timef_units": [
+          "radian"
+        ],
         "unit_resolution": {
           "spec_type": "measured_joint_position",
-          "status": "unresolved",
-          "timef_unit": "dimensionless",
-          "timef_unit_is_placeholder": true
+          "unit": "radian",
+          "unit_resolution": "inferred",
+          "confidence": "high"
         }
       }
     },

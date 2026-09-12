@@ -63,6 +63,13 @@ def test_values_are_loaded_by_the_shared_parser(tmp_path):
     np.testing.assert_array_equal(position[0].to_numpy(), np.arange(100, 105, dtype=np.float64))
 
 
+def test_position_series_use_radians(tmp_path):
+    record = _convert(tmp_path).records[0]
+    position = [s for s in record.time_series if s.spec.spec_type == "measured_joint_position"]
+    assert len(position) == 7
+    assert {str(series.spec.unit_value) for series in position} == {"radian"}
+
+
 def test_collision_indices_and_timestamps_are_explicit(tmp_path):
     collisions = [a for a in _convert(tmp_path).records[0].annotations if a.key == "collision"]
     assert [a.value["matlab_index"] for a in collisions] == [1, 3, 5]
@@ -71,13 +78,15 @@ def test_collision_indices_and_timestamps_are_explicit(tmp_path):
     assert [a.span.start_us for a in collisions] == [0, 2000, 4000]
 
 
-def test_provenance_and_unknown_position_unit_are_machine_readable(tmp_path):
+def test_provenance_and_inferred_position_unit_are_machine_readable(tmp_path):
     by_key = {a.key: a.value for a in _convert(tmp_path).records[0].annotations}
     assert by_key["source_run_id"] == "collision-batch-01/03-15-12-53"
     assert "collision-batch-01/03-15-12-53/JK_moments.mat" in by_key["source_files"]
     assert by_key["unit_resolution"] == {
-        "spec_type": "measured_joint_position", "status": "unresolved",
-        "timef_unit": "dimensionless", "timef_unit_is_placeholder": True,
+        "spec_type": "measured_joint_position",
+        "unit": "radian",
+        "unit_resolution": "inferred",
+        "confidence": "high",
     }
 
 

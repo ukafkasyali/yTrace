@@ -189,15 +189,18 @@ def validate_kuka_timef(
             actual_source_files,
         )
         unit_resolution = _annotation_value(record, "unit_resolution")
+        position_units = sorted({str(series.spec.unit_value) for series in position})
         _add(
             checks,
-            f"{prefix}:position_unit_marked_unresolved",
+            f"{prefix}:position_unit_radian_high_confidence_inference",
             True,
             bool(
-                unit_resolution.get("status") == "unresolved"
-                and unit_resolution.get("timef_unit_is_placeholder") is True
+                position_units == ["radian"]
+                and unit_resolution.get("unit") == "radian"
+                and unit_resolution.get("unit_resolution") == "inferred"
+                and unit_resolution.get("confidence") == "high"
             ),
-            details={"unit_resolution": unit_resolution},
+            details={"timef_units": position_units, "unit_resolution": unit_resolution},
         )
         _add(
             checks,
