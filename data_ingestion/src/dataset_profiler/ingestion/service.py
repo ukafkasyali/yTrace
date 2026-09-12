@@ -156,6 +156,12 @@ class IngestionService:
                 raise IngestionJobConflict(
                     "Approved source already has an ingestion with another asset selection"
                 )
+            if existing.state is IngestionState.FAILED:
+                existing = self.jobs.set_state(
+                    existing.ingestion_id,
+                    IngestionState.QUEUED,
+                    "Queued for verified acquisition retry",
+                )
             return existing, False
 
         resolved = self.resolver.resolve(request.approved_source_id)

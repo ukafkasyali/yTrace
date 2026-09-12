@@ -77,6 +77,17 @@ class ZenodoAcquirer:
         if self._owns_client:
             self.client.close()
 
+    def has_verified_content(self, content_sha256: str, size_bytes: int) -> bool:
+        target = self.content_dir / content_sha256[:2] / content_sha256
+        try:
+            return (
+                target.is_file()
+                and target.stat().st_size == size_bytes
+                and _file_sha256(target) == content_sha256
+            )
+        except OSError:
+            return False
+
     def acquire(self, source_kind: SourceKind, asset: ManifestAsset) -> AcquiredAsset:
         if source_kind is not SourceKind.ZENODO:
             raise AcquisitionError("Zenodo acquirer received another provider")

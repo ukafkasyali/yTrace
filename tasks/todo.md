@@ -134,20 +134,21 @@ verify provider metadata/checksums, compute SHA-256, and atomically promote veri
 
 **Acceptance criteria:**
 
-- [ ] Only exact assets on the approved record/revision can be fetched.
-- [ ] Redirect, DNS, timeout, truncation, size, and checksum failures fail closed.
-- [ ] Partial files never appear in the verified cache.
+- [x] Only exact assets on the approved record/revision can be fetched.
+- [x] Redirect, DNS, timeout, truncation, size, and checksum failures fail closed.
+- [x] Partial files never appear in the verified cache.
 
 **Progress:**
 
 - [x] Zenodo streams exact manifest assets into staging, verifies size/provider checksum, computes
   SHA-256, and atomically promotes content.
 - [x] Redirect, public-address, cross-host, truncation, size, and checksum guards are implemented.
-- [ ] Persist source-asset-to-content receipts and connect acquisition to the queued job worker.
+- [x] Persist source-asset-to-content receipts and connect acquisition to the queued job worker.
 
 **Verification:**
 
-- [ ] Mock tests cover every failure class and deterministic success.
+- [x] Mock tests cover every failure class and deterministic success.
+- [x] Mock retry proves a previously verified asset is reused without another network request.
 - [ ] A previously downloaded KUKA archive can be verified without another network request.
 
 **Dependencies:** Task 5

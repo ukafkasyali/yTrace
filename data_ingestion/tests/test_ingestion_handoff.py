@@ -5,12 +5,15 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx
 from fastapi.testclient import TestClient
 
 from dataset_profiler.ingestion import (
+    AcquiredAsset,
     AcquisitionError,
+    AcquisitionWorker,
     AssetReceipt,
     CreateIngestion,
     IngestionJobConflict,
@@ -148,6 +151,40 @@ class ZenodoAcquirerTests(unittest.TestCase):
                 acquirer.acquire(SourceKind.ZENODO, cross_host)
             acquirer.close()
 
+    def test_dns_timeout_and_configured_size_fail_closed(self) -> None:
+        content = b"robot-signal-data"
+        asset = self.asset(content)
+        with tempfile.TemporaryDirectory() as temporary:
+            oversized = ZenodoAcquirer(
+                Path(temporary),
+                max_asset_bytes=len(content) - 1,
+                client=httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200))),
+                validate_dns=False,
+            )
+            with self.assertRaisesRegex(AcquisitionError, "configured download limit"):
+                oversized.acquire(SourceKind.ZENODO, asset)
+            oversized.close()
+
+            def timeout_handler(request: httpx.Request) -> httpx.Response:
+                raise httpx.ReadTimeout("timeout", request=request)
+
+            timeout = ZenodoAcquirer(
+                Path(temporary),
+                client=httpx.Client(transport=httpx.MockTransport(timeout_handler)),
+                validate_dns=False,
+            )
+            with self.assertRaisesRegex(AcquisitionError, "download failed"):
+                timeout.acquire(SourceKind.ZENODO, asset)
+            timeout.close()
+
+            dns = ZenodoAcquirer(Path(temporary), validate_dns=True)
+            with patch(
+                "dataset_profiler.ingestion.acquisition.socket.getaddrinfo",
+                return_value=[(2, 1, 6, "", ("127.0.0.1", 443))],
+            ), self.assertRaisesRegex(AcquisitionError, "non-public"):
+                dns.acquire(SourceKind.ZENODO, asset)
+            dns.close()
+
 
 class IngestionJobStoreTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -266,6 +303,116 @@ class FailingResolver:
         pass
 
 
+class FakeAcquirer:
+    def __init__(self, contents: dict[str, bytes]):
+        self.contents = contents
+        self.calls: list[str] = []
+        self.cached: set[str] = set()
+        self.fail_once: set[str] = set()
+
+    def acquire(self, source_kind: SourceKind, asset: ManifestAsset) -> AcquiredAsset:
+        self.calls.append(asset.asset_id)
+        if asset.asset_id in self.fail_once:
+            self.fail_once.remove(asset.asset_id)
+            raise AcquisitionError("synthetic acquisition failure")
+        content = self.contents[asset.asset_id]
+        digest = hashlib.sha256(content).hexdigest()
+        self.cached.add(digest)
+        return AcquiredAsset(asset.asset_id, len(content), digest, Path("unused"))
+
+    def has_verified_content(self, content_sha256: str, size_bytes: int) -> bool:
+        return content_sha256 in self.cached
+
+
+class AcquisitionWorkerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.payload = json.loads(CONTRACT_FIXTURE.read_text(encoding="utf-8"))
+        content = b"timestamp,joint_1\n0.0,1.0\n"
+        self.payload["assets"][0]["sizeBytes"] = len(content)
+        self.resolver = FakeResolver(self.payload)
+        self.service = IngestionService(Path(self.temporary.name), self.resolver)
+        self.job, _ = self.service.create(
+            CreateIngestion(approved_source_id="src_0123456789abcdef01234567")
+        )
+        self.acquirer = FakeAcquirer({"asset_0123456789abcdef": content})
+        self.worker = AcquisitionWorker(self.service.jobs, self.resolver, self.acquirer)
+
+    def tearDown(self) -> None:
+        self.service.close()
+        self.temporary.cleanup()
+
+    def test_worker_verifies_assets_and_persists_public_receipt(self) -> None:
+        result = self.worker.run_once()
+
+        assert result is not None
+        self.assertEqual(result.state, IngestionState.INSPECTING)
+        receipt = self.service.jobs.list_receipts(result.ingestion_id)[0]
+        self.assertEqual(receipt.provider_locator, "zenodo:123:signals.csv")
+        self.assertEqual(receipt.observed_size_bytes, len(self.acquirer.contents[receipt.asset_id]))
+        self.assertNotIn(str(Path(self.temporary.name)), receipt.model_dump_json())
+
+    def test_retry_reuses_persisted_verified_content(self) -> None:
+        second_id = "asset_1111111111111111"
+        second_content = b"second asset"
+        self.payload["assets"].append(
+            self.payload["assets"][0]
+            | {
+                "assetId": second_id,
+                "name": "second.csv",
+                "sizeBytes": len(second_content),
+                "providerLocator": "zenodo:123:second.csv",
+                "downloadUrl": "https://zenodo.org/api/files/123/second.csv",
+                "sourceChecksum": None,
+            }
+        )
+        self.acquirer.contents[second_id] = second_content
+        self.acquirer.fail_once.add(second_id)
+        resolved = self.resolver.resolve(self.job.approved_source_id)
+        self.service.jobs.connection.execute(
+            "UPDATE ingestion_jobs SET manifest_sha256 = ?, asset_ids_json = ? "
+            "WHERE ingestion_id = ?",
+            (
+                resolved.manifest_sha256,
+                json.dumps(sorted(["asset_0123456789abcdef", second_id])),
+                self.job.ingestion_id,
+            ),
+        )
+
+        failed = self.worker.run_once()
+        retried, created = self.service.create(
+            CreateIngestion(approved_source_id=self.job.approved_source_id)
+        )
+        completed = self.worker.run_once()
+
+        assert failed is not None and completed is not None
+        self.assertEqual(failed.state, IngestionState.FAILED)
+        self.assertFalse(created)
+        self.assertEqual(retried.ingestion_id, failed.ingestion_id)
+        self.assertEqual(completed.state, IngestionState.INSPECTING)
+        self.assertEqual(self.acquirer.calls.count("asset_0123456789abcdef"), 1)
+        self.assertEqual(len(self.service.jobs.list_receipts(self.job.ingestion_id)), 2)
+
+    def test_manifest_drift_fails_without_fetching(self) -> None:
+        self.payload["name"] = "changed after job creation"
+
+        result = self.worker.run_once()
+
+        assert result is not None
+        self.assertEqual(result.state, IngestionState.FAILED)
+        self.assertEqual(self.acquirer.calls, [])
+
+    def test_interrupted_acquisition_is_requeued_explicitly(self) -> None:
+        claimed = self.service.jobs.claim_next_acquisition()
+        assert claimed is not None
+
+        self.assertEqual(self.worker.recover_interrupted(), 1)
+        self.assertEqual(
+            self.service.jobs.get(claimed.ingestion_id).state,
+            IngestionState.QUEUED,
+        )
+
+
 class IngestionServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -307,6 +454,17 @@ class IngestionServiceTests(unittest.TestCase):
 
         self.assertEqual(job.state, IngestionState.NEEDS_INPUT)
         self.assertIn("Dataset-file license", job.message)
+
+    def test_matching_retry_requeues_the_same_failed_job(self) -> None:
+        first, _ = self.service.create(self.request)
+        self.service.jobs.set_state(first.ingestion_id, IngestionState.FAILED, "failed")
+
+        retried, created = self.service.create(self.request)
+
+        self.assertFalse(created)
+        self.assertEqual(retried.ingestion_id, first.ingestion_id)
+        self.assertEqual(retried.state, IngestionState.QUEUED)
+        self.assertEqual(self.resolver.calls, 1)
 
 
 class HttpResolverTests(unittest.TestCase):
@@ -378,11 +536,16 @@ class IngestionApiTests(unittest.TestCase):
                     json={"approvedSourceId": "src_0123456789abcdef01234567"},
                 )
                 fetched = client.get(f"/api/ingestions/{created.json()['ingestionId']}")
+                assets = client.get(
+                    f"/api/ingestions/{created.json()['ingestionId']}/assets"
+                )
 
                 self.assertEqual(created.status_code, 202)
                 self.assertEqual(repeated.json()["ingestionId"], created.json()["ingestionId"])
                 self.assertEqual(fetched.json(), created.json())
                 self.assertEqual(created.json()["state"], "queued")
+                self.assertEqual(assets.status_code, 200)
+                self.assertEqual(assets.json(), [])
             service.close()
 
     def test_conflicting_asset_selection_returns_409(self) -> None:

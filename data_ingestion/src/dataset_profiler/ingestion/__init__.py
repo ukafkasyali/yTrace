@@ -10,10 +10,12 @@ from .jobs import (
     IngestionState,
 )
 from .service import CreateIngestion, IngestionService
+from .worker import AcquisitionWorker
 
 __all__ = [
     "AcquiredAsset",
     "AcquisitionError",
+    "AcquisitionWorker",
     "ApprovedManifest",
     "AssetReceipt",
     "CreateIngestion",

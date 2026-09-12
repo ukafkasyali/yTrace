@@ -48,8 +48,8 @@ fail before acquisition.
 
 One `approvedSourceId` has at most one logical ingestion job. Matching retries return the existing
 job, including after restart; another asset selection returns a conflict rather than creating a
-second ready dataset. This persistence layer does not download content, execute source code, or
-mark a dataset ready.
+second ready dataset. The acquisition worker downloads only manifest-selected assets and never
+executes source code or marks a dataset ready.
 
 Run the local ingestion API separately from the scout:
 
@@ -57,20 +57,25 @@ Run the local ingestion API separately from the scout:
 export INGESTION_SOURCING_API_URL=http://127.0.0.1:8001
 export INGESTION_DATA_DIR=var/ingestion
 dataset-ingestion-api
+dataset-ingestion-worker
 ```
 
 `POST /api/ingestions` accepts `{"approvedSourceId":"..."}` and an optional non-empty
 `assetIds` list. The service resolves and hashes the approved manifest itself; it never accepts a
 browser-supplied source or download URL. `GET /api/ingestions/{ingestionId}` returns the persisted
-job. Until the acquisition worker is added, valid licensed jobs remain `queued`; a missing
-dataset-file license creates the one job in `needs_input` rather than substituting a repository code
-license.
+job, and `GET /api/ingestions/{ingestionId}/assets` returns immutable public acquisition receipts.
+A missing dataset-file license creates the one job in `needs_input` rather than substituting a
+repository code license.
 
 The first acquisition adapter handles manifest-listed Zenodo assets only. It revalidates the exact
 HTTPS provider URL, optionally resolves only public addresses, disables redirects, streams into an
 isolated staging file, enforces both manifest and configured byte limits, verifies the original MD5
 or SHA-256 when supplied, computes SHA-256 for content addressing, and atomically promotes verified
-bytes. It does not extract or inspect archives yet and is not connected to the queued-job worker.
+bytes. The single-worker process claims queued jobs atomically, re-resolves the approved manifest,
+checks its stored SHA-256, and records expected provider claims separately from observed content
+size and SHA-256. A restart requeues interrupted acquisition, and a retry reuses already verified
+content through its persisted source-asset receipt. Successful jobs advance to `inspecting`; archive
+extraction and format inventory are later stages.
 
 ## Declarative semantic specs
 

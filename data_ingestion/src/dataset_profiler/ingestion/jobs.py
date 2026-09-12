@@ -188,7 +188,9 @@ class IngestionJobStore:
                 ).fetchone()
                 if existing is not None:
                     persisted = self._receipt(existing)
-                    if persisted != receipt:
+                    persisted_values = persisted.model_dump(exclude={"acquired_at"})
+                    receipt_values = receipt.model_dump(exclude={"acquired_at"})
+                    if persisted_values != receipt_values:
                         raise IngestionJobConflict("Asset already has a different acquisition receipt")
                     self.connection.execute("COMMIT")
                     return persisted
@@ -202,6 +204,20 @@ class IngestionJobStore:
                 self.connection.execute("ROLLBACK")
                 raise
 
+    def requeue_interrupted_acquisitions(self) -> int:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            cursor = self.connection.execute(
+                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ? WHERE state = ?",
+                (
+                    IngestionState.QUEUED.value,
+                    "Queued after interrupted acquisition",
+                    now,
+                    IngestionState.ACQUIRING.value,
+                ),
+            )
+        return cursor.rowcount
+
     def claim_next_acquisition(self) -> IngestionJob | None:
         now = datetime.now(UTC).isoformat()
         with self._lock:
@@ -210,11 +226,11 @@ class IngestionJobStore:
                 row = self.connection.execute(
                     """
                     SELECT * FROM ingestion_jobs
-                    WHERE state IN (?, ?)
+                    WHERE state = ?
                     ORDER BY created_at, ingestion_id
                     LIMIT 1
                     """,
-                    (IngestionState.QUEUED.value, IngestionState.FAILED.value),
+                    (IngestionState.QUEUED.value,),
                 ).fetchone()
                 if row is None:
                     self.connection.execute("COMMIT")
