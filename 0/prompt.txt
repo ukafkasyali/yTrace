@@ -1,0 +1,9 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://127.0.0.1:5174/
+</in-app-browser-context>
+
+## My request:
+Wait, but they all do the same movement? Can't they do different ones? Please also directly display all the publisher markers in that tab. Because it doesn't make sense to me that we just show it as we play, and then also bring the animation to the beginning of the incident, not the end. Those are two minor mistakes.
