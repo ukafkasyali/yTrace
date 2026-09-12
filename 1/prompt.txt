@@ -1,0 +1,31 @@
+ata — gestern um 23:58 Uhr
+hocalar herkesin eline sağlık tekrar, llama-har-sp-canary-v4-20260912 deploymentta (web interfaceinde) nasıl görünüyor
+training ile deployment arasında bir gap var mı
+
+---
+
+No, be short. What can I respond? What are we doing right now here? Is it finished?
+
+---
+
+Bro english. No turkish
+
+---
+
+Why isn't that done yet?
+
+---
+
+Can't you please assure this works? Can't you do it or not?
+
+---
+
+Yes, you should have access to computer use, any tool you need and work from there. Then also look into the vm and stuff if you need inference? Or what do you think?
+
+---
+
+Just use computer use and initialize a new VM, we have more than enough compute? Doesn't it work like that?
+
+---
+
+Use sametdegirmenci11outlook.de

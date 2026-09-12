@@ -1,0 +1,148 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BW6D8GMBG0QJVZ7YNXMNNE",
+  "session_id": "01a097a4-e68d-7451-b439-224653056c4c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:35:51.158041Z",
+  "branch": "codex/submission-pilot",
+  "checkpoints_count": 8,
+  "save_step_count": 3,
+  "files_touched": [],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "33ec426d0e81",
+  "checkpoint_transcript_start": 270,
+  "transcript_lines_at_start": 270,
+  "compact_transcript_start": 32,
+  "token_usage": {
+    "input_tokens": 128264,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 6472158,
+    "output_tokens": 8611,
+    "api_call_count": 44
+  },
+  "session_metrics": {
+    "turn_count": 12
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 956,
+      "user_lines_removed": 36,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/public/robot/kuka/positions-05-28-20-57.json": 1,
+        "frontend/public/robot/kuka/positions-05-28-21-02.json": 1,
+        "frontend/public/robot/kuka/positions-05-28-21-07.json": 1,
+        "frontend/public/robot/kuka/positions-05-28-21-15.json": 1,
+        "frontend/scripts/prepare_example_positions.py": 3,
+        "frontend/src/App.tsx": 23,
+        "frontend/src/assistant/AssistantPanel.tsx": 5,
+        "frontend/src/assistant/predictionBrief.test.ts": 14,
+        "frontend/src/assistant/predictionBrief.ts": 10,
+        "frontend/src/recordings/RecordingContext.tsx": 3,
+        "frontend/src/robot/RobotPanel.tsx": 9,
+        "frontend/src/robot/scene.ts": 3,
+        "frontend/src/robot/telemetry.test.ts": 6,
+        "frontend/src/robot/telemetry.ts": 1,
+        "frontend/src/styles.css": 11,
+        "inference/build_demo_cases.py": 12,
+        "inference/demo_cases.json": 106,
+        "inference/test_server.py": 3
+      },
+      "user_removed_per_file": {
+        "frontend/scripts/prepare_example_positions.py": 1,
+        "frontend/src/App.tsx": 8,
+        "frontend/src/assistant/AssistantPanel.tsx": 3,
+        "frontend/src/assistant/predictionBrief.test.ts": 1,
+        "frontend/src/recordings/RecordingContext.tsx": 2,
+        "frontend/src/robot/RobotPanel.tsx": 5,
+        "frontend/src/robot/scene.ts": 3,
+        "frontend/src/robot/telemetry.test.ts": 2,
+        "frontend/src/robot/telemetry.ts": 1,
+        "inference/build_demo_cases.py": 6,
+        "inference/demo_cases.json": 2,
+        "inference/test_server.py": 2
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 213,
+      "agent_lines_removed": 36,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 767,
+      "user_lines_removed": 16,
+      "agent_lines_added": 213,
+      "agent_lines_removed": 36,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/App.tsx": 5,
+        "frontend/src/assistant/AssistantPanel.tsx": 6,
+        "frontend/src/assistant/investigationReport.ts": 2,
+        "frontend/src/recordings/RecordingExplorer.tsx": 2,
+        "frontend/src/styles.css": 9
+      },
+      "user_removed_per_file": {
+        "frontend/src/App.tsx": 5,
+        "frontend/src/assistant/AssistantPanel.tsx": 5,
+        "frontend/src/assistant/investigationReport.ts": 1,
+        "frontend/src/recordings/RecordingExplorer.tsx": 4,
+        "frontend/src/styles.css": 1
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 799,
+      "user_lines_removed": 80,
+      "agent_lines_added": 229,
+      "agent_lines_removed": 48,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/public/robot/kuka/positions-04-22-15-33.json": 1,
+        "frontend/public/robot/kuka/positions-04-22-15-53.json": 1,
+        "frontend/public/robot/kuka/positions-05-26-14-28.json": 1,
+        "frontend/src/robot/telemetry.test.ts": 4,
+        "frontend/src/robot/telemetry.ts": 1,
+        "inference/build_demo_cases.py": 8,
+        "inference/demo_cases.json": 37,
+        "inference/test_server.py": 3
+      },
+      "user_removed_per_file": {
+        "frontend/src/robot/telemetry.test.ts": 5,
+        "frontend/src/robot/telemetry.ts": 1,
+        "inference/build_demo_cases.py": 8,
+        "inference/demo_cases.json": 63,
+        "inference/test_server.py": 3
+      }
+    }
+  ]
+}
