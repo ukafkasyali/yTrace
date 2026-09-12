@@ -571,10 +571,9 @@ def generation_eval(
     nonblank_rationales = [rationale for rationale in rationale_texts if rationale]
     normalized_rationales = [
         re.sub(
-            r"\b\d+(?:\.\d+)?\s*ms\b",
-            "# ms",
+            r"\b\d+(?:\.\d+)?\b",
+            "#",
             re.sub(r"\bJ[1-7]\b", "J#", rationale, flags=re.IGNORECASE),
-            flags=re.IGNORECASE,
         )
         for rationale in nonblank_rationales
     ]

@@ -288,3 +288,35 @@ def test_generation_eval_retries_invalid_first_pass_and_reports_it(tmp_path) -> 
     assert metrics["rationale_premature_label_rate"] == 0.0
     assert rows[0]["retry_used"] is True
     assert rows[0]["first_pass_output"] == ""
+
+
+def test_generation_eval_separates_surface_from_template_diversity(tmp_path) -> None:
+    metadata = {
+        "session_id": "session-1",
+        "event_type": "accidental",
+        "contact": True,
+        "onset_sample": 400,
+        "strongest_joint": "J1",
+        "affected_joints": ["J1"],
+        "evidence_start_ms": 400,
+        "evidence_end_ms": 500,
+    }
+
+    class FakeModel:
+        def eval(self):
+            return self
+
+        def generate(self, batch, **kwargs):
+            del kwargs
+            return [
+                f'Rationale: J{index + 1} changes near {400 + index * 50} ms.\nAnswer: {{"contact":true}}'
+                for index, _ in enumerate(batch)
+            ]
+
+    dataset = [
+        {"record_id": f"record-{index}", "intent": "contact", "metadata": metadata} for index in range(2)
+    ]
+    metrics, _ = generation_eval(FakeModel(), dataset, tmp_path / "diversity.jsonl")
+
+    assert metrics["rationale_unique_count"] == 2
+    assert metrics["rationale_normalized_unique_count"] == 1
