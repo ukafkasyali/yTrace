@@ -8,10 +8,9 @@ import { intervalLabel } from '../lib/format';
 import type { DemoData, EvidenceLink, Interval } from '../types';
 import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
-import type { AutomaticAnalysisRequest } from '../recordings/markerAnalysis';
 
 type Message = InvestigationAnswer & { id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
-type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; automaticAnalysis?: AutomaticAnalysisRequest; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void };
+type Props = { data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
   return <div className="answer-brief">{blocks.map((block, index) => {
@@ -22,7 +21,7 @@ function AnswerText({ text }: { text: string }) {
       : <p key={`${heading}-${index}`}>{block.replace(/\n+/g, ' ')}</p>;
   })}</div>;
 }
-export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, automaticAnalysis, onEvidence, onModelWindow }: Props) {
+export default function AssistantPanel({ data, datasetId, playhead, interval, services, registry, onEvidence, onModelWindow }: Props) {
   const [question, setQuestion] = useState('');
   const [mode, setMode] = useState<'local' | 'assistant'>('assistant');
   const historical = interval.end <= playhead;
@@ -37,7 +36,6 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
   const active = useRef<{ id: string; controller: AbortController; queryId?: string } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
-  const handledAutomatic = useRef(new Set<string>());
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
   useEffect(() => () => { const job = active.current; job?.controller.abort(); if (job?.queryId) void services.cancelQuery(job.queryId).catch(() => undefined); active.current = null; }, [services]);
   function update(id: string, changes: Partial<Message> | ((m: Message) => Partial<Message>)) { setMessages(ms => ms.map(m => m.id === id ? { ...m, ...(typeof changes === 'function' ? changes(m) : changes) } : m)); }
@@ -46,20 +44,15 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
     if (!e.window.channelIds.length) return [];
     return [{ channelId: e.window.channelIds[0], channelIds: e.window.channelIds, label: `Inspect ${e.window.channelIds.length} input channels`, interval: { start: e.window.startSec, end: e.window.endSec } }];
   }
-  useEffect(() => {
-    if (!automaticAnalysis || busy || handledAutomatic.current.has(automaticAnalysis.id) || (automaticAnalysis.mode === 'assistant' && !assistantAvailable)) return;
-    handledAutomatic.current.add(automaticAnalysis.id);
-    void submit(automaticAnalysis.prompt, automaticAnalysis);
-  }, [assistantAvailable, automaticAnalysis, busy]);
-  async function submit(prompt = question, automatic?: AutomaticAnalysisRequest) {
-    const runMode = automatic?.mode ?? mode;
+  async function submit(prompt = question) {
+    const runMode = mode;
     if (!prompt.trim() || busy || (runMode === 'assistant' && !assistantAvailable)) return;
-    const snapshot = automatic ? { ...automatic.interval } : { ...interval }, horizon = automatic?.playhead ?? playhead;
+    const snapshot = { ...interval }, horizon = playhead;
     if (runMode === 'assistant' && modelWindowIssue(data, snapshot, horizon)) return;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
-    setMessages(ms => [...ms, { id, mode: runMode, question: automatic?.displayQuestion ?? prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: automatic?.source ?? (runMode === 'local' ? 'Local numerical analysis' : 'Assistant'), tools: [], evidence: [], status: 'running' }]);
-    if (!automatic) setQuestion('');
+    setMessages(ms => [...ms, { id, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
+    setQuestion('');
     setBusy(true);
     try {
       if (runMode === 'local') {
@@ -76,7 +69,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
           if (event.type === 'tool.started') update(id, m => ({ tools: [...m.tools, p.label ?? p.tool ?? 'Tool started'] }));
           if (event.type === 'tool.completed') update(id, m => ({ tools: [...m.tools, p.summary ?? 'Tool completed'] }));
           if (event.type === 'answer.delta') update(id, m => ({ text: m.text + (p.text ?? '') }));
-          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput: typeof p.modelOutput === 'string' ? p.modelOutput : undefined, source: automatic ? `${automatic.source} · ${p.modelId ?? 'OpenTSLM'}` : `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
+          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput: typeof p.modelOutput === 'string' ? p.modelOutput : undefined, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
           if (event.type === 'query.error') { completed.current = true; update(id, m => ({ status: 'error', text: `${m.text}${m.text ? '\n\n' : ''}${p.message ?? 'Inference failed.'}` })); }
           if (event.type === 'query.cancelled') { completed.current = true; update(id, { status: 'cancelled' }); }
         }, controller.signal);
@@ -96,7 +89,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
   }
   return <section className="assistant-panel" aria-label="Telemetry assistant">
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span></header>
-    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={busy || !assistantAvailable || Boolean(windowIssue)} onClick={() => { setMode('assistant'); void submit('Analyze this robot telemetry window.', { id: crypto.randomUUID(), displayQuestion: 'What happened in this interval?', prompt: 'Analyze this robot telemetry window.', interval, playhead, mode: 'assistant', source: 'OpenTSLM + measurements' }); }}>{busy ? 'Analyzing…' : 'Analyze interval'}</button></div>
+    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={busy || !assistantAvailable || Boolean(windowIssue)} onClick={() => { setMode('assistant'); void submit('Analyze this robot telemetry window.'); }}>{busy ? 'Analyzing…' : 'Analyze interval'}</button></div>
     {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Turn a contact event into an investigation.</h3><p>Analyze the selected interval to compare a model interpretation with measured joint signals. Then inspect the evidence and save your findings.</p><p className="intro-limit">Recorded telemetry can suggest what to investigate. It cannot verify a physical cause.</p></div>}
@@ -111,7 +104,7 @@ export default function AssistantPanel({ data, datasetId, playhead, interval, se
               {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
             {m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}
-            {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation</summary><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}</details>}
+            {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation · unverified</summary><p>Generated text can disagree with publisher annotations. Review those annotations separately.</p><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}</details>}
             {m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export investigation</button>}
             {(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}
           </div></div>

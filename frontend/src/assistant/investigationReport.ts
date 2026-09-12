@@ -7,6 +7,32 @@ export type InvestigationAnswer = {
   modelId?: string; modelRevision?: string; inputTrace?: unknown; modelOutput?: string;
 };
 
+function inputReceiptIssue(receipt: unknown, recordingId: string, interval: Interval): string | undefined {
+  if (!receipt || typeof receipt !== 'object') return 'The service did not provide an input receipt.';
+  const value = receipt as {
+    samplesPerChannel?: unknown;
+    inputSha256?: unknown;
+    window?: { channelIds?: unknown; recordingId?: unknown; startSec?: unknown; endSec?: unknown };
+  };
+  const expectedChannels = Array.from({ length: 7 }, (_, index) => `joint_${index + 1}`);
+  const channelIds = value.window?.channelIds;
+  if (value.samplesPerChannel !== 1024) return 'The input receipt does not confirm 1,024 samples per channel.';
+  if (!Array.isArray(channelIds) || channelIds.join(',') !== expectedChannels.join(',')) {
+    return 'The input receipt does not confirm canonical joint_1 through joint_7 channel order.';
+  }
+  if (
+    value.window?.recordingId !== recordingId
+    || value.window.startSec !== interval.start
+    || value.window.endSec !== interval.end
+  ) {
+    return 'The input receipt does not match this recording and selected interval.';
+  }
+  if (typeof value.inputSha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(value.inputSha256)) {
+    return 'The input receipt does not include a valid input hash.';
+  }
+  return undefined;
+}
+
 export function buildInvestigationReport(data: DemoData, datasetId: string, answer: InvestigationAnswer) {
   if (answer.interval.end > answer.playhead) throw new Error('The investigation extends beyond its replay cursor.');
   const window = selectWindow(data, answer.interval);
@@ -20,6 +46,9 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
       range: maximum - minimum, absolutePeak: Math.abs(channel.values[peakIndex]),
       signedPeak: channel.values[peakIndex], peakTimeSec: window.times[peakIndex] };
   });
+  const receiptIssue = answer.mode === 'assistant'
+    ? inputReceiptIssue(answer.inputTrace, data.recording.id, answer.interval)
+    : undefined;
   return {
     schemaVersion: 1, kind: 'trace_retrospective_investigation',
     recording: { datasetId, recordingId: data.recording.id, sourceUrl: data.recording.sourceUrl },
@@ -39,6 +68,8 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
       'Strong torque response does not identify the physical contact location.',
       ...(window.resolution === 'display' ? ['Measurements use reduced display samples; short peaks may be missing.'] : []),
       ...(answer.mode === 'assistant' && !answer.modelRevision ? ['The service did not provide a model revision.'] : []),
+      ...(receiptIssue ? [receiptIssue] : []),
+      ...(answer.mode === 'assistant' && answer.modelOutput ? ['Raw model output is preserved for audit and may disagree with publisher annotations.'] : []),
     ],
   };
 }
