@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BHVSFR7ENYSTAJR43F9V1Y",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-scout",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "data_sourcing/README.md",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/tests/test_graph.py",
+    "docs/DATA_SOURCING_API.md",
+    "frontend/src/services/sourcing.ts",
+    "frontend/src/sourcing/DecisionEvidence.test.tsx",
+    "frontend/src/sourcing/DecisionEvidence.tsx",
+    "frontend/src/styles.css",
+    "tasks/plan.md",
+    "tasks/todo.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2163647,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 130229775,
+    "output_tokens": 471152,
+    "api_call_count": 984
+  }
+}
