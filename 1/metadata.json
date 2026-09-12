@@ -1,0 +1,61 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BY1DPQKJHBPYW1XF9KKH7D",
+  "session_id": "01a097a4-e68d-7451-b439-224653056c4c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:08:08.461403Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "frontend/src/comparison/ComparisonPanel.tsx",
+    "frontend/src/comparison/compare.test.ts",
+    "frontend/src/comparison/compare.ts",
+    "frontend/src/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-luna",
+  "turn_id": "c9743b281d13",
+  "checkpoint_transcript_start": 1260,
+  "transcript_lines_at_start": 1260,
+  "compact_transcript_start": 167,
+  "token_usage": {
+    "input_tokens": 48103,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 5844403,
+    "output_tokens": 9909,
+    "api_call_count": 57
+  },
+  "session_metrics": {
+    "turn_count": 16
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:08:08.241888Z",
+    "agent_lines": 67,
+    "agent_removed": 13,
+    "human_added": 15,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 82,
+    "total_lines_changed": 99,
+    "agent_percentage": 80.8080808080808,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    }
+  ]
+}
