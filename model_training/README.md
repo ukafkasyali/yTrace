@@ -15,7 +15,8 @@ contract. A new robot dataset should add a reader and mapping rather than fork t
 - Manual `JK_moments.mat` marker as event-onset ground truth.
 - Event position jittered from 205–716 ms; recording folders are split before window generation.
 - 70/15/15 recording-grouped train/validation/test split, stratified by experiment class.
-- Train-only robust median/MAD scaling; signed torque and physical-unit summary statistics retained.
+- Train-only robust median/MAD scaling; signed torque and physical-unit statistics retained as
+  metadata but excluded from model prompts to prevent a textual shortcut.
 - Strongest-joint pseudo-label is calibrated top-5%-mean disturbance, not contact-location truth.
 - Natural-language evidence plus strict JSON output. Free motion uses `null` onset/joint fields.
 - Primary TSLM: OpenTSLM SoftPrompt + Llama 3.2 1B + HAR warm start.
@@ -44,4 +45,4 @@ python -m robot_observability.train_opentslm \
 
 Every expensive operation is resumable or refuses to overwrite prior artifacts. Training emits an
 atomic `status.json`, append-only `metrics.jsonl`, TensorBoard events, generated validation samples,
-and `best_model.pt`/`last_model.pt` adapters.
+W&B prediction tables, real-versus-zero-signal canaries, and `best_model.pt`/`last_model.pt` adapters.

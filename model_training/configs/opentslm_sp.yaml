@@ -4,22 +4,28 @@ warm_start: OpenTSLM/llama-3.2-1b-har-sp
 upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
 precision: bfloat16
 batch_size: 1
-gradient_accumulation_steps: 32
-epochs: 8
+gradient_accumulation_steps: 16
+epochs: 3
 early_stopping_patience: 3
-max_wall_time_hours: 9.5
+max_wall_time_hours: 3.0
+training:
+  max_examples: 8192
 learning_rates:
   encoder: 0.0002
   projector: 0.0001
-  lora: 0.0002
+  lora: 0.00002
 lora:
   rank: 16
   alpha: 32
   dropout: 0.0
 validation:
+  at_start: true
+  every_steps: 50
   every_epoch: true
-  loss_subset: 1024
-  generation_subset: 256
+  batch_size: 2
+  loss_subset: 128
+  generation_subset: 48
+  zero_signal_subset: 12
 observability:
   tensorboard: true
   jsonl: true

@@ -22,7 +22,7 @@ class RobotQADataset:
         eos_token: str = "",
     ) -> None:
         self.prepared = PreparedSplit(root, split)
-        if mode not in {"summary", "summary_plus_atomic", "all_intents"}:
+        if mode not in {"mixed", "summary", "summary_plus_atomic", "all_intents"}:
             raise ValueError(f"Unknown prompt mode: {mode}")
         self.mode = mode
         self.seed = seed
@@ -44,6 +44,12 @@ class RobotQADataset:
         signal, metadata = self.prepared[row_index]
         if self.mode == "all_intents":
             intent = INTENTS[intent_index]
+        elif self.mode == "mixed":
+            digest = hashlib.sha256(f"{self.seed}:{metadata['record_id']}:mixed".encode()).digest()
+            if digest[0] % 2 == 0:
+                intent = "summary"
+            else:
+                intent = INTENTS[1 + int.from_bytes(digest[1:5], "big") % (len(INTENTS) - 1)]
         elif self.mode == "summary_plus_atomic" and intent_index == 1:
             digest = hashlib.sha256(f"{self.seed}:{metadata['record_id']}:atomic".encode()).digest()
             intent = INTENTS[1 + int.from_bytes(digest[:4], "big") % (len(INTENTS) - 1)]
@@ -62,7 +68,8 @@ class RobotQADataset:
             "time_series": torch.from_numpy(signal.astype("float32", copy=True)),
             "post_prompt": (
                 f"\nQuestion: {question}\n"
-                f"Respond with one short evidence sentence, then `Answer:` and valid compact JSON containing only {schema_keys}."
+                f"Respond with `Answer:` and valid compact JSON containing only {schema_keys}, "
+                "then one short `Evidence:` sentence."
             ),
             "answer": target_text(metadata, intent) + self.eos_token,
             "record_id": metadata["record_id"],
