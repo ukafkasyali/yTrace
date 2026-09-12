@@ -1,0 +1,81 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BTJH78ZAZFYT3ZDWNHC981",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:07:29.556194Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "AGENTS.md",
+    "docs/PARALLEL_AGENT_BRIEFS.md",
+    "docs/submission/QWEN_BASELINE.md",
+    "docs/submission/QWEN_BASELINE_PROMPT.txt"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "e07d703939ec",
+  "checkpoint_transcript_start": 925,
+  "transcript_lines_at_start": 925,
+  "compact_transcript_start": 113,
+  "token_usage": {
+    "input_tokens": 227073,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3462100,
+    "output_tokens": 16001,
+    "api_call_count": 22
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:07:29.333665Z",
+    "agent_lines": 58,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 3,
+    "total_committed": 58,
+    "total_lines_changed": 61,
+    "agent_percentage": 95.08196721311475,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1119,
+      "user_lines_removed": 58,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "AGENTS.md": 49,
+        "docs/PARALLEL_AGENT_BRIEFS.md": 178,
+        "frontend/public/robot/kuka/positions-03-15-12-53.json": 1,
+        "frontend/public/robot/kuka/positions-03-22-11-18.json": 1,
+        "frontend/scripts/prepare_example_positions.py": 48,
+        "frontend/src/App.tsx": 24,
+        "frontend/src/assistant/AssistantPanel.tsx": 32,
+        "frontend/src/assistant/predictionBrief.ts": 15,
+        "frontend/src/recordings/RecordingContext.tsx": 5,
+        "frontend/src/robot/RobotPanel.tsx": 7,
+        "frontend/src/robot/telemetry.ts": 8,
+        "frontend/src/signals/SignalViewer.tsx": 8
+      },
+      "user_removed_per_file": {
+        "AGENTS.md": 3,
+        "frontend/src/App.tsx": 20,
+        "frontend/src/assistant/AssistantPanel.tsx": 15,
+        "frontend/src/recordings/RecordingContext.tsx": 4,
+        "frontend/src/robot/RobotPanel.tsx": 6,
+        "frontend/src/robot/telemetry.ts": 2,
+        "frontend/src/signals/SignalViewer.tsx": 8
+      }
+    }
+  ]
+}
