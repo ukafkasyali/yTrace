@@ -13,6 +13,36 @@ import time
 
 DEFAULT_CONFIG = Path(__file__).with_name("smoke.config.json")
 
+SUMMARY_KEYS = [
+    "contact",
+    "event_type",
+    "onset_ms",
+    "strongest_joint",
+    "affected_joints",
+    "evidence_start_ms",
+    "evidence_end_ms",
+]
+
+
+def question_contract(question: str) -> tuple[str, list[str], str]:
+    """Route operator wording onto the question families used during training."""
+    text = question.casefold()
+    if any(word in text for word in ("summar", "diagnos", "analy", "main change", "what do you notice")):
+        return "Diagnose this robot telemetry window.", SUMMARY_KEYS, "summary"
+    if "strongest" in text and "joint" in text:
+        return "Which joint has the strongest normalized disturbance evidence?", ["strongest_joint"], "strongest_joint"
+    if ("affected" in text or "materially" in text) and "joint" in text:
+        return "Which joints are materially affected, ranked by disturbance?", ["affected_joints"], "affected_joints"
+    if "evidence" in text and any(word in text for word in ("where", "interval", "sustained")):
+        return "Where is the strongest temporal evidence?", ["evidence_start_ms", "evidence_end_ms"], "evidence_interval"
+    if any(word in text for word in ("intentional", "accidental", "semantics", "classify", "free motion")):
+        return "Was the motion free, an intentional contact, or an accidental collision?", ["event_type"], "semantics"
+    if any(word in text for word in ("when", "onset", "begin", "timing")):
+        return "When did external contact begin?", ["onset_ms"], "onset"
+    if "contact" in text:
+        return "Did external contact occur?", ["contact"], "contact"
+    return "Diagnose this robot telemetry window.", SUMMARY_KEYS, "summary"
+
 
 def load_robust_normalization(path: str | Path) -> tuple[list[float], list[float], float]:
     """Load immutable training-split statistics, never statistics from a query."""
@@ -46,9 +76,10 @@ def prepare_sample(request: dict, series: list[dict], normalization: str, normal
         raise ValueError("Channel order does not match query")
     if not series:
         raise ValueError("No input channels")
+    canonical_question, schema_keys, intent = question_contract(request["question"])
     descriptions, values = [], []
     reference_times = series[0]["timeSec"]
-    for channel_index, channel in enumerate(series):
+    for channel in series:
         times, raw = channel["timeSec"], channel["values"]
         if len(raw) < 2 or len(raw) != len(times) or times != reference_times:
             raise ValueError("Input channels must be aligned and contain at least two samples")
@@ -62,24 +93,35 @@ def prepare_sample(request: dict, series: list[dict], normalization: str, normal
             encoded = [(v - mean) / (std + 1e-8) for v in raw]
         elif normalization == "train_robust":
             center, scale, clip = robust
-            encoded = [max(-clip, min(clip, (v - center[channel_index]) / scale[channel_index])) for v in raw]
+            try:
+                joint_index = int(channel["channelId"].removeprefix("joint_")) - 1
+                joint_center, joint_scale = center[joint_index], scale[joint_index]
+            except (ValueError, IndexError):
+                raise ValueError(f"Unknown joint identity: {channel['channelId']}") from None
+            encoded = [max(-clip, min(clip, (v - joint_center) / joint_scale)) for v in raw]
         else:
             encoded = list(raw)
         values.append(encoded)
+        joint_name = f"J{int(channel['channelId'].removeprefix('joint_'))}"
         descriptions.append(
-            f"{channel['channelId']}: signed external joint torque in Nm, sampled at 1000 Hz. "
-            f"{len(raw)} samples from {times[0]:.6f} to {times[-1]:.6f} seconds. "
-            f"Original mean {mean:.4f} Nm and sample std {std:.4f} Nm. "
-            f"Encoding: {normalization}."
+            f"{joint_name} external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. "
+            "The numeric values are normalized with train-only robust statistics."
         )
     return {
-        "pre_prompt": request["question"],
+        "pre_prompt": (
+            "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
+            "Use the numeric time series as primary evidence. "
+        ),
         "time_series_text": descriptions,
         "time_series": values,
-        "post_prompt": ("\nQuestion: " + request["question"].strip() + "\n"
-                        "Respond with `Answer:` and valid compact JSON, then one short `Evidence:` sentence."),
+        "post_prompt": (
+            f"\nQuestion: {canonical_question}\n"
+            f"Respond with `Answer:` and valid compact JSON containing only {schema_keys}, "
+            "then one short `Evidence:` sentence."
+        ),
         # Flamingo's training collator expects this field; never put targets here.
         "answer": "",
+        "intent": intent,
     }
 
 

@@ -1,9 +1,12 @@
 import copy
+import json
 import math
+from pathlib import Path
 import statistics
+import tempfile
 import unittest
 
-from inference.runtime import prepare_sample
+from inference.runtime import prepare_sample, question_contract
 
 
 class InputPreparationTests(unittest.TestCase):
@@ -24,14 +27,31 @@ class InputPreparationTests(unittest.TestCase):
         self.assertEqual(result["time_series"], [[1, 2, 3], [7, 7, 7]])
         self.assertEqual(result["answer"], "")
         self.assertNotIn("DO NOT INCLUDE", str(result))
-        self.assertIn("joint_2", result["time_series_text"][0])
+        self.assertIn("J2 external joint torque", result["time_series_text"][0])
+        self.assertEqual(result["intent"], "summary")
         self.assertEqual(before, self.series)
 
     def test_normalizes_with_sample_std_and_constant_channel_is_finite(self):
         result = prepare_sample(self.request, self.series, "zscore_sample")
         self.assertAlmostEqual(statistics.stdev(result["time_series"][0]), 1)
         self.assertEqual(result["time_series"][1], [0, 0, 0])
-        self.assertIn("Original mean 2.0000", result["time_series_text"][0])
+        self.assertIn("train-only robust statistics", result["time_series_text"][0])
+
+    def test_robust_normalization_uses_stable_joint_identity(self):
+        self.series[0]["values"] = [11, 12, 13]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "normalization.json"
+            path.write_text(json.dumps({"center_nm": [0, 10, 0, 0, 0, 0, 0], "scale_nm": [1] * 7, "clip": 100}))
+            result = prepare_sample(self.request, self.series, "train_robust", str(path))
+        self.assertEqual(result["time_series"][0], [1, 2, 3])
+        self.assertEqual(result["time_series"][1], [7, 7, 7])
+
+    def test_routes_operator_questions_to_trained_contracts(self):
+        self.assertEqual(question_contract("Did contact occur?")[2], "contact")
+        self.assertEqual(question_contract("Which joint is strongest?")[2], "strongest_joint")
+        question, keys, intent = question_contract("Analyze the event and timing")
+        self.assertEqual((question, intent), ("Diagnose this robot telemetry window.", "summary"))
+        self.assertIn("onset_ms", keys)
 
     def test_rejects_future_boundary_and_unaligned_series(self):
         self.series[0]["timeSec"][-1] = 5.003

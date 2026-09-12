@@ -99,18 +99,46 @@ def measured_summary(series):
 
 
 def present_generation(generation, summary):
-    """Make imperfect generative output legible without promoting it to fact."""
+    """Render supported model fields without presenting predictions as measurements."""
     ranges = ", ".join(
         f"{row['channel'].replace('joint_', 'Joint ')} ({row['range']:.3f} Nm range)"
         for row in summary[:3]
     )
-    # Smoke checkpoints may append malformed JSON. Preserve readable text and retain
-    # the original generation separately in the response payload for debugging.
-    lead = " ".join(generation.split("Answer:", 1)[0].split())
-    interpretation = f"OpenTSLM generated: {lead}" if lead else "OpenTSLM returned no readable natural-language interpretation."
+    answer_at = generation.casefold().rfind("answer:")
+    brace = generation.find("{", answer_at if answer_at >= 0 else 0)
+    if brace < 0:
+        raise ValueError("OpenTSLM output has no structured answer")
+    try:
+        prediction, _ = json.JSONDecoder().raw_decode(generation[brace:])
+    except json.JSONDecodeError as error:
+        raise ValueError("OpenTSLM output has invalid structured answer") from error
+    if not isinstance(prediction, dict):
+        raise ValueError("OpenTSLM structured answer is not an object")
+    lines = []
+    contact = prediction.get("contact")
+    event_type = prediction.get("event_type")
+    if isinstance(contact, bool):
+        lines.append("OpenTSLM predicts external contact." if contact else "OpenTSLM predicts free motion without external contact.")
+    if event_type in ("free", "intentional", "accidental"):
+        lines.append(f"Interaction class: {event_type}.")
+    strongest = prediction.get("strongest_joint")
+    if isinstance(strongest, str) and strongest:
+        lines.append(f"Strongest predicted disturbance: {strongest}.")
+    affected = prediction.get("affected_joints")
+    if isinstance(affected, list) and affected and all(isinstance(item, str) for item in affected):
+        lines.append(f"Affected joints: {', '.join(affected)}.")
+    onset = prediction.get("onset_ms")
+    if isinstance(onset, (int, float)) and not isinstance(onset, bool):
+        lines.append(f"Predicted onset: {onset:g} ms after the window starts.")
+    evidence_start, evidence_end = prediction.get("evidence_start_ms"), prediction.get("evidence_end_ms")
+    if all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in (evidence_start, evidence_end)):
+        lines.append(f"Predicted evidence interval: {evidence_start:g}–{evidence_end:g} ms.")
+    if not lines:
+        raise ValueError("OpenTSLM output contains no supported prediction fields")
+    interpretation = " ".join(lines)
     return (
         f"Measured in this selected window\nLargest observed torque ranges: {ranges}.\n\n"
-        f"OpenTSLM interpretation\n{interpretation} Treat this generated interpretation as a lead, not a verified event explanation."
+        f"OpenTSLM interpretation\n{interpretation} Treat these generated predictions as leads, not verified physical facts."
     )
 
 

@@ -32,7 +32,7 @@ class FakeRuntime:
         self.release.wait(3)
         if self.failure:
             raise RuntimeError("private runtime detail")
-        return "A generated test response."
+        return 'Answer: {"contact":true}\nEvidence: generated test evidence.'
 
 
 def fixture():
@@ -112,8 +112,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual([e["id"] for e in events], ["1", "2", "3"])
         answer = events[-1]["payload"]
         self.assertIn("Measured in this selected window", answer["answer"])
-        self.assertIn("A generated test response.", answer["answer"])
-        self.assertEqual(answer["modelOutput"], "A generated test response.")
+        self.assertIn("OpenTSLM predicts external contact", answer["answer"])
+        self.assertIn('"contact":true', answer["modelOutput"])
         self.assertEqual(answer["modelRevision"], "test-revision")
         self.assertIn("not a verified explanation", answer["evidence"][0]["label"])
         request, series = self.runtime.received
