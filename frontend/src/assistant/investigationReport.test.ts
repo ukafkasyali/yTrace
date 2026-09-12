@@ -31,6 +31,12 @@ describe('investigation export', () => {
     expect(report.interpretation.origin).toBe('deterministic_calculation');
     expect(report.limitations.join(' ')).toContain('short peaks may be missing');
   });
+  it('keeps the incident-start cursor separate from the completed analysis window', () => {
+    const report = buildInvestigationReport(data, 'dataset', { ...answer, replayCursor: 1 });
+    expect(report.window.replayCursorSec).toBe(1);
+    expect(report.window.analysisHorizonSec).toBe(2);
+    expect(report.window.samplesPerChannel).toBe(3);
+  });
   it('rejects measurements beyond the snapshotted replay cursor', () => {
     expect(() => buildInvestigationReport(data, 'dataset', { ...answer, playhead: 1 })).toThrow('replay cursor');
   });

@@ -153,3 +153,13 @@ Original recording `05-28-21-25` has raw detail in `[4,9)`. The backend examples
 recording `03-22-11-18` (test split). These fixed examples are not a new benchmark.
 Each now has its own recorded position fixture; see the position-validation report
 for the distinction between the original Jacobian check and reference-mapped examples.
+
+
+All publisher markers are browsable before playback. Selecting an incident or
+example starts the robot at the context beginning (normally 0.4 s before the
+marker). **Replay interval · 0.5×** plays that context and stops at its end.
+Analysis of the completed recording is independent from the visual cursor;
+exports distinguish the analysis cutoff from that cursor. **Show onset in 3D**
+shows a valid generated contact onset and responding joint, never impact location.
+The additional motion catalogue and its pending deployment are documented in
+[the walkthrough](../docs/submission/UI_WALKTHROUGH.md#deployment-handoff).

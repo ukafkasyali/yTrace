@@ -112,7 +112,7 @@ type QueryRequest = {
   modelId?: string; // required in direct mode
   question: string;
   window: WindowRef;
-  playheadSec: number; // finite; window.endSec must be <= this playback cursor
+  playheadSec: number; // finite historical analysis cutoff; window.endSec must be <= this
   conversationId?: string;
 };
 ```
@@ -177,3 +177,14 @@ arbitrary. `answer.completed` includes `modelOutput` (original generation) and
 `inputTrace` with model revision, exact window, `samplesPerChannel`, `inputSha256`,
 normalization and generation latency. The UI retains these with the completed
 answer and its export, separately from current selection and publisher metadata.
+
+
+### Completed-recording cursor separation
+
+The visual replay cursor can be at the beginning of an incident while its complete
+recorded window is analyzed. `playheadSec` in query/receipt payloads is the bounded
+historical analysis cutoff (at least window.endSec, at most recording duration).
+It no longer implies the current 3D cursor. Investigation exports retain that
+legacy field and add explicit `analysisHorizonSec` and `replayCursorSec` fields.
+Raw 7×1,024 sample validation is unchanged. This applies to completed recordings;
+it is not permission to read future data from a live stream.

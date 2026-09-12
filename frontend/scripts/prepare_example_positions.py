@@ -14,13 +14,16 @@ from scipy.io import loadmat
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--raw-root', type=Path, required=True)
+    parser.add_argument('--catalog', type=Path, default=Path(__file__).resolve().parents[2] / 'inference/demo_cases.json')
     args = parser.parse_args()
     out = Path(__file__).resolve().parents[1] / 'public/robot/kuka'
     geometry = json.loads((out / 'kinematics.json').read_text())
     reference = json.loads((out / 'position-validation.json').read_text())
     assert reference['mappingVerified'] and reference['recordingId'] == '05-28-21-25'
     limits = np.array([joint['limitsRadians'] for joint in geometry['joints']])
-    for folder, rid in [('collision', '03-15-12-53'), ('contact', '03-22-11-18')]:
+    catalog = json.loads(args.catalog.read_text())
+    for entry in catalog['provenance']:
+        folder, rid, _ = entry['sources'][0]['path'].split('/')
         source = args.raw_root / folder / rid
         pfile, tfile = source / 'JK_PosMsr.mat', source / 'JK_MsrExtTrq.mat'
         position, torque = loadmat(pfile)['PosMsr'], loadmat(tfile)['MsrExtTrq']

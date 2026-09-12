@@ -15,7 +15,7 @@ not an additional accuracy benchmark.
 4. Read the compact generated prediction first and **Measured torque** beneath it.
    They remain different sources. **Model & input details** retains the full model
    response, raw generation, tool steps and the **1,024-sample input receipt**.
-5. Click **Inspect 7 input channels** to return to the answer's exact input window and move the robot cursor to its end.
+5. Click **Inspect 7 input channels** to return to the answer's exact input window and place the replay cursor at its beginning.
    **Export investigation** saves the answer, annotations, calculations and receipt.
 6. Press **Play replay**. Recorded articulation and plots advance, while the answer
    and investigation interval stay fixed. **Select at cursor** explicitly changes
@@ -80,3 +80,70 @@ reuse the original mapping convention. Their missing per-recording Jacobian vali
 is explicitly disclosed in metadata and the robot view; body/world geometry remains
 schematic. Playback holds the last available angle sample through the final partial
 100 Hz interval, never beyond the source recording boundary.
+
+
+## Incident-start navigation and motion catalogue (13 September)
+
+All publisher markers are available immediately in **Publisher markers**, in a
+scrollable list. Selecting one opens **Robot** at the start of its 1.024-second
+context (normally 0.4 seconds before the annotation), not at the window end.
+**Replay interval · 0.5×** plays that window and pauses at its end. Choosing a
+recording example also starts before its incident. Marker navigation beyond raw
+coverage still produces an explicitly reduced-resolution numerical summary.
+
+Trace inspects a completed recording. Model/numerical analysis may therefore read
+its entire selected window while the visual cursor remains at the beginning.
+The existing API `playheadSec` remains the request's historical analysis cutoff,
+at least the selected window end; it does not force the visual cursor to move.
+Exports now include `analysisHorizonSec` and `replayCursorSec` separately. No samples
+beyond the recorded source or outside raw coverage are introduced.
+
+For supported contact predictions, **Show onset in 3D** positions the robot at the
+model's generated onset and highlights its predicted strongest responding joint.
+The amber cue is visible within 125 ms of that generated onset for readability;
+this is a display tolerance, not measured impact duration or localization.
+Free predictions and invalid/missing onsets do not create a contact cue.
+
+### Three genuinely different additional trajectories
+
+The previous four batch-41 choices repeated the original trajectory (about
+0.07–0.08 degrees RMS difference over a shared sampled time grid). The prepared
+replacement catalogue uses these three train recordings instead:
+
+- `04-22-15-33`: reversed J3 motion relative to original `05-28-21-25`.
+- `04-22-15-53`: reversed J1 and J2 motion relative to the original.
+- `05-26-14-28`: reversed J1 motion relative to the original.
+
+Each has its own source PosMsr and torque files, 100 Hz articulation/overview and
+an eight-second raw excerpt around its first publisher marker. Source hashes,
+train splits and archive MD5 identities are in `inference/demo_cases.json`.
+Selection uses measured trajectories, never model correctness. These are different
+joint trajectories within the dataset's sweeping experiments, not distinct
+industrial task simulations. Position convention reuses the original validation;
+independent per-recording Jacobian checks are not claimed.
+
+### Deployment handoff
+
+The replacement catalogue and three fixtures are staged on the private server,
+but the catalogue switch/restart was blocked by automatic approval review pending
+an explicit coordinated handoff. The active catalogue still contains the four
+batch-41 choices; their position fixtures remain supported for compatibility.
+Once approved, activate `inference/demo_cases.next.json` as `demo_cases.json` and
+restart only `trace-inference` with its existing canary-v4 config. Recheck readiness,
+six catalogue recordings including the original, and a real 1,024-sample request.
+
+Inference is temporarily running on CPU (four OpenMP/MKL threads), using the same
+checkpoint and config. GPU reload failed because a concurrent v5b training job
+expanded to almost all GPU memory. That training job was not stopped. Restore CUDA
+only after coordinating GPU availability; do not launch another competing process.
+
+
+Verification for this update: 47 frontend tests, 25 inference tests and the frontend
+production build pass. Browser checks found all 27 collision markers at cursor
+5.641 s; selecting marker 27 at 165.529 s placed replay at 165.129 s. CPU canary-v4
+returned accidental contact for the first collision example, with a generated
+312 ms onset; **Show onset in 3D** displayed 5.953 s and J4. This verifies the path,
+not accuracy or exact CPU/GPU output equivalence. On mobile the Robot tab uses the
+available space for articulation; telemetry remains directly in All 7 signals.
+The three replacement trajectories are data-validated locally; browser/inference
+verification against their remote catalogue remains pending the blocked deployment.

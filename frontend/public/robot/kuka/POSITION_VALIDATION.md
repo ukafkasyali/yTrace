@@ -79,3 +79,13 @@ Unknown recording IDs still show a clearly labeled fixed-pose fallback.
 ```sh
 python frontend/scripts/prepare_example_positions.py --raw-root /path/to/original/raw
 ```
+
+
+The prepared catalogue also exports `04-22-15-33`, `04-22-15-53`, and `05-26-14-28`
+from public collision batches 14 and 28, under the same timestamp/limits/reference
+validation scope. At 10 s they differ from the reference by more than two radians
+in at least one joint. No artificial pose offsets or trajectory changes are applied.
+Four batch-41 fixtures remain as compatibility assets for the currently active
+remote catalogue while its replacement awaits deployment approval. Those recordings
+repeat almost the same trajectory and are not presented as additional motion types.
+`prepare_example_positions.py --catalog PATH` can reproduce a specific catalogue.

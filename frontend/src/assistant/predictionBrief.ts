@@ -13,3 +13,13 @@ export function predictionBrief(output?: string) {
     };
   } catch { return; }
 }
+
+/** Convert relative generated onset to recording time, without inventing contact location. */
+export function predictionCue(output: string | undefined, interval: { start: number; end: number }) {
+  const brief = predictionBrief(output);
+  if (!brief || brief.title === 'Free motion predicted' || brief.onset === undefined ||
+    !Number.isFinite(interval.start) || !Number.isFinite(interval.end) || interval.start < 0 || Math.abs(interval.end - interval.start - 1.024) > 1e-8) return;
+  return { title: brief.title, onsetSeconds: interval.start + brief.onset / 1000,
+    channelId: brief.strongest ? `joint_${brief.strongest.slice(1)}` : undefined, interval: { ...interval } };
+}
+export type PredictionCue = NonNullable<ReturnType<typeof predictionCue>>;

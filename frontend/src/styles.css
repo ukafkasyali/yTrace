@@ -317,3 +317,27 @@ input,textarea{caret-color:var(--accent)}
   .selection-footer .text-button { font-size: 10px; }
   .transport { bottom: 38px; }
 }
+
+/* Event time is explicit; the robot remains measured context, not a contact reconstruction. */
+.robot-event-cue { min-height: 62px; padding: 9px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; border-bottom: 1px solid var(--line); background: #1b2225; }
+.robot-event-cue strong { font-size: 12px; font-weight: 600; }
+.robot-event-cue span { font-size: 11px; color: #b6c2c5; line-height: 1.4; max-width: 70ch; }
+.robot-event-cue.at-onset { background: #342d22; }
+.robot-event-cue.at-onset strong { color: #f0d4a5; }
+.robot-event-cue.at-onset span { color: #deceb8; }
+.robot-prediction-action { margin: 4px 0 12px; }
+.visual-tabs .replay-interval { margin-left: auto; }
+@media(max-width:850px) { .robot-event-cue { min-height: 72px; padding: 8px 10px; } }
+
+.event-browser { min-height: 0; display: flex; flex-direction: column; }
+.event-list { min-height: 0; overflow-y: auto; flex: 1; }
+@media(max-width:850px) {
+  .visual-tabs { height: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 12px; padding-inline: 12px; }
+  .visual-tabs > button { min-height: 40px; }
+  .visual-tabs .replay-interval { grid-column: 1 / -1; margin: 0; justify-content: center; min-height: 32px; }
+}
+@media(max-width:850px) {
+  .visual-robot .signals-panel { display: none; }
+  .visual-robot .recording-context { flex: 1; min-height: 0; }
+  .robot-joints { overflow-y: auto; }
+}

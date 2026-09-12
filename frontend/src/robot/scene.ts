@@ -161,10 +161,10 @@ export function createRobotScene(host: HTMLDivElement, description: RobotGeometr
       render();
       return true;
     },
-    highlight(ids: string[]) {
+    highlight(ids: string[], predictedJoint?: string) {
       materials.forEach((material, id) => {
-        material.emissive.set(ids.includes(id) ? material.color : 0x000000);
-        material.emissiveIntensity = ids.includes(id) ? .3 : 0;
+        material.emissive.set(id === predictedJoint ? 0xd9ad70 : ids.includes(id) ? material.color : 0x000000);
+        material.emissiveIntensity = id === predictedJoint ? .8 : ids.includes(id) ? .3 : 0;
         material.opacity = ids.length && !ids.includes(id) ? .45 : 1;
         material.transparent = material.opacity < 1;
       }); render();

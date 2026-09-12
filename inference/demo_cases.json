@@ -1,8 +1,11 @@
 {
-  "selection": "First publisher marker in each of two previously audited recordings (split disclosed); free interval fixed at [1, 2.024) before inference. No selection by model result.",
+  "selection": "Original two audited recordings plus three train recordings with different measured trajectories from public collision-batches 14 and 28, selected by joint-position comparison rather than model predictions. Reversed motion is relative to original 05-28-21-25. First publisher marker in each; free interval fixed at [1, 2.024). Batch-14 MD5: 38f464111c534f1ec2be0c6f0a117d2c; batch-28 MD5: 3dc2369c63d6ac41200e9e221581b96d.",
   "recordings": [
     "demo_data/03-15-12-53.json.gz",
-    "demo_data/03-22-11-18.json.gz"
+    "demo_data/03-22-11-18.json.gz",
+    "demo_data/04-22-15-33.json.gz",
+    "demo_data/04-22-15-53.json.gz",
+    "demo_data/05-26-14-28.json.gz"
   ],
   "cases": [
     {
@@ -24,6 +27,36 @@
         "end": 6.52
       },
       "note": "Publisher intentional experiment \u00b7 test recording. The marker is an annotation; the model makes its own prediction."
+    },
+    {
+      "id": "accidental-04-22-15-33",
+      "title": "Collision \u00b7 reversed J3 motion",
+      "recordingId": "04-22-15-33",
+      "interval": {
+        "start": 4.684,
+        "end": 5.708
+      },
+      "note": "Publisher accidental experiment \u00b7 train recording. The marker is an annotation; the model makes its own prediction."
+    },
+    {
+      "id": "accidental-04-22-15-53",
+      "title": "Collision \u00b7 reversed J1 + J2 motion",
+      "recordingId": "04-22-15-53",
+      "interval": {
+        "start": 5.69,
+        "end": 6.714
+      },
+      "note": "Publisher accidental experiment \u00b7 train recording. The marker is an annotation; the model makes its own prediction."
+    },
+    {
+      "id": "accidental-05-26-14-28",
+      "title": "Collision \u00b7 reversed J1 motion",
+      "recordingId": "05-26-14-28",
+      "interval": {
+        "start": 6.495,
+        "end": 7.519
+      },
+      "note": "Publisher accidental experiment \u00b7 train recording. The marker is an annotation; the model makes its own prediction."
     },
     {
       "id": "free",
@@ -64,6 +97,51 @@
         {
           "path": "contact/03-22-11-18/JK_moments.mat",
           "sha256": "83789a91b13f825a4bb0cf9bd9cba387217d9a42e7ecd4176b7bd37afe257525"
+        }
+      ]
+    },
+    {
+      "recordingId": "04-22-15-33",
+      "split": "train",
+      "fixtureSha256": "b1a66a66b2a3fc0ad5288737b8d2e396f3f27de6102c52787519db29a74b6dcd",
+      "sources": [
+        {
+          "path": "collision/04-22-15-33/JK_MsrExtTrq.mat",
+          "sha256": "a51f96c790d066752e85f55cb1e147af3ae461561509c4dced27267b5f7b11e1"
+        },
+        {
+          "path": "collision/04-22-15-33/JK_moments.mat",
+          "sha256": "d52e29460650f051b4fd3d0439a8070a5fa7e4234390ddcffc377a1d72bff614"
+        }
+      ]
+    },
+    {
+      "recordingId": "04-22-15-53",
+      "split": "train",
+      "fixtureSha256": "be60e2edb6614341173583990c662d5f9d9797b51903e988eb79f908719aa687",
+      "sources": [
+        {
+          "path": "collision/04-22-15-53/JK_MsrExtTrq.mat",
+          "sha256": "40856e738b05d67eaf26b84f05bc7e7f11d5f0de32bc54471f2dc54b90f3a1a4"
+        },
+        {
+          "path": "collision/04-22-15-53/JK_moments.mat",
+          "sha256": "804269ed316d2b42bd86c68279e8f256c02e6bbb57b18791d14f19d4a22be72a"
+        }
+      ]
+    },
+    {
+      "recordingId": "05-26-14-28",
+      "split": "train",
+      "fixtureSha256": "0f8669ef11f5cbfc605ead5a838460cc869fdb38444c8b91df7cdb5f7d45b384",
+      "sources": [
+        {
+          "path": "collision/05-26-14-28/JK_MsrExtTrq.mat",
+          "sha256": "46c2304ff211f51ec7e40c481a3ba50cb35299c398503fc8bb36d0c302a9cbc5"
+        },
+        {
+          "path": "collision/05-26-14-28/JK_moments.mat",
+          "sha256": "16a369fb94ebebb1a1b8bf13c4a3eba158a8d4347f8b8ea39923e14b6255ce6b"
         }
       ]
     }

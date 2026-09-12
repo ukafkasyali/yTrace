@@ -1,3 +1,6 @@
+import positions2057 from '../../public/robot/kuka/positions-04-22-15-33.json';
+import positions2102 from '../../public/robot/kuka/positions-04-22-15-53.json';
+import positions2107 from '../../public/robot/kuka/positions-05-26-14-28.json';
 import collisionPositions from '../../public/robot/kuka/positions-03-15-12-53.json';
 import intentionalPositions from '../../public/robot/kuka/positions-03-22-11-18.json';
 import { describe, expect, it } from 'vitest';
@@ -85,9 +88,9 @@ describe('measured robot articulation', () => {
 describe('per-recording example positions', () => {
   it('routes distinct recordings to their own measured angles with disclosed mapping scope', async () => {
     const { positionFixture } = await import('./telemetry');
-    const fixtures: Record<string, PositionData> = { '03-15-12-53': collisionPositions as PositionData, '03-22-11-18': intentionalPositions as PositionData };
+    const fixtures: Record<string, PositionData> = { '03-15-12-53': collisionPositions as PositionData, '03-22-11-18': intentionalPositions as PositionData, '04-22-15-33': positions2057 as PositionData, '04-22-15-53': positions2102 as PositionData, '05-26-14-28': positions2107 as PositionData };
     validateGeometry(geometry);
-    for (const id of ['03-15-12-53', '03-22-11-18']) {
+    for (const id of Object.keys(fixtures)) {
       const path = positionFixture(id)!;
       expect(path).toContain(id);
       const positions = fixtures[id];
@@ -96,6 +99,11 @@ describe('per-recording example positions', () => {
       expect(positionAtPlayhead(positions, id, positions.endSeconds!)?.time).toBe(positions.times.at(-1));
       expect(positionAtPlayhead(positions, id, positions.endSeconds! + .001)).toBeNull();
       expect(positions.validation.conventionReference).toBe('05-28-21-25');
+      if (['04-22-15-33', '04-22-15-53', '05-26-14-28'].includes(id)) {
+        const sample = positionAtPlayhead(positions, id, 10)!.radians;
+        const reference = positionAtPlayhead(measuredPositions as PositionData, '05-28-21-25', 10)!.radians;
+        expect(Math.max(...sample.map((angle, i) => Math.abs(angle - reference[i])))).toBeGreaterThan(2);
+      }
       const first = positionAtPlayhead(positions, id, 6)!;
       const later = positionAtPlayhead(positions, id, 60)!;
       expect(first.radians).not.toEqual(later.radians);
