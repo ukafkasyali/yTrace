@@ -1,9 +1,1 @@
-ok just ensure and give me evidence I can check that the v5b just wont hang and prevent v6 from proceeding. Also, we dont need balancing because we are already preparing for a demo so if j5 j7 are rare, they will be rare in the demo as well. If the only major difference is that, v5b is I think good enough. How many steps will v5b be trained to.
-
----
-
-you can also make it train for lower, because currently v5b is clearly underfit. Analyze and determine and then schedule v6 based on that.
-
----
-
 also we want this to be conversational. In validation we always have intent as summary but maybe we have a query about only a part of the task, for example when did the onset occur, then the reasoning trace can change based on that. It doesnt look good that it has a fixed template for every output. If this is an easy fix, implemen tit
