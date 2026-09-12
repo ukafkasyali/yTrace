@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BDN1QJCGCX1ZEFYQGYQ6YP",
+  "strategy": "manual-commit",
+  "branch": "codex/robot-observability-training",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "model_training/README.md",
+    "model_training/configs/opentslm_sp.yaml",
+    "model_training/configs/qwen3_vl.yaml",
+    "model_training/docs/runbook.md",
+    "model_training/pyproject.toml",
+    "model_training/scripts/eval_plot_vlm.py",
+    "model_training/scripts/monitor_training.py",
+    "model_training/scripts/report_fit_probe.py",
+    "model_training/src/robot_observability/baseline.py",
+    "model_training/src/robot_observability/cli.py",
+    "model_training/src/robot_observability/metrics.py",
+    "model_training/src/robot_observability/plot_baseline.py",
+    "model_training/src/robot_observability/train_opentslm.py",
+    "model_training/tests/test_baseline.py",
+    "model_training/tests/test_fit_probe_report.py",
+    "model_training/tests/test_metrics.py",
+    "model_training/tests/test_plot_baseline.py",
+    "model_training/tests/test_training_observability.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 144410,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 13482112,
+    "output_tokens": 62239,
+    "api_call_count": 115
+  }
+}
