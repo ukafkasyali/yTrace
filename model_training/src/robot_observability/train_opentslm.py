@@ -690,7 +690,7 @@ def balanced_group_subset(dataset: Dataset, groups: dict[str, list[int]], size: 
                 selected.append(shuffled[key].pop())
         if len(selected) == previous_size:
             break
-    return Subset(dataset, sorted(selected))
+    return Subset(dataset, selected)
 
 
 def run(args: argparse.Namespace) -> None:
