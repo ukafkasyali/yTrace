@@ -1,0 +1,33 @@
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://127.0.0.1:5174/
+</in-app-browser-context>
+
+## My request:
+Okay, please review the data source page, pull the latest changes first and maybe take a look at open prs. Then use the impeccable skill to make a perfect data source page. And push to main please if you reviewed it
+
+---
+
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://127.0.0.1:5174/
+</in-app-browser-context>
+
+## My request:
+Okay, but does it really add something or is it just polluting? Like shouldn't it stay maybe a bit more lean? And improve just like the general color language or what do you think?
+
+---
+
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://127.0.0.1:5174/
+</in-app-browser-context>
+
+## My request:
+Yes please do it this way
