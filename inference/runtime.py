@@ -14,15 +14,31 @@ import time
 DEFAULT_CONFIG = Path(__file__).with_name("smoke.config.json")
 
 
-def prepare_sample(request: dict, series: list[dict], normalization: str) -> dict:
-    """Preserve every selected sample; normalize each channel independently.
+def load_robust_normalization(path: str | Path) -> tuple[list[float], list[float], float]:
+    """Load immutable training-split statistics, never statistics from a query."""
+    payload = json.loads(Path(path).read_text())
+    center = payload.get("center_nm")
+    scale = payload.get("scale_nm")
+    clip = payload.get("clip")
+    if (not isinstance(center, list) or not isinstance(scale, list) or len(center) != 7 or len(scale) != 7
+            or not isinstance(clip, (int, float)) or clip <= 0
+            or any(not isinstance(x, (int, float)) or x <= 0 for x in scale)):
+        raise ValueError("Invalid robust normalization metadata")
+    return [float(x) for x in center], [float(x) for x in scale], float(clip)
 
-    The smoke preprocessing follows TSQA's sample standard deviation. It must
-    be replaced with the team's training preprocessing before evaluating KUKA.
-    No annotation, event label, answer, or future sample is accepted here.
+
+def prepare_sample(request: dict, series: list[dict], normalization: str, normalization_path: str | None = None) -> dict:
+    """Preserve selected samples and apply the declared training-compatible encoding.
+
+    ``train_robust`` uses immutable train-split median/MAD statistics rather
+    than statistics from the queried window. No annotation, event label,
+    answer, or future sample is accepted here.
     """
-    if normalization not in ("zscore_sample", "none"):
-        raise ValueError("Unknown normalization; expected zscore_sample or none")
+    if normalization not in ("zscore_sample", "train_robust", "none"):
+        raise ValueError("Unknown normalization")
+    robust = load_robust_normalization(normalization_path) if normalization == "train_robust" and normalization_path else None
+    if normalization == "train_robust" and robust is None:
+        raise ValueError("train_robust requires normalization_path")
     window = request["window"]
     if not (0 <= window["startSec"] < window["endSec"] <= request["playheadSec"]):
         raise ValueError("Invalid historical interval")
@@ -32,7 +48,7 @@ def prepare_sample(request: dict, series: list[dict], normalization: str) -> dic
         raise ValueError("No input channels")
     descriptions, values = [], []
     reference_times = series[0]["timeSec"]
-    for channel in series:
+    for channel_index, channel in enumerate(series):
         times, raw = channel["timeSec"], channel["values"]
         if len(raw) < 2 or len(raw) != len(times) or times != reference_times:
             raise ValueError("Input channels must be aligned and contain at least two samples")
@@ -42,8 +58,14 @@ def prepare_sample(request: dict, series: list[dict], normalization: str) -> dic
                or (i and t <= times[i - 1]) for i, t in enumerate(times)):
             raise ValueError("Input extends outside selected half-open interval")
         mean, std = statistics.mean(raw), statistics.stdev(raw)
-        values.append([(v - mean) / (std + 1e-8) for v in raw]
-                      if normalization == "zscore_sample" else list(raw))
+        if normalization == "zscore_sample":
+            encoded = [(v - mean) / (std + 1e-8) for v in raw]
+        elif normalization == "train_robust":
+            center, scale, clip = robust
+            encoded = [max(-clip, min(clip, (v - center[channel_index]) / scale[channel_index])) for v in raw]
+        else:
+            encoded = list(raw)
+        values.append(encoded)
         descriptions.append(
             f"{channel['channelId']}: signed external joint torque in Nm, sampled at 1000 Hz. "
             f"{len(raw)} samples from {times[0]:.6f} to {times[-1]:.6f} seconds. "
@@ -54,7 +76,8 @@ def prepare_sample(request: dict, series: list[dict], normalization: str) -> dic
         "pre_prompt": request["question"],
         "time_series_text": descriptions,
         "time_series": values,
-        "post_prompt": "Describe the observed time-series patterns. Answer:",
+        "post_prompt": ("\nQuestion: " + request["question"].strip() + "\n"
+                        "Respond with `Answer:` and valid compact JSON, then one short `Evidence:` sentence."),
         # Flamingo's training collator expects this field; never put targets here.
         "answer": "",
     }
@@ -96,7 +119,7 @@ class Runtime:
         cfg = self.config
         if cfg.get("architecture") != "sp":
             raise ValueError("This initial runtime supports SP only. Flamingo needs a checkpoint-specific loader review.")
-        if cfg.get("normalization") not in ("zscore_sample", "none"):
+        if cfg.get("normalization") not in ("zscore_sample", "train_robust", "none"):
             raise ValueError("Set normalization explicitly to match training")
         device = os.environ.get("TRACE_DEVICE", "cuda")
         if device not in ("cpu", "cuda"):
@@ -154,7 +177,7 @@ class Runtime:
 
         if cancelled.is_set():
             raise InterruptedError("Query cancelled")
-        sample = prepare_sample(request, series, self.config["normalization"])
+        sample = prepare_sample(request, series, self.config["normalization"], self.config.get("normalization_path"))
         trace = {
             "model": self.model_id, "revision": self.revision,
             "window": request["window"], "playheadSec": request["playheadSec"],
