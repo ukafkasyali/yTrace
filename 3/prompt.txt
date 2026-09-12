@@ -1,1 +1,23 @@
-I don't think it makes sense. There are already things done. Do you have a good grasp about the project?
+Okay, so how can we continue?
+
+---
+
+Perform a read-only product critique of Trace as both a robotics engineer and a skeptical hackathon
+  judge.
+
+  Read AGENTS.md, docs/PARALLEL_AGENT_BRIEFS.md, the frontend README/integration contract, inference
+  README, and submission demo, pilot, evaluation, and limitations. Inspect the current commit and, if a
+  usable local UI build exists, use it. Do not edit files, create branches, run parallel inference,
+  restart services, or make external requests.
+
+  Try to complete the actual investigation:
+  - identify what happened;
+  - locate the supporting interval and joints;
+  - distinguish measured values, publisher annotations, and generated predictions;
+  - inspect robot/signals without losing investigation context;
+  - verify what the export preserves, including model identity, input count, and evidence.
+
+  Return no more than five prioritized findings. For each give a reproduction, user consequence,
+  evidence category (observed defect vs hypothesis/taste), and the smallest correction. Do not treat
+  the three demo cases as a benchmark. Finish with the strongest reason Trace could be useful and the
+  single most important missing proof for the submission.
