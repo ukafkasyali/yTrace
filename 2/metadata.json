@@ -1,9 +1,11 @@
 {
   "cli_version": "0.10.6",
   "checkpoint_id": "01M2BX8J53YEFEP5CES6A6QXPM",
+  "session_id": "01a097a5-408d-75d2-9da0-3752faf15507",
   "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:54:32.198601Z",
   "branch": "codex/pr15-conflict-resolve",
-  "checkpoints_count": 3,
+  "checkpoints_count": 1,
   "files_touched": [
     ".gitignore",
     "AGENTS.md",
@@ -99,34 +101,44 @@
     "tasks/plan.md",
     "tasks/todo.md"
   ],
-  "sessions": [
-    {
-      "metadata": "/0/metadata.json",
-      "transcript": "/0/full.jsonl",
-      "compact_transcript": "/0/transcript.jsonl",
-      "content_hash": "/0/content_hash.txt",
-      "prompt": ""
-    },
-    {
-      "metadata": "/1/metadata.json",
-      "transcript": "/1/full.jsonl",
-      "compact_transcript": "/1/transcript.jsonl",
-      "content_hash": "/1/content_hash.txt",
-      "prompt": ""
-    },
-    {
-      "metadata": "/2/metadata.json",
-      "transcript": "/2/full.jsonl",
-      "compact_transcript": "/2/transcript.jsonl",
-      "content_hash": "/2/content_hash.txt",
-      "prompt": ""
-    }
-  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "80e8d68862c8",
+  "compact_transcript_start": 0,
   "token_usage": {
-    "input_tokens": 1248195,
+    "input_tokens": 150137,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 39534063,
-    "output_tokens": 160936,
-    "api_call_count": 307
-  }
+    "cache_read_tokens": 5368136,
+    "output_tokens": 26189,
+    "api_call_count": 56
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:54:32.138703Z",
+    "agent_lines": 300,
+    "agent_removed": 35,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 300,
+    "total_lines_changed": 335,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    }
+  ]
 }
