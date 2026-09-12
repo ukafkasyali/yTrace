@@ -28,9 +28,12 @@ OpenTSLM outputs are generated predictions. Keep these three sources distinct.
 Do not add another orchestration LLM unless a concrete requirement cannot be handled
 by the current deterministic request router and the value is demonstrated. CNN,
 Direct LLM, and other models belong in evaluation until they have real endpoints and
-credible results. The 3D robot is optional context and is not reconstructed from this
-dataset: the source data contains external joint torque, not complete joint-position
-trajectories.
+credible results. The 3D robot is contextual, not a diagnosis. Torque does not reconstruct pose.
+Separate `PosMsr` files contain recorded joint angles: the original recording has
+a numerical Jacobian mapping check; added examples must disclose when they reuse
+that reference convention without an independent per-recording Jacobian check.
+Body geometry and the global frame remain schematic. Never animate missing angles
+from torque, borrow another recording's pose, or imply exact physical reconstruction.
 
 ## Challenge alignment
 
@@ -198,3 +201,57 @@ cd .. && python3 -m unittest discover -s inference -p 'test_*.py' -v
 Inference server tests bind temporary localhost ports and may need sandbox approval.
 Training has optional heavy dependencies; run the focused tests available in the
 active environment and report any dependency-based collection limitation precisely.
+
+
+## Parallel work coordination — 13 September 2026
+
+Read `docs/PARALLEL_AGENT_BRIEFS.md` before starting a parallel workstream. It contains
+the shared onboarding prompt, task prompts, ownership boundaries and handoff format.
+Inspect actual git state and current PRs; dated notes are context, not proof that a
+change is deployed. Use separate `codex/` worktrees/branches for parallel editing.
+Do not reset, stash, stage or commit another agent's changes. Each worker opens a
+focused draft PR; the coordinating task integrates and deploys in sequence.
+
+Latest inspected main: `df84f79` (PR #12, bounded semantic-agent validation/repair).
+It follows `5ffdc99` (strict model input shape, three backend-served examples,
+input receipts and UI walkthrough). The inference service still serves canary-v4;
+new training files do not automatically replace that checkpoint.
+
+**Current user priority overrides the general backlog:** simplify the investigation
+UI, restore prominent robot access and per-recording motion, and fix replay/chat
+jitter. This coordinating task owns `frontend/`, its position export scripts and
+fixtures, and `docs/submission/UI_WALKTHROUGH.md` until its handoff. Other agents
+may review those areas read-only; do not independently redesign them.
+
+At this update, frontend work is **uncommitted and unfinished**, not verified for
+release. The following findings and changes must not be mistaken for shipped work:
+
+- The robot loader was hardcoded to `05-28-21-25`; the new examples fell back to a
+  fixed pose. Their local source PosMsr files exist, exactly match torque timestamps,
+  and pass finite-angle/joint-limit checks. New exports reuse the original reference
+  mapping and explicitly do not claim per-recording Jacobian verification.
+- Browser reproduction measured a 34 px chat shift as input-repair controls appeared
+  during playback. The analysis interval followed the continuously moving playhead.
+  The fix separates the investigation interval from visual playback and limits
+  conversation scrolling to new turns, not each streamed update.
+- The redesign makes Robot / All 7 signals / Publisher markers direct views, puts
+  a compact prediction before measured evidence, and keeps technical receipts in
+  details. Layout, browser validation and regression checks remain to be finished.
+
+Independent work can proceed in model reliability, raw-data adapter coverage, and
+submission/business evidence. Do not tune on the already-inspected test examples.
+Do not claim measured debugging-time savings without actual pilot observations.
+Do not restart the shared inference service, replace canary-v4, launch competing
+GPU jobs, or change shared API shapes without coordinating the concrete handoff.
+This is a coordination boundary, not a request to repeatedly ask the user permission.
+
+### Qwen baseline input contract
+
+The user-supplied Notion benchmark prompt matches the repository prompt and archived
+prompt hash exactly (`876c1cb65cc4ec7c8c95a399f024322aa3869b7cbdf85262a6b2b4d3ab65d24c`).
+Qwen3-VL-4B-Instruct received one seven-panel normalized telemetry plot plus fixed
+channel-schema/instruction text, not a textual numeric array or publisher markers.
+Read `docs/submission/QWEN_BASELINE.md` and the exact prompt beside it before
+modifying or describing this baseline. It is zero-shot plot input compared with
+fine-tuned OpenTSLM numeric input: training and representation are confounded.
+Do not attribute null contact outputs to a proven cause or revise historical scores.
