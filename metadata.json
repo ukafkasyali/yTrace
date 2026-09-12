@@ -3,7 +3,7 @@
   "checkpoint_id": "01M2BWDAD4RGGG3BNP8G1Q7D0A",
   "strategy": "manual-commit",
   "branch": "codex/replay-workbench",
-  "checkpoints_count": 4,
+  "checkpoints_count": 5,
   "files_touched": [
     "AGENTS.md",
     "docs/FRONTEND_INTEGRATION.md",
@@ -54,13 +54,20 @@
       "compact_transcript": "/1/transcript.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "compact_transcript": "/2/transcript.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 45442,
+    "input_tokens": 48938,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 5034534,
-    "output_tokens": 8173,
-    "api_call_count": 28
+    "cache_read_tokens": 5822064,
+    "output_tokens": 9096,
+    "api_call_count": 35
   }
 }
