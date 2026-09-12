@@ -8,7 +8,7 @@ Does Trace's evidence-linked analysis and export help robotics engineers complet
 
 ## Protocol
 
-Recruit 3–5 robotics engineers for a formative pilot. Ask first how they investigate a recorded incident, which artifacts they hand off, and what information is usually missing. Do not solicit a positive testimonial or prime them with a claimed time saving.
+Recruit four robotics engineers for a formative pilot so each condition and case pairing can be counterbalanced. Ask first how they investigate a recorded incident, which artifacts they hand off, and what information is usually missing. Do not solicit a positive testimonial or prime them with a claimed time saving.
 
 Prepare six matched cases across collision, intentional contact and free motion. Use development/validation recordings; do not tune the model with final test answers. Keep source labels hidden during tasks. Give both conditions the same telemetry and documentation. Match case difficulty by duration and signal strength; each participant sees distinct cases in each condition. Counterbalance case assignment and condition order.
 

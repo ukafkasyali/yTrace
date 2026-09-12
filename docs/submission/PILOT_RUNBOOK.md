@@ -22,11 +22,22 @@ selection window, recording ID and source revision in a private scoring key.
 | C06 | free motion |  |  |  |
 
 Use each case once per participant and counterbalance both case-condition pairing
-and condition order. Match cases by window duration and visible signal strength as
-far as the available validation material permits. Condition B must include one
-preselected model-unavailable or unusable-output case; record it as a tool outcome,
-not as a participant failure. Freeze the scoring key and expected deterministic
-measurements before recruiting.
+and condition order. Recruit the four participants in this schedule. It gives
+every case one A and one B exposure per two-participant block, while no participant
+sees the same case twice.
+
+| Participant | Condition order | A cases | B cases |
+|---|---|---|---|
+| P01 | A then B | C01, C03, C05 | C02, C04, C06 |
+| P02 | B then A | C02, C04, C06 | C01, C03, C05 |
+| P03 | B then A | C02, C04, C06 | C01, C03, C05 |
+| P04 | A then B | C01, C03, C05 | C02, C04, C06 |
+
+Match cases by window duration and visible signal strength as far as the available
+validation material permits. Condition B must include one preselected
+model-unavailable or unusable-output case; record it as a tool outcome, not as a
+participant failure. Freeze the scoring key and expected deterministic measurements
+before recruiting.
 
 Prepare the same raw telemetry and short channel guide for both conditions:
 

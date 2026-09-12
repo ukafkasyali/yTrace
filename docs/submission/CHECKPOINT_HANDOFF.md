@@ -18,6 +18,7 @@ channel's actual requirements before sending any private artifact.
 |---|---|---|
 | Artifact role | Promoted OpenTSLM SoftPrompt checkpoint (canary-v4) | Private on Nebius; destination not approved here |
 | SHA-256 | `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23` | Record after receiver verifies the transferred bytes |
+| Artifact format | Expected tensor-only PyTorch `best_model.pt`: encoder/projector state plus declared LoRA state when enabled | Confirm keys and `weights_only=True` release validation against the exact transfer file |
 | Architecture | OpenTSLM-SP / soft prompt | Confirm from the released artifact/config |
 | Base model | `meta-llama/Llama-3.2-1B` | Confirm resolved model revision |
 | Backbone revision | `unknown` in the live service receipt | **Missing: obtain immutable revision/commit or state why unavailable** |
@@ -27,7 +28,8 @@ channel's actual requirements before sending any private artifact.
 | Input contract | seven canonical joints, 1,024 contiguous 1 kHz samples, `[start,end)` = 1.024 s | Include channel order, units and rejection behavior |
 | Normalization | training-only robust normalization for canary-v4 | Attach the exact normalization artifact and SHA-256; do not use query statistics |
 | Prompt/output contract | `rationale_then_answer`, deterministic signal pseudolabel source | Attach exact prompt/template revision and schema |
-| Adapter/LoRA | Not established by the public release record | **Missing: state enabled/disabled; if enabled provide rank, alpha, dropout, targets and adapter digest** |
+| Adapter/LoRA | Training configuration declares LoRA rank 16, alpha 32 and dropout 0.0; the live artifact's enabled state and target modules are not established by the public release record | **Missing: state enabled/disabled; if enabled provide target modules and adapter digest** |
+| Rollback owner | Not recorded | **Missing: name the release owner responsible for retaining the prior config and performing a failed-release rollback** |
 | License/access terms | Base-model access may be gated | Confirm redistribution and recipient access before transfer |
 
 ## Evidence bundle
@@ -61,7 +63,7 @@ an unreviewed checkpoint.
    code revision and evaluation bundle before calling the handoff complete.
 5. Preserve the current private canary-v4 service unchanged. A handoff is not a
    runtime promotion. Any future promotion remains evaluation → safe release →
-   restart → smoke test → rollback on failure.
+   restart → smoke test → rollback on failure by the named rollback owner.
 
 ## Completion record
 
@@ -74,6 +76,7 @@ Do not fill this section until transfer is actually authorized and complete.
 | Resolved backbone revision |  |
 | Config / normalization / prompt hashes |  |
 | Adapter or LoRA identity |  |
+| Rollback owner |  |
 | Repository and upstream revisions |  |
 | Evaluation bundle digest |  |
 | Date and acknowledgement reference |  |
