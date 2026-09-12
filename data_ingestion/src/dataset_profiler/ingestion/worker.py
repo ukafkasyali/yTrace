@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from .acquisition import AcquiredAsset, AcquisitionError
-from .contracts import ManifestAsset, SourceKind
+from .contracts import ApprovedManifest, ManifestAsset
 from .jobs import (
     AssetReceipt,
     IngestionJob,
@@ -20,7 +20,7 @@ from .service import (
 
 
 class AssetAcquirer(Protocol):
-    def acquire(self, source_kind: SourceKind, asset: ManifestAsset) -> AcquiredAsset: ...
+    def acquire(self, manifest: ApprovedManifest, asset: ManifestAsset) -> AcquiredAsset: ...
 
     def has_verified_content(self, content_sha256: str, size_bytes: int) -> bool: ...
 
@@ -61,7 +61,7 @@ class AcquisitionWorker:
                         existing.content_sha256, existing.observed_size_bytes
                     ):
                         continue
-                acquired = self.acquirer.acquire(resolved.manifest.source_kind, asset)
+                acquired = self.acquirer.acquire(resolved.manifest, asset)
                 if acquired.asset_id != asset.asset_id or acquired.size_bytes != asset.size_bytes:
                     raise AcquisitionError("Acquirer returned content for another approved asset")
                 self.jobs.record_receipt(self._receipt(job, asset, acquired))

@@ -5,8 +5,8 @@ import os
 import time
 from pathlib import Path
 
-from .acquisition import ZenodoAcquirer
 from .jobs import IngestionJobStore
+from .providers import ProviderAcquirer
 from .service import HttpApprovedSourceResolver
 from .worker import AcquisitionWorker
 
@@ -24,7 +24,11 @@ def main() -> int:
     resolver = HttpApprovedSourceResolver(
         os.environ.get("INGESTION_SOURCING_API_URL", "http://127.0.0.1:8001")
     )
-    acquirer = ZenodoAcquirer(data_dir / "cache")
+    acquirer = ProviderAcquirer(
+        data_dir / "cache",
+        github_token=os.environ.get("GITHUB_TOKEN"),
+        hugging_face_token=os.environ.get("HF_TOKEN"),
+    )
     worker = AcquisitionWorker(jobs, resolver, acquirer)
     try:
         worker.recover_interrupted()

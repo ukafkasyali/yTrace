@@ -9,6 +9,7 @@ from .jobs import (
     IngestionJobStore,
     IngestionState,
 )
+from .providers import ProviderAcquirer
 from .service import CreateIngestion, IngestionService
 from .worker import AcquisitionWorker
 
@@ -25,6 +26,7 @@ __all__ = [
     "IngestionService",
     "IngestionState",
     "ManifestContractError",
+    "ProviderAcquirer",
     "ZenodoAcquirer",
     "parse_manifest",
 ]

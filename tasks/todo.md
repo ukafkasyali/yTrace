@@ -164,14 +164,14 @@ revisions/LFS assets. Never clone, import, execute, or enable remote code.
 
 **Acceptance criteria:**
 
-- [ ] GitHub retrieval verifies repository, commit, blob/file identity, and size.
-- [ ] Hugging Face retrieval verifies dataset ID, revision, sibling/LFS identity, and size.
-- [ ] Executable files may be inventoried as unsupported but are never run.
+- [x] GitHub retrieval verifies repository, commit, blob/file identity, and size.
+- [x] Hugging Face retrieval verifies dataset ID, revision, sibling/LFS identity, and size.
+- [x] Executable files may be inventoried as unsupported but are never run.
 
 **Verification:**
 
-- [ ] Mock tests cover revision drift, LFS pointers, missing assets, redirects, and checksums.
-- [ ] One small fixture per provider reaches the verified content cache.
+- [x] Mock tests cover revision drift, LFS pointers, missing assets, redirects, and checksums.
+- [x] One small mocked fixture per provider reaches the verified content cache.
 
 **Dependencies:** Task 6
 

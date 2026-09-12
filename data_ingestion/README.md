@@ -77,6 +77,14 @@ size and SHA-256. A restart requeues interrupted acquisition, and a retry reuses
 content through its persisted source-asset receipt. Successful jobs advance to `inspecting`; archive
 extraction and format inventory are later stages.
 
+The worker also supports pinned GitHub repository files and Hugging Face dataset files. GitHub
+acquisition verifies that the approved path resolves to the approved blob at the exact commit, then
+recomputes Git's blob identity over the downloaded bytes. Hugging Face acquisition requires the
+exact dataset revision in both the locator and download URL, validates the provider revision header,
+verifies LFS SHA-256 when present, and rejects unresolved LFS pointer text. Provider redirects and
+DNS are revalidated at every hop. Optional `GITHUB_TOKEN` and `HF_TOKEN` values are read only by the
+worker and never persisted in manifests or receipts.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and

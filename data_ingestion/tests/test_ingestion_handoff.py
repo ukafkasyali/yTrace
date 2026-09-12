@@ -310,7 +310,7 @@ class FakeAcquirer:
         self.cached: set[str] = set()
         self.fail_once: set[str] = set()
 
-    def acquire(self, source_kind: SourceKind, asset: ManifestAsset) -> AcquiredAsset:
+    def acquire(self, manifest, asset: ManifestAsset) -> AcquiredAsset:
         self.calls.append(asset.asset_id)
         if asset.asset_id in self.fail_once:
             self.fail_once.remove(asset.asset_id)
