@@ -1,0 +1,164 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BTZJQ6B1XK4F3KNKREJBJM",
+  "session_id": "01a097a4-e68d-7451-b439-224653056c4c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T22:14:36.082937Z",
+  "branch": "codex/replay-workbench",
+  "checkpoints_count": 4,
+  "save_step_count": 4,
+  "files_touched": [
+    "frontend/README.md",
+    "frontend/public/robot/kuka/POSITION_VALIDATION.md",
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/lib/modelWindow.test.ts",
+    "frontend/src/lib/modelWindow.ts",
+    "frontend/src/recordings/RecordingContext.tsx",
+    "frontend/src/robot/RobotPanel.tsx",
+    "frontend/src/robot/scene.ts",
+    "frontend/src/robot/telemetry.test.ts",
+    "frontend/src/robot/telemetry.ts",
+    "frontend/src/signals/SignalViewer.tsx",
+    "frontend/src/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "805f73c9d293",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 100625,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1772350,
+    "output_tokens": 15240,
+    "api_call_count": 24
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T22:14:36.036424Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 67,
+    "human_removed": 47,
+    "total_committed": 0,
+    "total_lines_changed": 138,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1110,
+      "user_lines_removed": 110,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/README.md": 29,
+        "frontend/public/robot/kuka/POSITION_VALIDATION.md": 21,
+        "frontend/public/robot/kuka/positions-03-15-12-53.json": 1,
+        "frontend/public/robot/kuka/positions-03-22-11-18.json": 1,
+        "frontend/scripts/prepare_example_positions.py": 48,
+        "frontend/src/App.tsx": 27,
+        "frontend/src/assistant/AssistantPanel.tsx": 33,
+        "frontend/src/assistant/predictionBrief.test.ts": 12,
+        "frontend/src/assistant/predictionBrief.ts": 15,
+        "frontend/src/lib/modelWindow.test.ts": 11,
+        "frontend/src/lib/modelWindow.ts": 1,
+        "frontend/src/recordings/RecordingContext.tsx": 5,
+        "frontend/src/robot/RobotPanel.tsx": 7,
+        "frontend/src/robot/telemetry.test.ts": 26,
+        "frontend/src/robot/telemetry.ts": 11,
+        "frontend/src/signals/SignalViewer.tsx": 8,
+        "frontend/src/styles.css": 111
+      },
+      "user_removed_per_file": {
+        "frontend/README.md": 18,
+        "frontend/src/App.tsx": 24,
+        "frontend/src/assistant/AssistantPanel.tsx": 15,
+        "frontend/src/lib/modelWindow.ts": 1,
+        "frontend/src/recordings/RecordingContext.tsx": 4,
+        "frontend/src/robot/RobotPanel.tsx": 6,
+        "frontend/src/robot/telemetry.ts": 4,
+        "frontend/src/signals/SignalViewer.tsx": 8,
+        "frontend/src/styles.css": 30
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 750,
+      "user_lines_removed": 4,
+      "agent_lines_added": 367,
+      "agent_lines_removed": 110,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/src/robot/RobotPanel.tsx": 1,
+        "frontend/src/robot/scene.ts": 1,
+        "frontend/src/robot/telemetry.test.ts": 5
+      },
+      "user_removed_per_file": {
+        "frontend/src/robot/RobotPanel.tsx": 1,
+        "frontend/src/robot/scene.ts": 1,
+        "frontend/src/robot/telemetry.test.ts": 2
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 372,
+      "agent_lines_removed": 112,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 372,
+      "agent_lines_removed": 112,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 453,
+      "agent_lines_removed": 150,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    }
+  ]
+}
