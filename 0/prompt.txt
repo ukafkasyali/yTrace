@@ -1,0 +1,50 @@
+Inspect the downloaded KUKA Part II contact batch and compare it against the existing Part I pipeline.
+
+Goal: add a reusable Part II TimeNet connector with minimal duplication.
+
+Tasks:
+
+1. Run the existing deterministic profiler on the Part II batch.
+2. Compare Part II against Part I for:
+   - MAT filenames/variables
+   - `MsrExtTrq`
+   - `PosMsr`
+   - time-axis layout
+   - sampling rate
+   - run-directory structure
+   - event/contact index representation
+3. Reuse the existing KUKA parser wherever possible; do not duplicate MAT decoding.
+4. Add a separate TimeNet dataset identity for Part II, preferably:\
+   `kuka/contact-part2`
+5. Map one experimental run to one TimeF record with the same signal representation as Part I where valid.
+6. Represent intentional-contact events as point annotations, preserving original MATLAB index, Python index, timestamp, and provenance.
+7. Do not add windows, ML tasks, normalization, or merge Part I and Part II.
+8. Add round-trip tests and validate the downloaded Part II batch numerically against the raw MAT data.
+9. Report:
+   - what schema is shared with Part I
+   - what differs semantically
+   - how much code was reused
+   - test/validation results
+   - any unresolved fields
+
+Keep the implementation in the main submission repo and leave TimeNet as the existing pinned external dependency.
+
+---
+
+can you do it again? I realized I copied the collision data again to the contact one
+
+---
+
+Can you create a pr for this?
+
+---
+
+Can we create a simple script that takes the path of the data set and outputs the converted timeset output? Tell me how you would implement this
+
+---
+
+Ok do it. Note that I should be able to do part1 and 2 (it is fine if it does it one at a time
+
+---
+
+can you create a pr for this
