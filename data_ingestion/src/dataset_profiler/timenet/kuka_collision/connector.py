@@ -38,8 +38,8 @@ _TORQUE = TimeSeriesSpec(
 )
 _POSITION = TimeSeriesSpec(
     spec_type="measured_joint_position",
-    name="Measured joint position (source unit unresolved)",
-    unit_value=ureg.dimensionless,
+    name="Measured joint position",
+    unit_value=ureg.radian,
     data_source=_SOURCE,
     dtype="float64",
 )
@@ -148,8 +148,12 @@ class KukaCollisionPart1Connector(BaseConnector[KukaRunRef]):
                            source="connector discovery", id=f"{record_id}-source-subset"),
                 Annotation(
                     key="unit_resolution",
-                    value={"spec_type": _POSITION.spec_type, "status": "unresolved",
-                           "timef_unit": "dimensionless", "timef_unit_is_placeholder": True},
+                    value={
+                        "spec_type": _POSITION.spec_type,
+                        "unit": "radian",
+                        "unit_resolution": "inferred",
+                        "confidence": "high",
+                    },
                     source="manual KUKA-to-TimeF mapping",
                     id=f"{record_id}-position-unit-resolution",
                 ),

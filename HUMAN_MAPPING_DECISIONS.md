@@ -155,23 +155,41 @@ IDs, and source-file lists are validated after TimeF read-back.
 
 **Decision:** Which value units should the two specs declare?
 
-**Evidence:** The official Part I record states that the seven joint torque signals are in N·m.
-Neither Batch 01 files nor the inspected accompanying documentation state the `PosMsr` unit. In the
-pinned API, `TimeSeriesSpec.unit_value` is required. Passing `None` can construct an object due to a
-validation gap, but serializes as `"None"`; `TimeFReader` then fails because Pint has no such unit.
+**Evidence:** The official Part I record states that the seven joint torque signals are in N·m. The
+five Batch 01 runs place all seven `PosMsr` channels between approximately -1.439 and +1.449. Read as
+radians, those extrema are approximately -82.4 to +83.0 degrees: a plausible trajectory occupying
+about 49% of the ±170-degree limits for joints 1, 3, 5, and 7 and about 69% of the ±120-degree limits
+for joints 2, 4, and 6. Read as degrees, the same motion would use only about 0.8% to 1.2% of those
+limits and would be implausibly small for the observed experiment.
 
-**Chosen interpretation:** External torque uses `newton_meter`. Joint position uses `dimensionless`
-only as a TimeF compatibility placeholder. Every record carries a machine-readable `unit_resolution`
-annotation with `status="unresolved"` and `timef_unit_is_placeholder=true`, so consumers can
-distinguish this from a genuine dimensionless claim.
+The variable family (`PosMsr`, `MsrTrq`, `MsrExtTrq`, and `CmdTrq`) is consistent with KUKA Fast
+Research Interface terminology. FRI documentation specifies radians for commanded joint positions,
+and independent LWR work collecting positions through `GetMeasuredJointPositions()` reports them in
+radians. A recursive search of every supplied Batch 01 source and metadata file found no `rad2deg`,
+`deg2rad`, `180/pi`, or `pi/180` conversion. The original logger implementation is not included, so
+the archive provides no direct statement of the position unit.
 
-**Confidence:** High for torque; unresolved for position.
+Evidence references:
 
-**Alternative interpretations:** Radians are plausible but are not asserted without source evidence;
-patch TimeF to support a nullable/unknown unit; omit position.
+- [FastResearchInterface class reference](https://rpc.lirmm.net/rpc-framework/assets/api_doc/html/classFastResearchInterface.html)
+  documents measured/commanded joint-position access and radians for commanded joint positions.
+- [Identifying the Dynamic Model Used by the KUKA LWR](https://www.diag.uniroma1.it/~labrob/pub/papers/ICRA14_LWR_RevMod.pdf)
+  describes positions collected with `GetMeasuredJointPositions()` as radians.
+- [KUKA Robot Learning Lab documentation](https://rll-doc.ipr.iar.kit.edu/rll_move_client.html)
+  lists the LWR4+ joint limits in radians.
 
-**Whether deterministic validation is possible:** The declared placeholder and marker can be checked.
-The original position unit cannot be recovered deterministically from Batch 01.
+**Chosen interpretation:** External torque uses `newton_meter`; joint position uses `radian`. Every
+record carries a small machine-readable `unit_resolution` annotation identifying the position unit as
+an inference with high confidence. This records the evidence status without weakening the actual
+TimeF unit or introducing a custom schema.
+
+**Confidence:** High for both units. The torque unit is documented; the position unit is inferred.
+
+**Alternative interpretations:** Degrees conflict strongly with the observed ranges and normal FRI
+conventions. Leaving the series dimensionless would discard the best-supported physical semantics.
+
+**Whether deterministic validation is possible:** The declared radian unit and inference marker are
+checked after round trip. The original position values remain byte-for-byte numerically unchanged.
 
 ## Subject identity
 
