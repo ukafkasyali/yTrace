@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BYMV8DE84AJTT95SZCA40C",
+  "strategy": "manual-commit",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "data_sourcing/src/data_sourcing/adapters/native.py",
+    "data_sourcing/src/data_sourcing/fixtures/robot_collision_native.json",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/tests/test_adapters.py",
+    "data_sourcing/tests/test_api.py",
+    "data_sourcing/tests/test_persistence.py",
+    "docs/DATA_SOURCING_API.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 68962,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3107084,
+    "output_tokens": 11049,
+    "api_call_count": 26
+  }
+}

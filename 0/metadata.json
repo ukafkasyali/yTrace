@@ -1,0 +1,47 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BYMV8DE84AJTT95SZCA40C",
+  "session_id": "01a097ce-ab6b-7eb2-9319-23ba02becc14",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T23:18:39.258625Z",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "data_sourcing/src/data_sourcing/adapters/native.py",
+    "data_sourcing/src/data_sourcing/fixtures/robot_collision_native.json",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/tests/test_adapters.py",
+    "data_sourcing/tests/test_api.py",
+    "data_sourcing/tests/test_persistence.py",
+    "docs/DATA_SOURCING_API.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "4538bcc4e6c1",
+  "checkpoint_transcript_start": 562,
+  "transcript_lines_at_start": 562,
+  "compact_transcript_start": 60,
+  "token_usage": {
+    "input_tokens": 68962,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3107084,
+    "output_tokens": 11049,
+    "api_call_count": 26
+  },
+  "session_metrics": {
+    "turn_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T23:18:39.041675Z",
+    "agent_lines": 302,
+    "agent_removed": 22,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 302,
+    "total_lines_changed": 324,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
