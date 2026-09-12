@@ -116,6 +116,11 @@ endpoint: seven channels and exactly 1,024 raw samples per channel for the initi
 interval. The promoted canary-v4 checkpoint generates real answers through this
 path; ingestion/search capabilities are separate.
 
+Completed investigations export a readable Markdown handoff by default. The report
+keeps generated interpretation, deterministic torque measurements, publisher
+annotations, provenance and limitations in separate sections. The model-details
+disclosure retains a secondary JSON export for machine-readable audit workflows.
+
 When the inference bridge starts with `--raw-root`, Trace lists the validated full
 recordings as well as the bundled cases. Selecting a 1.024-second interval outside
 the initial detail automatically fetches seven ordered 1 kHz channels, checks the

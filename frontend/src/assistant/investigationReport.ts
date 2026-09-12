@@ -75,12 +75,104 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
   };
 }
 
-export function downloadInvestigationReport(data: DemoData, datasetId: string, answer: InvestigationAnswer) {
-  const report = buildInvestigationReport(data, datasetId, answer);
-  const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2) + '\n'], { type: 'application/json' }));
+type InvestigationReport = ReturnType<typeof buildInvestigationReport>;
+
+function markdownText(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/([`*_[\]<>|])/g, '\\$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function markdownLink(url: string): string {
+  return `<${url.replace(/</g, '%3C').replace(/>/g, '%3E')}>`;
+}
+
+function fixed(value: number, digits = 3): string {
+  return Number.isFinite(value) ? value.toFixed(digits) : 'unavailable';
+}
+
+export function renderInvestigationMarkdown(report: InvestigationReport): string {
+  const annotations = report.publisherAnnotations.length
+    ? report.publisherAnnotations.map(annotation =>
+      `- ${fixed(annotation.timeSeconds)} s — ${markdownText(annotation.label)} (${markdownText(annotation.source)})`).join('\n')
+    : '- No publisher annotation falls inside this interval.';
+  const measurements = report.measurements.channels.map(channel =>
+    `| ${markdownText(channel.name)} | ${fixed(channel.range)} ${markdownText(channel.unit)} | ${fixed(channel.signedPeak)} ${markdownText(channel.unit)} | ${fixed(channel.peakTimeSec)} s |`).join('\n');
+  const evidence = report.interpretation.evidence.length
+    ? report.interpretation.evidence.map(item =>
+      `- ${markdownText(item.label)} — ${fixed(item.interval.start)}–${fixed(item.interval.end)} s; ${item.channelIds?.map(markdownText).join(', ') ?? markdownText(item.channelId)}`).join('\n')
+    : '- No separate evidence links were returned.';
+  const receipt = report.interpretation.inputReceipt && typeof report.interpretation.inputReceipt === 'object'
+    ? report.interpretation.inputReceipt as { samplesPerChannel?: unknown; inputSha256?: unknown }
+    : undefined;
+  const answer = report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
+  return [
+    '# Trace incident investigation',
+    '',
+    '> Retrospective robot telemetry report. Measurements, publisher annotations, and generated predictions are recorded as separate evidence sources.',
+    '',
+    '## Incident',
+    '',
+    `- **Recording:** ${markdownText(report.recording.recordingId)}`,
+    `- **Source dataset:** ${markdownLink(report.recording.sourceUrl)}`,
+    `- **Selected window:** [${fixed(report.window.startSec)}, ${fixed(report.window.endSec)}) s`,
+    `- **Question:** ${markdownText(report.question)}`,
+    '',
+    '## Interpretation',
+    '',
+    `**Origin:** ${markdownText(report.interpretation.origin)} · **Source:** ${markdownText(report.interpretation.source)}`,
+    '',
+    answer || 'No interpretation was returned.',
+    '',
+    '## Measured torque',
+    '',
+    `${markdownText(report.measurements.method)}.`,
+    '',
+    '| Joint | Range | Signed absolute peak | Peak time |',
+    '| --- | ---: | ---: | ---: |',
+    measurements,
+    '',
+    '## Publisher annotations',
+    '',
+    annotations,
+    '',
+    '## Evidence and provenance',
+    '',
+    `- **Input:** ${report.window.samplesPerChannel} samples per channel at ${report.window.sampleRateHz} Hz (${markdownText(report.window.resolution)})`,
+    `- **Model:** ${markdownText(report.interpretation.modelId ?? 'not applicable')}`,
+    `- **Revision:** ${markdownText(report.interpretation.modelRevision ?? 'not provided')}`,
+    `- **Input receipt:** ${markdownText(receipt?.samplesPerChannel ?? 'not provided')} samples/channel; SHA-256 ${markdownText(receipt?.inputSha256 ?? 'not provided')}`,
+    '',
+    evidence,
+    '',
+    '## Limitations',
+    '',
+    ...report.limitations.map(item => `- ${markdownText(item)}`),
+    '',
+  ].join('\n');
+}
+
+function download(content: string, type: string, filename: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `trace-${data.recording.id.replace(/[^a-zA-Z0-9_-]/g, '_')}-${answer.interval.start.toFixed(3)}s.json`;
+  link.download = filename;
   document.body.appendChild(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function reportFilename(data: DemoData, answer: InvestigationAnswer, extension: string): string {
+  return `trace-${data.recording.id.replace(/[^a-zA-Z0-9_-]/g, '_')}-${answer.interval.start.toFixed(3)}s.${extension}`;
+}
+
+export function downloadInvestigationMarkdown(data: DemoData, datasetId: string, answer: InvestigationAnswer) {
+  const report = buildInvestigationReport(data, datasetId, answer);
+  download(renderInvestigationMarkdown(report), 'text/markdown;charset=utf-8', reportFilename(data, answer, 'md'));
+}
+
+export function downloadInvestigationJson(data: DemoData, datasetId: string, answer: InvestigationAnswer) {
+  const report = buildInvestigationReport(data, datasetId, answer);
+  download(JSON.stringify(report, null, 2) + '\n', 'application/json', reportFilename(data, answer, 'json'));
 }

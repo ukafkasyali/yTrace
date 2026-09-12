@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, RotateCcw, SlidersHorizontal, Waves } from 'lucide-react';
 import { predictionBrief, predictionCue, type PredictionCue } from './predictionBrief';
-import { downloadInvestigationReport, type InvestigationAnswer } from './investigationReport';
+import { downloadInvestigationJson, downloadInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
 import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelWindow';
 import { analyzeWindow } from '../lib/data';
 import { intervalLabel } from '../lib/format';
@@ -80,8 +80,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     } finally { if (active.current?.id === id) { active.current = null; setBusy(false); } }
   }
   function exportReport(message: Message) {
-    try { downloadInvestigationReport(message.telemetry, datasetId, message); setExportStatus('Investigation report downloaded as JSON.'); }
+    try { downloadInvestigationMarkdown(message.telemetry, datasetId, message); setExportStatus('Readable investigation report downloaded as Markdown.'); }
     catch (error) { setExportStatus(error instanceof Error ? error.message : 'The report could not be exported.'); }
+  }
+  function exportEvidence(message: Message) {
+    try { downloadInvestigationJson(message.telemetry, datasetId, message); setExportStatus('Machine-readable evidence downloaded as JSON.'); }
+    catch (error) { setExportStatus(error instanceof Error ? error.message : 'The evidence could not be exported.'); }
   }
   async function stop() {
     const job = active.current; if (!job) return;
@@ -108,9 +112,9 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
             </div>
             {m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}
             {cue && <button className="text-button robot-prediction-action" onClick={() => onRobotPrediction(cue)}>Show predicted time cue in 3D <ArrowUpRight size={12}/></button>}
-            {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation · unverified</summary><p>Generated text can disagree with publisher annotations. Review those annotations separately.</p><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}</details>}
+            {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation · unverified</summary><p>Generated text can disagree with publisher annotations. Review those annotations separately.</p><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}<button className="text-button" onClick={() => exportEvidence(m)}><Download size={12}/>Download audit JSON</button></details>}
             {m.status === 'complete' && <button className="text-button" onClick={() => onCompare(m.interval)}>Compare this answer’s window <ArrowUpRight size={12}/></button>}
-            {m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export investigation</button>}
+            {m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export report (.md)</button>}
             {(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}
           </div></div>
         </article>;
