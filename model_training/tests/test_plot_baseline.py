@@ -5,6 +5,7 @@ import pytest
 
 from robot_observability.plot_baseline import (
     _balanced_example_rows,
+    _wandb_run_id,
     build_prompt,
     example_diagnostics,
     load_resumable_rows,
@@ -101,3 +102,13 @@ def test_example_diagnostics_expose_task_failures() -> None:
         "strongest_joint_correct": True,
         "onset_abs_error_ms": 25.0,
     }
+
+
+def test_wandb_run_id_falls_back_when_generate_id_was_removed() -> None:
+    class ModernWandb:
+        class util:
+            pass
+
+    run_id = _wandb_run_id(ModernWandb)
+    assert len(run_id) == 8
+    assert all(character in "0123456789abcdef" for character in run_id)

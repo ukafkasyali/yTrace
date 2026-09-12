@@ -11,6 +11,8 @@ from robot_observability.train_opentslm import (
     optimizer_group_stats,
     optimizer_group_update_stats,
     signal_preview,
+    training_manifest_rows,
+    wandb_manifest_table,
 )
 
 
@@ -61,3 +63,43 @@ def test_signal_preview_and_optimizer_update_instrumentation() -> None:
     assert before["probe_parameters_with_grad"] == 3
     assert updates["probe_update_norm"] > 0
     assert updates["probe_relative_update"] > 0
+
+
+def test_training_manifest_wandb_table_includes_supervised_answer() -> None:
+    sample = {
+        "record_id": "record-1",
+        "intent": "semantics",
+        "post_prompt": "Classify the event.",
+        "answer": '{"event_type":"free"}',
+        "metadata": {
+            "session_id": "session-1",
+            "event_type": "free",
+            "contact": False,
+            "onset_sample": None,
+            "strongest_joint": None,
+            "affected_joints": [],
+            "evidence_start_ms": None,
+            "evidence_end_ms": None,
+        },
+    }
+
+    class FakeDataset:
+        def __len__(self):
+            return 1
+
+        def __getitem__(self, index):
+            assert index == 0
+            return sample
+
+    class FakeWandb:
+        class Table:
+            def __init__(self, *, columns, data):
+                self.columns = columns
+                self.data = data
+
+    rows = training_manifest_rows(FakeDataset())
+    table = wandb_manifest_table(FakeWandb, rows)
+
+    answer_index = table.columns.index("supervised_answer")
+    assert rows[0]["supervised_answer"] == sample["answer"]
+    assert table.data[0][answer_index] == sample["answer"]

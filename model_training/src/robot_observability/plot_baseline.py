@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import os
+import secrets
 import time
 import urllib.error
 import urllib.request
@@ -327,6 +328,12 @@ def _append_row(path: Path, row: dict[str, object]) -> None:
         os.fsync(handle.fileno())
 
 
+def _wandb_run_id(wandb_module: Any) -> str:
+    """Generate a run ID across both legacy and current W&B releases."""
+    generate_id = getattr(getattr(wandb_module, "util", None), "generate_id", None)
+    return str(generate_id()) if callable(generate_id) else secrets.token_hex(4)
+
+
 class WandbLogger:
     def __init__(
         self,
@@ -350,9 +357,7 @@ class WandbLogger:
             raise RuntimeError("W&B logging requested; install the plot-baseline or train extra") from error
         run_id_path = output_root / "wandb_run_id.txt"
         run_id = (
-            run_id_path.read_text(encoding="utf-8").strip()
-            if run_id_path.exists()
-            else wandb.util.generate_id()
+            run_id_path.read_text(encoding="utf-8").strip() if run_id_path.exists() else _wandb_run_id(wandb)
         )
         if not run_id_path.exists():
             run_id_path.write_text(run_id + "\n", encoding="utf-8")

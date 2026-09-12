@@ -252,6 +252,7 @@ def training_manifest_rows(dataset: Dataset) -> list[dict[str, object]]:
                 "event_type": metadata["event_type"],
                 "post_prompt": sample["post_prompt"],
                 "target": answer_payload(metadata, sample["intent"]),
+                "supervised_answer": sample["answer"],
             }
         )
     return rows

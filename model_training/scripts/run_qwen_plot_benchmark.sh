@@ -8,12 +8,29 @@ revision="${QWEN_REVISION:-ebb281ec70b05090aa6165b016eac8ec08e71b17}"
 output="${QWEN_OUTPUT:-artifacts/evaluation/qwen3-vl-4b-bf16-plot-test}"
 status_path="${QWEN_STATUS:-qwen3-vl-benchmark-status.json}"
 server_log="${QWEN_SERVER_LOG:-qwen3-vl-server.log}"
+vlm_venv="${VLM_VENV:-.vlm-venv}"
+current_state="initializing"
+
+# vLLM/FlashInfer compile kernels at first launch and discover their build tools
+# through PATH. Calling the vLLM entry point directly does not activate the venv.
+export PATH="$PWD/$vlm_venv/bin:$PATH"
 
 write_status() {
   local state="$1"
+  current_state="$state"
   printf '{"state":"%s","timestamp":"%s"}\n' "$state" "$(date -Is)" >"${status_path}.tmp"
   mv "${status_path}.tmp" "$status_path"
 }
+
+write_failure() {
+  local exit_code=$?
+  printf '{"state":"failed","failed_from":"%s","exit_code":%d,"timestamp":"%s"}\n' \
+    "$current_state" "$exit_code" "$(date -Is)" >"${status_path}.tmp"
+  mv "${status_path}.tmp" "$status_path"
+  exit "$exit_code"
+}
+
+trap write_failure ERR
 
 write_status waiting_for_gpu
 while tmux has-session -t "$wait_session" 2>/dev/null; do
@@ -21,7 +38,7 @@ while tmux has-session -t "$wait_session" 2>/dev/null; do
 done
 
 write_status starting_server
-.vlm-venv/bin/vllm serve "$model" \
+"$vlm_venv/bin/vllm" serve "$model" \
   --revision "$revision" \
   --served-model-name "$model" \
   --port "$port" \
@@ -58,7 +75,7 @@ if [[ -f "$output/manifest.json" ]]; then
   resume_args=(--resume)
 fi
 write_status evaluating
-.vlm-venv/bin/python scripts/eval_plot_vlm.py \
+"$vlm_venv/bin/python" scripts/eval_plot_vlm.py \
   --endpoint "http://127.0.0.1:$port" \
   --output "$output" \
   "${resume_args[@]}"
