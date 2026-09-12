@@ -1,36 +1,36 @@
-# Dataset source integrity tasks
+# Configurable sourcing requirements tasks
 
-## Task 1: Preserve source identity during exploration
+## Task 1: Preview the research contract
 
-- [x] Add source role, parent and depth metadata with backward-compatible defaults.
-- [x] Stop grouping linked URLs into one candidate; create distinct child leads.
-- [x] Verify: focused canonicalization and graph traversal tests pass.
+- [x] Add typed preview request/response models and endpoint.
+- [x] Generate system, inferred, and custom natural-language requirements.
+- [x] Verify API validation, stable IDs, and no empty-label requirement.
 
-## Task 2: Promote only proven dataset artifacts
+## Task 2: Enforce the confirmed contract
 
-- [x] Evaluate dataset identity from the primary native record only.
-- [x] Require direct data/archive files and validated semantic evidence.
-- [x] Add a hard gate and regression tests for guides, lists and code-only repositories.
-- [x] Verify: complete backend test suite and lint pass.
+- [x] Persist explicit selection through queued/background execution.
+- [x] Verify custom requirements with exact native quotes.
+- [x] Ensure only mandatory configurable requirements create hard failures.
 
-## Checkpoint: Backend integrity
+## Checkpoint: Backend
 
-- [x] Existing cached run still reaches approval.
-- [x] No parent source inherits child identity evidence.
+- [x] Focused planner, API, relevance, scoring, and graph tests pass.
+- [x] Legacy run creation remains compatible.
 
-## Task 3: Separate datasets from discovery leads in review
+## Task 3: Add the requirement editor
 
-- [x] Rank promoted datasets only.
-- [x] Render excluded leads and reasons as a separate audit section.
-- [x] Verify: frontend tests and production build pass.
+- [ ] Add frontend preview service and validators.
+- [ ] Add Must/Preferred/Disabled controls and custom requirement entry.
+- [ ] Submit only enabled confirmed requirements.
 
 ## Task 4: Document and review
 
-- [x] Update the sourcing API/README behavior.
-- [x] Run security, compatibility and simplicity review.
-- [x] Commit the completed slices and update the existing PR.
+- [ ] Update API and module documentation.
+- [ ] Run full backend/frontend verification and five-axis review.
+- [ ] Commit tested slices and update the existing PR.
 
 ## Checkpoint: Complete
 
-- [x] All backend and frontend checks pass.
-- [x] Original reported failure has explicit regression coverage.
+- [ ] Research contract is previewed before search credits are spent.
+- [ ] All backend and frontend checks pass.
+- [ ] Worktree is clean and remote PR branch is updated.

@@ -31,6 +31,7 @@ from data_sourcing.models import (
     RefinementOutcome,
     RefinementOutcomeStatus,
     RequirementCategory,
+    RequirementDefinition,
     ResearchRequirement,
     RunStatus,
     SearchHypothesis,
@@ -72,6 +73,7 @@ class SourcingState(TypedDict, total=False):
     constraints: dict[str, Any]
     status: str
     requirements: list[dict[str, Any]]
+    requirements_confirmed: bool
     hypotheses: list[dict[str, Any]]
     search_results: list[dict[str, Any]]
     candidates: list[dict[str, Any]]
@@ -110,7 +112,13 @@ def initial_state(
         "brief": request.brief,
         "constraints": request.constraints.model_dump(mode="json"),
         "status": RunStatus.QUEUED.value,
-        "requirements": [],
+        "requirements": _json_list(
+            [
+                ResearchRequirement.model_validate(item.model_dump())
+                for item in (request.requirements or [])
+            ]
+        ),
+        "requirements_confirmed": request.requirements is not None,
         "hypotheses": [],
         "search_results": [],
         "candidates": [],
@@ -144,9 +152,20 @@ def _json_list(items: list[Any]) -> list[dict[str, Any]]:
 
 
 def _request(state: SourcingState) -> CreateSourcingRun:
+    requirements = None
+    if state.get("requirements_confirmed", False):
+        requirements = [
+            RequirementDefinition.model_validate(
+                ResearchRequirement.model_validate(item).model_dump(
+                    exclude={"status", "evidence_ids"}
+                )
+            )
+            for item in state.get("requirements", [])
+        ]
     return CreateSourcingRun(
         brief=state["brief"],
         constraints=SourcingConstraints.model_validate(state["constraints"]),
+        requirements=requirements,
     )
 
 
@@ -227,7 +246,7 @@ class DatasetScoutGraph:
     def requirements(self, state: SourcingState) -> dict[str, Any]:
         request = _request(state)
         draft = self.planner.draft(request)
-        requirements = self.planner.requirements_from_draft(request, draft)
+        requirements = self.planner.requirements(request)
         return {
             "status": RunStatus.PLANNING.value,
             "requirements": _json_list(requirements),
@@ -325,6 +344,11 @@ class DatasetScoutGraph:
             if requirement.category is RequirementCategory.DOMAIN
             for value in requirement.expected_values
         ]
+        custom_requirements = [
+            requirement
+            for requirement in requirements
+            if requirement.category is RequirementCategory.OTHER
+        ]
         seen_candidate_ids = {candidate.id for candidate in candidates}
         candidate_index = 0
         inspections = 0
@@ -358,6 +382,11 @@ class DatasetScoutGraph:
                 verified.documents,
                 required_domain_terms,
             )
+            custom_evidence = self.relevance_judge.evaluate_custom_requirements(
+                candidate.id,
+                verified.documents,
+                custom_requirements,
+            )
             source_role = (
                 SourceRole.DATASET_ARTIFACT
                 if identity.is_dataset_artifact
@@ -373,8 +402,17 @@ class DatasetScoutGraph:
                     "dataset_identity_reason": identity.reason,
                 }
             )
-            evidence.extend([*verified.evidence, *identity.evidence, *relevance.evidence])
-            errors.extend([*identity.warnings, *relevance.warnings])
+            evidence.extend(
+                [
+                    *verified.evidence,
+                    *identity.evidence,
+                    *relevance.evidence,
+                    *custom_evidence.evidence,
+                ]
+            )
+            errors.extend(
+                [*identity.warnings, *relevance.warnings, *custom_evidence.warnings]
+            )
             if (
                 verified.documents
                 and candidate.discovery_depth < self.settings.traversal_depth_limit

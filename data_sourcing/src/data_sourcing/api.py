@@ -14,6 +14,8 @@ from data_sourcing.models import (
     CreateSourcingRun,
     ErrorDetail,
     ErrorEnvelope,
+    RequirementPreviewRequest,
+    RequirementsPreview,
     RunAccepted,
     SourcingManifest,
     SourcingRun,
@@ -111,6 +113,15 @@ def create_app(
             status=run.status,
             status_url=f"/api/sourcing-runs/{run_id}",
         )
+
+    @app.post(
+        "/api/sourcing-requirement-previews",
+        response_model=RequirementsPreview,
+    )
+    def preview_sourcing_requirements(
+        body: RequirementPreviewRequest,
+    ) -> RequirementsPreview:
+        return sourcing.scout.planner.preview(body)
 
     @app.get("/api/sourcing-runs/{run_id}", response_model=SourcingRun)
     def get_sourcing_run(run_id: str) -> SourcingRun:

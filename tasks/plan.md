@@ -1,63 +1,64 @@
-# Implementation Plan: Dataset source integrity
+# Implementation Plan: Configurable sourcing requirements
 
 ## Overview
 
-Replace URL-component evidence aggregation with bounded lead exploration and explicit artifact
-promotion. Keep the wire contract additive and make the review UI distinguish usable datasets from
-discovery pages that were inspected and rejected.
+Add a preflight research-contract preview, preserve its confirmed requirement definitions through
+the durable run, verify custom natural-language requirements from native evidence, and expose an
+accessible Must/Preferred/Disabled editor in the existing dataset scout.
 
 ## Architecture Decisions
 
-- Preserve every native URL as a separate identity; links form provenance edges, not identity.
-- Use one semantic identity judgment over the primary native record, validated by a verbatim quote.
-- Require direct, non-empty data/archive files before semantic support can promote a source.
-- Keep deterministic gates authoritative; the LLM may support or abstain but cannot override files.
-- Use native adapters first. Do not add Playwright/MCP dependencies in this increment.
+- Add `POST /api/sourcing-requirement-previews` as a stateless typed preview resource.
+- Add optional `requirements` to run creation; absence keeps legacy automatic planning, while an
+  explicit list is authoritative for configurable requirements.
+- Mark system requirements in the contract and reinsert them server-side if a client omits them.
+- Represent arbitrary custom requirements as `OTHER` and verify them with a validated native quote.
+- Make hard gates conditional on mandatory categories; preferred requirements never reject.
 
 ## Task List
 
-### Phase 1: Source exploration
+### Phase 1: Preview contract
 
-- [x] Add source-role and traversal metadata to the additive API contract.
-- [x] Canonicalize native URLs independently and expand related URLs as bounded child leads.
-- [x] Add regression tests for identity preservation and two-hop/count limits.
+- [x] Add requirement-definition and preview API models.
+- [x] Generate stable previews, omit empty task labels, and expose the preview endpoint.
+- [x] Add backend contract and planner regression tests.
 
-### Checkpoint: Exploration
+### Checkpoint: Preview
 
-- [x] Focused adapter and graph tests pass.
+- [x] Focused API and planner tests pass.
 
-### Phase 2: Artifact verification
+### Phase 2: Confirmed execution
 
-- [x] Add source-local dataset identity judgment and evidence.
-- [x] Add the deterministic `dataset_identity` hard gate and artifact-first ranking.
-- [x] Prove linked evidence cannot promote a guide or code-only repository.
+- [x] Preserve explicit requirement selection across persistence and background execution.
+- [x] Ground custom requirements in native source quotes.
+- [x] Make hard gates respect Must versus Preferred versus Disabled.
 
-### Checkpoint: Verification
+### Checkpoint: Execution
 
-- [x] Backend test suite and lint pass.
+- [x] Graph, relevance, scoring, and lifecycle tests pass.
 
-### Phase 3: Review presentation
+### Phase 3: Frontend workflow
 
-- [x] Rank only promoted dataset artifacts.
-- [x] Show inspected non-dataset leads separately with exclusion reasons.
-- [x] Update API documentation and regression fixtures.
+- [ ] Add preview service contracts and response validation.
+- [ ] Add custom requirement entry and accessible priority controls.
+- [ ] Require a current preview before starting and submit the confirmed contract.
 
 ### Checkpoint: Complete
 
-- [x] Frontend tests and production build pass.
-- [x] Cached end-to-end sourcing flow reaches approval and manifest generation.
-- [x] Diff review finds no evidence-boundary, security, or compatibility regressions.
+- [ ] Frontend tests and production build pass.
+- [ ] Full backend tests and lint pass.
+- [ ] Documentation, security review, and compatibility review are complete.
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| False promotion from persuasive README text | High | Require source-local files and validated quote |
-| Valid dataset hidden behind a guide | Medium | Follow related native URLs as separate bounded leads |
-| Traversal exhausts demo budget | High | Two-hop, sixteen-lead, eight-artifact and time caps |
-| Persisted runs lack new fields | Medium | Add defaults and keep frontend compatibility fallbacks |
-| Cached demo loses combined coverage | Medium | Preserve the dataset repository as its own verified source |
+| Client removes integrity requirements | High | Reinsert fixed requirements server-side and retain fixed gates |
+| LLM claims unsupported custom evidence | High | Require exact source URL, document index, and verbatim quote |
+| Preview becomes stale after brief edits | Medium | Invalidate preview on every brief/custom change |
+| Old clients break | High | Optional additive request field preserves automatic planning |
+| Preferred requirement rejects data | High | Hard gates use mandatory requirements only |
 
 ## Open Questions
 
-- Browser fallback runtime is intentionally deferred pending explicit dependency/integration approval.
+- None blocking under the surfaced assumptions.

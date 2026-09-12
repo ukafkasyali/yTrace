@@ -75,6 +75,7 @@ class ArtifactStore:
             brief=state["brief"],
             constraints=state["constraints"],
             requirements=state.get("requirements", []),
+            requirements_confirmed=state.get("requirements_confirmed", False),
             hypotheses=state.get("hypotheses", []),
             candidates=state.get("candidates", []),
             profiles=state.get("profiles", []),

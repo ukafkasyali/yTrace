@@ -82,6 +82,42 @@ def test_create_is_idempotent_and_rejects_key_reuse(tmp_path: Path) -> None:
         assert len(list(settings.runs_dir.iterdir())) == 1
 
 
+def test_requirement_preview_and_confirmed_selection_survive_run_creation(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        preview = client.post(
+            "/api/sourcing-requirement-previews",
+            json={
+                "brief": BRIEF,
+                "customRequirements": ["Must include at least 200 collision sequences"],
+            },
+        )
+
+        assert preview.status_code == 200
+        requirements = preview.json()["requirements"]
+        custom = next(item for item in requirements if item["category"] == "OTHER")
+        assert custom["priority"] == "MUST"
+        configurable = [
+            item
+            for item in requirements
+            if item["isSystemRequired"] or item["id"] == custom["id"]
+        ]
+
+        created = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "confirmed-requirements"},
+            json={"brief": BRIEF, "requirements": configurable},
+        )
+        run = client.get(f"/api/sourcing-runs/{created.json()['runId']}").json()
+
+        assert run["requirementsConfirmed"] is True
+        assert {item["id"] for item in run["requirements"]} == {
+            item["id"] for item in configurable
+        }
+
+
 def test_rejection_requires_feedback_before_refining(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:

@@ -14,6 +14,7 @@ from data_sourcing.models import (
     ApprovalDecision,
     ApprovalRequest,
     CreateSourcingRun,
+    RequirementDefinition,
     RunStatus,
     SourcingRun,
 )
@@ -90,7 +91,19 @@ class SourcingService:
 
     def execute_run(self, run_id: str) -> None:
         run = self.artifacts.read_run(run_id)
-        request = CreateSourcingRun(brief=run.brief, constraints=run.constraints)
+        requirements = None
+        if run.requirements_confirmed:
+            requirements = [
+                RequirementDefinition.model_validate(
+                    item.model_dump(exclude={"status", "evidence_ids"})
+                )
+                for item in run.requirements
+            ]
+        request = CreateSourcingRun(
+            brief=run.brief,
+            constraints=run.constraints,
+            requirements=requirements,
+        )
         state = initial_state(
             run_id,
             request,

@@ -51,6 +51,8 @@ def requirement_is_evidenced(
     evidence: list[EvidenceRecord],
 ) -> bool:
     claim = requirement_claim_key(requirement)
+    if requirement.category is RequirementCategory.OTHER:
+        return bool(claim and _evidence_for(evidence, profile.candidate_id, claim))
     return requirement_is_met(requirement, profile) and bool(
         claim and _evidence_for(evidence, profile.candidate_id, claim)
     )
@@ -67,6 +69,8 @@ def requirement_claim_key(requirement: ResearchRequirement) -> str | None:
         RequirementCategory.SCHEMA: "schema",
         RequirementCategory.ACQUISITION: "total_size_bytes",
     }
+    if requirement.category is RequirementCategory.OTHER:
+        return f"custom_requirement:{requirement.id}"
     return claim_by_category.get(requirement.category)
 
 
@@ -117,10 +121,10 @@ def assess_candidate(
     fit_met = sum(requirement_is_evidenced(item, profile, evidence) for item in fit_requirements)
     task_ratio = fit_met / max(1, len(fit_requirements))
     domain_requirements = [
-        item for item in requirements if item.category is RequirementCategory.DOMAIN
+        item for item in required if item.category is RequirementCategory.DOMAIN
     ]
     label_requirements = [
-        item for item in requirements if item.category is RequirementCategory.TASK_LABELS
+        item for item in required if item.category is RequirementCategory.TASK_LABELS
     ]
     domain_passed = all(
         requirement_is_evidenced(item, profile, evidence) for item in domain_requirements
@@ -147,16 +151,6 @@ def assess_candidate(
     files_passed = profile.has_time_series_files and bool(file_evidence)
     schema_passed = profile.schema_documented and bool(schema_evidence)
     acquisition_passed = profile.acquisition_feasible and bool(size_evidence)
-    license_gate = GateResult(
-        gate="license",
-        passed=bool(profile.license_id) and licence_allowed,
-        reason=(
-            "Explicit allowed licence found"
-            if profile.license_id and licence_allowed
-            else "Licence is missing or outside the allowed set"
-        ),
-        evidence_ids=license_evidence,
-    )
     gates = [
         GateResult(
             gate="dataset_identity",
@@ -176,7 +170,6 @@ def assess_candidate(
             else "Canonical version or provenance missing",
             evidence_ids=revision_evidence,
         ),
-        license_gate,
         GateResult(
             gate="time_series_files",
             passed=files_passed,
@@ -186,6 +179,19 @@ def assess_candidate(
             evidence_ids=file_evidence,
         ),
     ]
+    if license_requirements:
+        gates.append(
+            GateResult(
+                gate="license",
+                passed=bool(profile.license_id) and licence_allowed,
+                reason=(
+                    "Explicit allowed licence found"
+                    if profile.license_id and licence_allowed
+                    else "Licence is missing or outside the allowed set"
+                ),
+                evidence_ids=license_evidence,
+            )
+        )
     if domain_requirements:
         gates.append(
             GateResult(
@@ -199,8 +205,8 @@ def assess_candidate(
                 evidence_ids=domain_evidence,
             )
         )
-    gates.extend(
-        [
+    if label_requirements:
+        gates.append(
             GateResult(
                 gate="task_labels",
                 passed=labels_passed,
@@ -208,7 +214,10 @@ def assess_candidate(
                 if labels_passed
                 else "Required task labels are incomplete",
                 evidence_ids=label_evidence,
-            ),
+            )
+        )
+    if any(item.category is RequirementCategory.SCHEMA for item in required):
+        gates.append(
             GateResult(
                 gate="schema",
                 passed=schema_passed,
@@ -216,7 +225,10 @@ def assess_candidate(
                 if schema_passed
                 else "Schema or channel documentation missing",
                 evidence_ids=schema_evidence,
-            ),
+            )
+        )
+    if any(item.category is RequirementCategory.ACQUISITION for item in required):
+        gates.append(
             GateResult(
                 gate="acquisition",
                 passed=acquisition_passed,
@@ -224,9 +236,8 @@ def assess_candidate(
                 if acquisition_passed
                 else "Acquisition size is unknown or exceeds the configured bound",
                 evidence_ids=size_evidence,
-            ),
-        ]
-    )
+            )
+        )
 
     extensions = {extension.casefold() for extension in profile.file_extensions}
     integration = (

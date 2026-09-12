@@ -299,3 +299,31 @@ def test_non_dataset_source_fails_identity_gate_despite_an_otherwise_high_score(
     identity = next(gate for gate in assessment.gates if gate.gate == "dataset_identity")
     assert identity.passed is False
     assert assessment.tier is CandidateTier.REJECT
+
+
+def test_preferred_schema_and_license_requirements_do_not_create_hard_gates() -> None:
+    requirements = [
+        requirement(RequirementCategory.SCHEMA).model_copy(
+            update={"priority": RequirementPriority.SHOULD}
+        ),
+        requirement(RequirementCategory.LICENSE).model_copy(
+            update={"priority": RequirementPriority.SHOULD}
+        ),
+    ]
+    incomplete = profile().model_copy(
+        update={"license_id": None, "schema_documented": False}
+    )
+    records = [
+        item
+        for item in complete_evidence(incomplete.candidate_id)
+        if item.claim_key not in {"license", "schema"}
+    ]
+
+    assessment = assess_candidate(incomplete, requirements, records)
+
+    assert {gate.gate for gate in assessment.gates} == {
+        "dataset_identity",
+        "provenance",
+        "time_series_files",
+    }
+    assert assessment.missing_requirement_ids == []

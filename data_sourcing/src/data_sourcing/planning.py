@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Iterable
 
@@ -10,7 +11,10 @@ from data_sourcing.config import Settings
 from data_sourcing.models import (
     CreateSourcingRun,
     RequirementCategory,
+    RequirementDefinition,
+    RequirementPreviewRequest,
     RequirementPriority,
+    RequirementsPreview,
     ResearchRequirement,
     SearchHypothesis,
 )
@@ -173,7 +177,7 @@ class RequirementPlanner:
         fallback = deterministic_draft(request)
         model_draft = self._model_draft(request)
         if model_draft is None:
-            return fallback
+            return self._add_confirmed_terms(fallback, request)
         model_labels = [
             label
             for label in model_draft.task_labels
@@ -188,7 +192,7 @@ class RequirementPlanner:
             for domain in _unique(model_draft.domain_terms)
             if domain in request_text
         ]
-        return PlanningDraft(
+        merged = PlanningDraft(
             task_labels=_normalize_labels([*fallback.task_labels, *model_labels])[:8],
             domain_terms=_bounded_domains([*fallback.domain_terms, *model_domains]),
             minimum_sample_rate_hz=(
@@ -199,8 +203,93 @@ class RequirementPlanner:
             )[:8],
             search_terms=_unique([*fallback.search_terms, *model_draft.search_terms])[:12],
         )
+        return self._add_confirmed_terms(merged, request)
+
+    @staticmethod
+    def _add_confirmed_terms(
+        draft: PlanningDraft,
+        request: CreateSourcingRun,
+    ) -> PlanningDraft:
+        if request.requirements is None:
+            return draft
+        terms = [
+            value
+            for requirement in request.requirements
+            for value in requirement.expected_values
+        ]
+        return draft.model_copy(
+            update={"search_terms": _unique([*draft.search_terms, *terms])[:12]}
+        )
+
+    @staticmethod
+    def _system_requirements() -> list[ResearchRequirement]:
+        return [
+            ResearchRequirement(
+                id="req_provenance",
+                label="Canonical provenance",
+                description="A native, versioned source identifies the dataset.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.PROVENANCE,
+                is_system_required=True,
+            ),
+            ResearchRequirement(
+                id="req_time_series",
+                label="Usable time-series files",
+                description="Downloadable files contain machine-readable telemetry.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.MODALITY,
+                is_system_required=True,
+            ),
+        ]
+
+    def confirm_requirements(
+        self,
+        definitions: list[RequirementDefinition],
+    ) -> list[ResearchRequirement]:
+        fixed_categories = {RequirementCategory.PROVENANCE, RequirementCategory.MODALITY}
+        configurable = [
+            ResearchRequirement.model_validate(item.model_dump())
+            for item in definitions
+            if item.category not in fixed_categories
+        ]
+        return [*self._system_requirements(), *configurable]
+
+    def preview(self, request: RequirementPreviewRequest) -> RequirementsPreview:
+        run_request = CreateSourcingRun(
+            brief=request.brief,
+            constraints=request.constraints,
+        )
+        generated = self.requirements(run_request)
+        custom: list[ResearchRequirement] = []
+        seen: set[str] = set()
+        for raw in request.custom_requirements:
+            text = " ".join(raw.split())
+            if len(text) < 3 or text.casefold() in seen:
+                continue
+            seen.add(text.casefold())
+            digest = hashlib.sha256(text.casefold().encode()).hexdigest()[:12]
+            custom.append(
+                ResearchRequirement(
+                    id=f"req_custom_{digest}",
+                    label=text[:120],
+                    description="Custom natural-language requirement verified from native sources.",
+                    priority=RequirementPriority.MUST,
+                    category=RequirementCategory.OTHER,
+                    expected_values=[text],
+                )
+            )
+        return RequirementsPreview(
+            requirements=[
+                RequirementDefinition.model_validate(
+                    item.model_dump(exclude={"status", "evidence_ids"})
+                )
+                for item in [*generated, *custom]
+            ]
+        )
 
     def requirements(self, request: CreateSourcingRun) -> list[ResearchRequirement]:
+        if request.requirements is not None:
+            return self.confirm_requirements(request.requirements)
         return self.requirements_from_draft(request, self.draft(request))
 
     def requirements_from_draft(
@@ -209,13 +298,7 @@ class RequirementPlanner:
         draft: PlanningDraft,
     ) -> list[ResearchRequirement]:
         requirements = [
-            ResearchRequirement(
-                id="req_provenance",
-                label="Canonical provenance",
-                description="A native, versioned source identifies the dataset.",
-                priority=RequirementPriority.MUST,
-                category=RequirementCategory.PROVENANCE,
-            ),
+            *self._system_requirements(),
             ResearchRequirement(
                 id="req_license",
                 label="Explicit licence",
@@ -223,14 +306,6 @@ class RequirementPlanner:
                 priority=RequirementPriority.MUST,
                 category=RequirementCategory.LICENSE,
                 expected_values=request.constraints.allowed_licenses,
-            ),
-            ResearchRequirement(
-                id="req_time_series",
-                label="Usable time-series files",
-                description="Downloadable files contain machine-readable telemetry.",
-                priority=RequirementPriority.MUST,
-                category=RequirementCategory.MODALITY,
-                expected_values=draft.modality_terms,
             ),
             ResearchRequirement(
                 id="req_schema",
@@ -258,16 +333,17 @@ class RequirementPlanner:
                     expected_values=draft.domain_terms,
                 )
             )
-        requirements.append(
-            ResearchRequirement(
-                id="req_task_labels",
-                label="Task labels",
-                description="Labels needed by the stated task are documented.",
-                priority=RequirementPriority.MUST,
-                category=RequirementCategory.TASK_LABELS,
-                expected_values=draft.task_labels,
+        if draft.task_labels:
+            requirements.append(
+                ResearchRequirement(
+                    id="req_task_labels",
+                    label="Task labels",
+                    description="Labels needed by the stated task are documented.",
+                    priority=RequirementPriority.MUST,
+                    category=RequirementCategory.TASK_LABELS,
+                    expected_values=draft.task_labels,
+                )
             )
-        )
         if draft.minimum_sample_rate_hz:
             requirements.append(
                 ResearchRequirement(

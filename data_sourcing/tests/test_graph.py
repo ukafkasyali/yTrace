@@ -464,7 +464,7 @@ def test_unresolved_free_motion_label_uses_two_gap_queries_and_abstains() -> Non
     connection.close()
 
 
-def test_unknown_task_labels_are_mandatory_input_not_vacuous_success() -> None:
+def test_unknown_task_labels_do_not_create_an_impossible_empty_requirement() -> None:
     scout, connection = build_graph()
     run_id = str(uuid4())
     request = CreateSourcingRun(
@@ -477,10 +477,7 @@ def test_unknown_task_labels_are_mandatory_input_not_vacuous_success() -> None:
     )
 
     assert result["status"] == RunStatus.NEEDS_INPUT.value
-    task_requirement = next(
-        item for item in result["requirements"] if item["id"] == "req_task_labels"
-    )
-    assert task_requirement["status"] == "MISSING"
+    assert not any(item["id"] == "req_task_labels" for item in result["requirements"])
     scout.close()
     connection.close()
 

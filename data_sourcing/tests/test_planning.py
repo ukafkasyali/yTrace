@@ -1,5 +1,9 @@
 from data_sourcing.config import Settings
-from data_sourcing.models import CreateSourcingRun, RequirementCategory
+from data_sourcing.models import (
+    CreateSourcingRun,
+    RequirementCategory,
+    RequirementPreviewRequest,
+)
 from data_sourcing.planning import (
     PlanningDraft,
     RequirementPlanner,
@@ -57,6 +61,47 @@ def test_planner_always_adds_hard_gate_requirements() -> None:
     }
     task = next(item for item in requirements if item.category is RequirementCategory.TASK_LABELS)
     assert task.expected_values == ["collision", "free"]
+
+
+def test_preview_omits_an_empty_task_label_requirement_and_adds_custom_text() -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+
+    preview = planner.preview(
+        RequirementPreviewRequest(
+            brief="Find a useful public industrial dataset for future analysis.",
+            custom_requirements=["Must include ambient temperature measurements"],
+        )
+    )
+
+    assert not any(
+        item.category is RequirementCategory.TASK_LABELS for item in preview.requirements
+    )
+    custom = next(
+        item for item in preview.requirements if item.category is RequirementCategory.OTHER
+    )
+    assert custom.priority.value == "MUST"
+    assert custom.expected_values == ["Must include ambient temperature measurements"]
+    assert custom.id.startswith("req_custom_")
+
+
+def test_custom_requirement_ids_are_stable_and_deduplicated() -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    request = RequirementPreviewRequest(
+        brief="Find public robot collision data for model training.",
+        custom_requirements=["At least 100 labelled events", "At least 100 labelled events"],
+    )
+
+    first = planner.preview(request)
+    second = planner.preview(request)
+    first_custom = [
+        item for item in first.requirements if item.category is RequirementCategory.OTHER
+    ]
+    second_custom = [
+        item for item in second.requirements if item.category is RequirementCategory.OTHER
+    ]
+
+    assert len(first_custom) == 1
+    assert [item.id for item in first_custom] == [item.id for item in second_custom]
 
 
 def test_planner_produces_exactly_three_initial_hypotheses() -> None:

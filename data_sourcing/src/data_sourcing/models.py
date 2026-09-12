@@ -113,20 +113,43 @@ class SourcingConstraints(WireModel):
     max_download_bytes: int = Field(default=25_000_000_000, gt=0, le=1_000_000_000_000)
 
 
-class CreateSourcingRun(WireModel):
-    brief: str = Field(min_length=20, max_length=8_000)
-    constraints: SourcingConstraints = Field(default_factory=SourcingConstraints)
-
-
-class ResearchRequirement(WireModel):
+class RequirementDefinition(WireModel):
     id: str = Field(pattern=r"^req_[a-z0-9_]{1,48}$")
     label: str = Field(min_length=1, max_length=120)
     description: str = Field(min_length=1, max_length=500)
     priority: RequirementPriority
     category: RequirementCategory
     expected_values: list[str] = Field(default_factory=list, max_length=30)
+    is_system_required: bool = False
+
+
+class CreateSourcingRun(WireModel):
+    brief: str = Field(min_length=20, max_length=8_000)
+    constraints: SourcingConstraints = Field(default_factory=SourcingConstraints)
+    requirements: list[RequirementDefinition] | None = Field(default=None, max_length=20)
+
+    @model_validator(mode="after")
+    def requirement_ids_are_unique(self) -> CreateSourcingRun:
+        if self.requirements is not None:
+            ids = [item.id for item in self.requirements]
+            if len(ids) != len(set(ids)):
+                raise ValueError("requirement IDs must be unique")
+        return self
+
+
+class RequirementPreviewRequest(WireModel):
+    brief: str = Field(min_length=20, max_length=8_000)
+    constraints: SourcingConstraints = Field(default_factory=SourcingConstraints)
+    custom_requirements: list[str] = Field(default_factory=list, max_length=10)
+
+
+class ResearchRequirement(RequirementDefinition):
     status: VerificationStatus = VerificationStatus.UNVERIFIED
     evidence_ids: list[str] = Field(default_factory=list)
+
+
+class RequirementsPreview(WireModel):
+    requirements: list[RequirementDefinition]
 
 
 class SearchHypothesis(WireModel):
@@ -285,6 +308,7 @@ class SourcingRun(WireModel):
     brief: str
     constraints: SourcingConstraints
     requirements: list[ResearchRequirement] = Field(default_factory=list)
+    requirements_confirmed: bool = False
     hypotheses: list[SearchHypothesis] = Field(default_factory=list)
     candidates: list[DatasetCandidate] = Field(default_factory=list)
     profiles: list[DatasetProfile] = Field(default_factory=list)
