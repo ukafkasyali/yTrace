@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2BZ7AEVKGB9Y0FKTJA3GGSK",
+  "strategy": "manual-commit",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/pyproject.toml",
+    "data_ingestion/src/dataset_profiler/ingestion/__init__.py",
+    "data_ingestion/src/dataset_profiler/ingestion/contracts.py",
+    "data_ingestion/src/dataset_profiler/ingestion/jobs.py",
+    "data_ingestion/tests/test_ingestion_handoff.py",
+    "data_sourcing/tests/test_contracts.py",
+    "docs/contracts/approved-source-manifest-v1.1.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 17462,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3712345,
+    "output_tokens": 11885,
+    "api_call_count": 19
+  }
+}
