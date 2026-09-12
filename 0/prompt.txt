@@ -1,0 +1,1 @@
+Now is a good time to wrap up and schedule jobs, so even if codex is off, they are run for the next 5.5 hours, so they are persistent.
