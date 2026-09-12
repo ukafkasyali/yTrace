@@ -6,8 +6,8 @@ from typing import Any
 
 import numpy as np
 
-from ..io.matlab import load_matlab
 from ..models import Event, Inference
+from .kuka_parser import collision_time_seconds, parse_collision_indices
 
 
 class KukaCollisionHints:
@@ -49,15 +49,15 @@ class KukaCollisionHints:
         path = run_dir / "JK_moments.mat"
         if not path.exists():
             return []
-        loaded = load_matlab(path).variables
-        raw = np.asarray(loaded.get("JK_moments", [])).reshape(-1)
+        raw = parse_collision_indices(
+            path,
+            n_samples=int(time_axis.size) if time_axis is not None else None,
+        )
         result: list[Event] = []
         for position, raw_index in enumerate(raw):
             # MATLAB indices are one-based. Preserve the original and use index-1 only for lookup.
             index = int(raw_index)
-            event_time = None
-            if time_axis is not None and 1 <= index <= time_axis.size:
-                event_time = float(time_axis[index - 1])
+            event_time = collision_time_seconds(time_axis, index) if time_axis is not None else None
             result.append(
                 Event(
                     event_id=f"{run_dir.name}:event:{position + 1:03d}",
@@ -115,4 +115,3 @@ class KukaCollisionHints:
             "The experimental date/year and timezone are not present in per-run metadata.",
             "The intended prediction target and evaluation protocol are not specified by the raw batch.",
         ]
-
