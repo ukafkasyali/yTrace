@@ -5,7 +5,7 @@ import html
 import json
 import re
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -31,6 +31,13 @@ _BATCHES = re.compile(
 )
 _TIME_SERIES_EXTENSIONS = {".csv", ".mat", ".parquet", ".h5", ".hdf5", ".npy", ".npz"}
 _ARCHIVE_EXTENSIONS = {".zip", ".tar", ".gz", ".zst"}
+_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
+_MAX_NATIVE_DOCUMENTS = 8
+_MAX_REDIRECTS = 3
+
+
+class NativeResponseTooLarge(SourceUnavailable):
+    pass
 
 
 class NativeFile(BaseModel):
@@ -80,6 +87,16 @@ def _related_urls(text: str) -> list[str]:
         if source:
             urls.append(source[0])
     return list(dict.fromkeys(urls))
+
+
+def _describes_dataset_repository(document: NativeDocument) -> bool:
+    if document.source_kind is not SourceKind.GITHUB:
+        return False
+    extensions = {_extension(file.name) for file in document.files}
+    text = document.text.casefold()
+    return bool(extensions & _TIME_SERIES_EXTENSIONS) or bool(
+        "dataset structure" in text and re.search(r"\btime[- ]series\b", text)
+    )
 
 
 def _evidence_id(candidate_id: str, source_url: str, claim: str, value: str) -> str:
@@ -311,46 +328,97 @@ class NativeVerifier:
             for item in json.loads(fixture_path.read_text(encoding="utf-8"))
         ]
 
-    def _get_bytes(self, url: str, headers: dict[str, str] | None = None) -> bytes:
-        validate_source_url(url)
-        if self.validate_dns:
-            resolve_public_host(urlsplit(url).hostname or "")
-        with self.client.stream("GET", url, headers=headers) as response:
-            response.raise_for_status()
-            declared_length = response.headers.get("Content-Length")
-            if declared_length and int(declared_length) > self.settings.max_source_response_bytes:
-                raise SourceUnavailable("Native source response exceeded the configured size limit")
-            content = bytearray()
-            for chunk in response.iter_bytes():
-                content.extend(chunk)
-                if len(content) > self.settings.max_source_response_bytes:
-                    raise SourceUnavailable(
+    def _get_bytes(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        *,
+        allow_not_found: bool = False,
+    ) -> bytes | None:
+        current_url = url
+        original_host = (urlsplit(url).hostname or "").casefold()
+        for redirect_count in range(_MAX_REDIRECTS + 1):
+            validate_source_url(current_url)
+            if self.validate_dns:
+                resolve_public_host(urlsplit(current_url).hostname or "")
+            with self.client.stream("GET", current_url, headers=headers) as response:
+                if response.status_code in _REDIRECT_STATUSES:
+                    location = response.headers.get("Location")
+                    if not location:
+                        raise SourceUnavailable(
+                            "Native source returned a redirect without a target"
+                        )
+                    redirected_url = urljoin(current_url, location)
+                    validate_source_url(redirected_url)
+                    redirected_host = (urlsplit(redirected_url).hostname or "").casefold()
+                    if redirected_host != original_host:
+                        raise SourceUnavailable("Native source redirect changed hosts")
+                    if redirect_count == _MAX_REDIRECTS:
+                        raise SourceUnavailable("Native source exceeded the redirect limit")
+                    current_url = redirected_url
+                    continue
+                if allow_not_found and response.status_code == 404:
+                    return None
+                response.raise_for_status()
+                declared_length = response.headers.get("Content-Length")
+                if (
+                    declared_length
+                    and int(declared_length) > self.settings.max_source_response_bytes
+                ):
+                    raise NativeResponseTooLarge(
                         "Native source response exceeded the configured size limit"
                     )
-        return bytes(content)
+                content = bytearray()
+                for chunk in response.iter_bytes():
+                    content.extend(chunk)
+                    if len(content) > self.settings.max_source_response_bytes:
+                        raise NativeResponseTooLarge(
+                            "Native source response exceeded the configured size limit"
+                        )
+                return bytes(content)
+        raise SourceUnavailable("Native source exceeded the redirect limit")
 
     def _get_json(self, url: str, headers: dict[str, str] | None = None) -> dict:
-        payload = json.loads(self._get_bytes(url, headers))
+        content = self._get_bytes(url, headers)
+        if content is None:
+            raise SourceUnavailable("Required native JSON source was not found")
+        payload = json.loads(content)
         if not isinstance(payload, dict):
             raise SourceUnavailable("Native source returned an unexpected JSON shape")
         return payload
 
-    def _get_text(self, url: str, headers: dict[str, str] | None = None) -> str:
-        return self._get_bytes(url, headers).decode("utf-8", errors="replace")
+    def _get_text(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        *,
+        allow_not_found: bool = False,
+    ) -> str | None:
+        content = self._get_bytes(url, headers, allow_not_found=allow_not_found)
+        return None if content is None else content.decode("utf-8", errors="replace")
 
     def _live_documents(self, candidate: DatasetCandidate) -> list[NativeDocument]:
-        queued = [str(candidate.canonical_url), *(str(url) for url in candidate.related_urls)]
+        queued = [
+            (str(candidate.canonical_url), 0),
+            *((str(url), 1) for url in candidate.related_urls),
+        ]
         documents: list[NativeDocument] = []
         visited: set[str] = set()
-        while queued:
-            url = queued.pop(0)
+        while queued and len(documents) < _MAX_NATIVE_DOCUMENTS:
+            url, depth = queued.pop(0)
             source = canonical_source_url(url)
             if not source or source[0] in visited:
                 continue
             visited.add(source[0])
-            document = self._fetch_document(*source)
+            try:
+                document = self._fetch_document(*source)
+            except (SourceUnavailable, ValueError, OSError, httpx.HTTPError):
+                if depth == 0:
+                    raise
+                continue
             documents.append(document)
-            queued.extend(item for item in document.related_urls if item not in visited)
+            if depth == 0 and _describes_dataset_repository(document):
+                queued.extend((item, 1) for item in document.related_urls)
         return documents
 
     def _fetch_document(self, url: str, kind: SourceKind) -> NativeDocument:
@@ -373,10 +441,20 @@ class NativeVerifier:
         readme = self._get_text(
             f"{api}/readme",
             headers=headers | {"Accept": "application/vnd.github.raw+json"},
-        )
+            allow_not_found=True,
+        ) or ""
         branch = str(metadata.get("default_branch", "main"))
         commit = self._get_json(f"{api}/commits/{branch}", headers)
-        tree = self._get_json(f"{api}/git/trees/{branch}?recursive=1", headers)
+        try:
+            tree = self._get_json(f"{api}/git/trees/{branch}?recursive=1", headers)
+        except NativeResponseTooLarge:
+            tree = {}
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {404, 409, 422}:
+                raise
+            tree = {}
+        if tree.get("truncated"):
+            tree = {}
         files = [
             NativeFile(name=str(item.get("path", "")), size=int(item.get("size", 0)))
             for item in tree.get("tree", [])

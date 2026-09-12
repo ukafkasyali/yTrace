@@ -191,6 +191,197 @@ def test_github_native_adapter_contract() -> None:
     assert verified.profile.has_time_series_files is True
 
 
+def test_native_adapter_follows_validated_same_host_redirect() -> None:
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(str(request.url))
+        if request.url.path == "/repos/mit-fast/Blackbird-Dataset":
+            return httpx.Response(
+                301,
+                headers={"Location": "https://api.github.com/repositories/145477026"},
+            )
+        return httpx.Response(200, json={"id": 145477026})
+
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False),
+        validate_dns=False,
+    )
+
+    payload = verifier._get_json("https://api.github.com/repos/mit-fast/Blackbird-Dataset")
+
+    assert payload == {"id": 145477026}
+    assert requests == [
+        "https://api.github.com/repos/mit-fast/Blackbird-Dataset",
+        "https://api.github.com/repositories/145477026",
+    ]
+
+
+def test_native_adapter_rejects_cross_host_redirect() -> None:
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(
+            transport=httpx.MockTransport(
+                lambda _: httpx.Response(
+                    301,
+                    headers={"Location": "https://huggingface.co/api/datasets/untrusted/repo"},
+                )
+            ),
+            follow_redirects=False,
+        ),
+        validate_dns=False,
+    )
+
+    with pytest.raises((SourceUnavailable, ValueError), match="host"):
+        verifier._get_json("https://api.github.com/repos/org/repo")
+
+
+def test_github_missing_readme_keeps_repository_metadata() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/readme"):
+            return httpx.Response(404, json={"message": "Not Found"})
+        if "/commits/" in path:
+            return httpx.Response(200, json={"sha": "abc123"})
+        if "/git/trees/" in path:
+            return httpx.Response(
+                200,
+                json={"tree": [{"path": "robotfailure.data.html", "type": "blob", "size": 200}]},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "full_name": "MaxBenChrist/robot-failure-dataset",
+                "description": "Robot failure data",
+                "default_branch": "master",
+                "license": {"spdx_id": "MIT"},
+            },
+        )
+
+    candidate = DatasetCandidate(
+        id="ds_555555555555",
+        name="Robot failure data",
+        canonical_url="https://github.com/MaxBenChrist/robot-failure-dataset",
+        source_kind=SourceKind.GITHUB,
+    )
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(handler)),
+        validate_dns=False,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.revision == "GITHUB:abc123"
+    assert verified.profile.license_id == "MIT"
+
+
+def test_oversized_github_tree_does_not_discard_linked_native_record() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if request.url.host == "zenodo.org":
+            return httpx.Response(
+                200,
+                json={
+                    "title": "Robot collision signals",
+                    "revision": 2,
+                    "metadata": {
+                        "description": (
+                            "Dataset structure: collision time-series torque signals at 1 kHz."
+                        ),
+                        "license": {"id": "cc-by-4.0"},
+                    },
+                    "files": [{"key": "signals.csv", "size": 500}],
+                },
+            )
+        if path.endswith("/readme"):
+            return httpx.Response(
+                200,
+                text=(
+                    "Dataset Structure for collision time-series torque signals. "
+                    "Archive: https://zenodo.org/records/123"
+                ),
+            )
+        if "/commits/" in path:
+            return httpx.Response(200, json={"sha": "abc123"})
+        if "/git/trees/" in path:
+            return httpx.Response(200, content=b"x" * 10_001)
+        return httpx.Response(
+            200,
+            json={
+                "full_name": "org/robot-data",
+                "description": "Robot collision signals",
+                "default_branch": "main",
+                "license": {"spdx_id": "MIT"},
+            },
+        )
+
+    candidate = DatasetCandidate(
+        id="ds_666666666666",
+        name="Robot signals",
+        canonical_url="https://github.com/org/robot-data",
+        source_kind=SourceKind.GITHUB,
+    )
+    verifier = NativeVerifier(
+        settings(max_source_response_bytes=10_000),
+        httpx.Client(transport=httpx.MockTransport(handler)),
+        validate_dns=False,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.source_kinds == [SourceKind.ZENODO, SourceKind.GITHUB]
+    assert verified.profile.file_extensions == [".csv"]
+    assert verified.profile.acquisition_feasible is True
+
+
+def test_dataset_index_does_not_absorb_every_linked_repository() -> None:
+    requested_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested_paths.append(request.url.path)
+        path = request.url.path
+        if path.endswith("/readme"):
+            return httpx.Response(
+                200,
+                text="A collection of useful datasets: https://github.com/mit-fast/Blackbird-Dataset",
+            )
+        if "/commits/" in path:
+            return httpx.Response(200, json={"sha": "abc123"})
+        if "/git/trees/" in path:
+            return httpx.Response(
+                200,
+                json={"tree": [{"path": "README.md", "type": "blob", "size": 200}]},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "full_name": "mint-lab/awesome-robotics-datasets",
+                "description": "A collection of useful datasets",
+                "default_branch": "main",
+                "license": {"spdx_id": "MIT"},
+            },
+        )
+
+    candidate = DatasetCandidate(
+        id="ds_777777777777",
+        name="Robotics dataset index",
+        canonical_url="https://github.com/mint-lab/awesome-robotics-datasets",
+        source_kind=SourceKind.GITHUB,
+    )
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(handler)),
+        validate_dns=False,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.source_kinds == [SourceKind.GITHUB]
+    assert not any("Blackbird-Dataset" in path for path in requested_paths)
+
+
 def test_zenodo_native_adapter_contract() -> None:
     payload = {
         "title": "Robot collision record",
