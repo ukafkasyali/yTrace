@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 from robot_observability.prepared import PreparedSplit
@@ -59,6 +60,7 @@ class RobotQADataset:
         digest = hashlib.sha256(f"{self.seed}:{metadata['record_id']}:{intent}".encode()).digest()
         question = variants[int.from_bytes(digest[:4], "big") % len(variants)]
         schema_keys = list(answer_payload(metadata, intent))
+        schema = json.dumps(schema_keys, separators=(",", ":"))
         return {
             "pre_prompt": (
                 "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
@@ -68,8 +70,10 @@ class RobotQADataset:
             "time_series": torch.from_numpy(signal.astype("float32", copy=True)),
             "post_prompt": (
                 f"\nQuestion: {question}\n"
-                f"Respond with `Answer:` and valid compact JSON containing only {schema_keys}, "
-                "then one short `Evidence:` sentence."
+                f"Respond with `Answer:` and one closed compact JSON object containing only {schema}. "
+                "Use JSON types exactly: booleans are true/false, numbers are unquoted, arrays are "
+                "arrays, and missing values are null. Never quote a boolean, number, or null. "
+                "Then write one short `Evidence:` sentence."
             ),
             "answer": target_text(metadata, intent) + self.eos_token,
             "record_id": metadata["record_id"],

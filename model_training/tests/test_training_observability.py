@@ -6,6 +6,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from robot_observability.train_opentslm import (
+    generation_eval,
     mean_loss,
     optimizer_group_snapshots,
     optimizer_group_stats,
@@ -103,3 +104,45 @@ def test_training_manifest_wandb_table_includes_supervised_answer() -> None:
     answer_index = table.columns.index("supervised_answer")
     assert rows[0]["supervised_answer"] == sample["answer"]
     assert table.data[0][answer_index] == sample["answer"]
+
+
+def test_generation_eval_retries_invalid_first_pass_and_reports_it(tmp_path) -> None:
+    metadata = {
+        "session_id": "session-1",
+        "event_type": "free",
+        "contact": False,
+        "onset_sample": None,
+        "strongest_joint": None,
+        "affected_joints": [],
+        "evidence_start_ms": None,
+        "evidence_end_ms": None,
+    }
+
+    class FakeDataset:
+        def __len__(self):
+            return 2
+
+        def __getitem__(self, index):
+            return {
+                "record_id": f"record-{index}",
+                "intent": "contact",
+                "metadata": metadata,
+            }
+
+    class FakeModel:
+        def eval(self):
+            return self
+
+        def generate(self, batch, **kwargs):
+            if "min_new_tokens" in kwargs:
+                return ['Answer: {"contact":false}\nEvidence: retry']
+            return ["", 'Answer: {"contact":false}\nEvidence: first pass']
+
+    metrics, rows = generation_eval(FakeModel(), FakeDataset(), tmp_path / "rows.jsonl")
+    assert metrics["first_pass/parse_validity"] == 0.5
+    assert metrics["parse_validity"] == 1.0
+    assert metrics["retry_rate"] == 0.5
+    assert metrics["first_pass_blank_rate"] == 0.5
+    assert metrics["final_blank_rate"] == 0.0
+    assert rows[0]["retry_used"] is True
+    assert rows[0]["first_pass_output"] == ""

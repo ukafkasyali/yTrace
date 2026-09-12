@@ -446,16 +446,45 @@ def generation_eval(
             outputs = model.generate(batch, max_new_tokens=128, do_sample=False)
             for sample, output in zip(batch, outputs):
                 metadata = sample["metadata"]
+                first_prediction = parse_answer(output)
+                retry_used = not str(output).strip() or first_prediction is None
+                final_output = output
+                final_prediction = first_prediction
+                if retry_used:
+                    retry_outputs = model.generate(
+                        [sample],
+                        max_new_tokens=128,
+                        min_new_tokens=16,
+                        do_sample=False,
+                    )
+                    final_output = retry_outputs[0]
+                    final_prediction = parse_answer(final_output)
                 row = {
                     "record_id": sample["record_id"],
                     "intent": sample["intent"],
                     "target": answer_payload(metadata, sample["intent"]),
-                    "output": output,
-                    "prediction": parse_answer(output),
+                    "first_pass_output": output,
+                    "first_pass_prediction": first_prediction,
+                    "retry_used": retry_used,
+                    "output": final_output,
+                    "prediction": final_prediction,
                 }
                 rows.append(row)
                 handle.write(json.dumps(row, sort_keys=True) + "\n")
-    return evaluate_rows(rows), rows
+    metrics = evaluate_rows(rows)
+    first_pass_rows = [
+        {**row, "output": row["first_pass_output"], "prediction": row["first_pass_prediction"]}
+        for row in rows
+    ]
+    metrics.update({f"first_pass/{key}": value for key, value in evaluate_rows(first_pass_rows).items()})
+    metrics["retry_rate"] = float(np.mean([bool(row["retry_used"]) for row in rows])) if rows else 0.0
+    metrics["first_pass_blank_rate"] = (
+        float(np.mean([not str(row["first_pass_output"]).strip() for row in rows])) if rows else 0.0
+    )
+    metrics["final_blank_rate"] = (
+        float(np.mean([not str(row["output"]).strip() for row in rows])) if rows else 0.0
+    )
+    return metrics, rows
 
 
 def intent_fit_metrics(rows: list[dict[str, object]]) -> dict[str, float | int]:
@@ -689,6 +718,10 @@ def run(args: argparse.Namespace) -> None:
     training_manifest_path = run_root / "training_selection_manifest.jsonl"
     write_jsonl(training_manifest_path, selected_training_rows)
     dataset_hashes = prepared_hashes(args.prepared_root)
+    source_receipt_path = args.prepared_root / "source_receipt.json"
+    dataset_source_receipt = (
+        json.loads(source_receipt_path.read_text(encoding="utf-8")) if source_receipt_path.exists() else None
+    )
 
     manifest = {
         "run_name": args.run_name,
@@ -697,6 +730,7 @@ def run(args: argparse.Namespace) -> None:
         "smoke": args.smoke,
         "prepared_root": str(args.prepared_root.resolve()),
         "prepared_sha256": dataset_hashes,
+        "dataset_source_receipt": dataset_source_receipt,
         "training_selection_manifest_sha256": sha256_file(training_manifest_path),
         "opentslm_commit": OPENTSLM_COMMIT,
         "timenet_commit": TIMENET_COMMIT,
