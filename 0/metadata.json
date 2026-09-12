@@ -1,0 +1,149 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2B9CKKGP11FQBXQYZWZC9Q5",
+  "session_id": "01a0965e-650e-7780-9975-294ca74c1600",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-12T17:07:08.825265432Z",
+  "branch": "feat/data-ingestion-profiler",
+  "checkpoints_count": 5,
+  "save_step_count": 5,
+  "files_touched": [
+    "HUMAN_MAPPING_DECISIONS.md",
+    "data_ingestion/README.md",
+    "data_ingestion/docs/KUKA_BATCH_01_INSPECTION.md",
+    "data_ingestion/docs/TIMENET_INTERFACE_NOTE.md",
+    "data_ingestion/outputs/.gitignore",
+    "data_ingestion/outputs/kuka_timef_validation.json",
+    "data_ingestion/pyproject.toml",
+    "data_ingestion/scripts/build_kuka_timef.py",
+    "data_ingestion/scripts/validate_kuka_timef.py",
+    "data_ingestion/src/dataset_profiler/datasets/__init__.py",
+    "data_ingestion/src/dataset_profiler/datasets/kuka_collision.py",
+    "data_ingestion/src/dataset_profiler/datasets/kuka_parser.py",
+    "data_ingestion/src/dataset_profiler/py.typed",
+    "data_ingestion/src/dataset_profiler/timef_validation.py",
+    "data_ingestion/src/dataset_profiler/timenet/__init__.py",
+    "data_ingestion/src/dataset_profiler/timenet/integration.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_collision/__init__.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_collision/connector.py",
+    "data_ingestion/src/dataset_profiler/timenet/kuka_collision/dataset.yaml",
+    "data_ingestion/tests/test_kuka_parser.py",
+    "data_ingestion/tests/test_kuka_timenet_connector.py",
+    "data_ingestion/timenet.lock"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "7d9cd4c275ad",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 498361,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 19678848,
+    "output_tokens": 66028,
+    "api_call_count": 171
+  },
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-12T17:07:08.701969647Z",
+    "agent_lines": 1912,
+    "agent_removed": 8,
+    "human_added": 33,
+    "human_modified": 14,
+    "human_removed": 0,
+    "total_committed": 1952,
+    "total_lines_changed": 1967,
+    "agent_percentage": 97.61057447890188,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 4,
+      "agent_lines_added": 1845762,
+      "agent_lines_removed": 0,
+      "user_removed_per_file": {
+        ".venv-collision/bin/python": 1,
+        ".venv-collision/bin/python3": 1,
+        ".venv-collision/bin/python3.12": 1,
+        ".venv-collision/lib64": 1
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 3,
+      "user_lines_removed": 4,
+      "agent_lines_added": 1847282,
+      "agent_lines_removed": 9,
+      "user_added_per_file": {
+        "data_ingestion/docs/TIMENET_INTERFACE_NOTE.md": 3
+      },
+      "user_removed_per_file": {
+        ".venv-collision/bin/python": 1,
+        ".venv-collision/bin/python3": 1,
+        ".venv-collision/bin/python3.12": 1,
+        ".venv-collision/lib64": 1
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 3,
+      "user_lines_removed": 4,
+      "agent_lines_added": 1847282,
+      "agent_lines_removed": 9,
+      "user_added_per_file": {
+        "data_ingestion/docs/TIMENET_INTERFACE_NOTE.md": 3
+      },
+      "user_removed_per_file": {
+        ".venv-collision/bin/python": 1,
+        ".venv-collision/bin/python3": 1,
+        ".venv-collision/bin/python3.12": 1,
+        ".venv-collision/lib64": 1
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 3,
+      "user_lines_removed": 4,
+      "agent_lines_added": 1847282,
+      "agent_lines_removed": 9,
+      "user_added_per_file": {
+        "data_ingestion/docs/TIMENET_INTERFACE_NOTE.md": 3
+      },
+      "user_removed_per_file": {
+        ".venv-collision/bin/python": 1,
+        ".venv-collision/bin/python3": 1,
+        ".venv-collision/bin/python3.12": 1,
+        ".venv-collision/lib64": 1
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 19,
+      "user_lines_removed": 11,
+      "agent_lines_added": 1847630,
+      "agent_lines_removed": 15,
+      "user_added_per_file": {
+        "data_ingestion/docs/TIMENET_INTERFACE_NOTE.md": 18,
+        "data_ingestion/timenet.lock": 1
+      },
+      "user_removed_per_file": {
+        ".venv-collision/bin/python": 1,
+        ".venv-collision/bin/python3": 1,
+        ".venv-collision/bin/python3.12": 1,
+        ".venv-collision/lib64": 1,
+        "data_ingestion/docs/TIMENET_INTERFACE_NOTE.md": 6,
+        "data_ingestion/timenet.lock": 1
+      }
+    }
+  ]
+}

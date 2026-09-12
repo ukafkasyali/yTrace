@@ -1,0 +1,64 @@
+# Files pasted by the user:
+
+## "We have completed the deterministic profiling milestone for KUKA Part I Batch 0…": /home/ugur/.codex/attachments/687afb21-1ca2-45bf-9071-3cd6d86c1c07/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
+
+---
+
+Approved, with the following adjustments before implementation:
+
+1. Change the dataset ID from `kuka/collision-part1-batch01` to:
+
+`kuka/collision-part1`
+
+The connector should represent the upstream Part I dataset. Batch 01 is only the subset/local source we are using for this implementation and validation milestone. Structure the connector so that processing additional batches later does not require creating a new dataset identity or redesigning the mapping.
+
+2. Before using `dimensionless` for `PosMsr`, check whether TimeF supports an unknown/unspecified/null unit. Prefer that if available.
+
+If TimeF strictly requires a unit and no unknown representation exists, use `dimensionless` only as a compatibility placeholder and:
+
+- mark the original unit as unresolved in a machine-readable way;
+- document this explicitly in `HUMAN_MAPPING_DECISIONS.md`;
+- ensure downstream consumers can distinguish “actually dimensionless” from “unknown unit represented as dimensionless because of a TimeF constraint.”
+
+Otherwise, proceed with the proposed mapping:
+
+- one experimental run → one Record;
+- no `subject_ids` for now;
+- 7 `MsrExtTrq` joint signals;
+- 7 `PosMsr` joint signals;
+- 1 kHz `RegularAxis`;
+- `MsrExtTrq` as the torque source;
+- collision indices represented as raw point annotations, preserving MATLAB index, converted Python index, and timestamp;
+- retain `source_run_id` and source-file provenance;
+- `start_time=None`;
+- no ML task at this milestone;
+- MIT dataset license;
+- N·m for torque.
+
+For the 14-scalar-series representation, proceed if that is the natural/required representation under the pinned TimeF API. Please document in `HUMAN_MAPPING_DECISIONS.md` why 14 scalar series were selected instead of two 7-channel multivariate series so that this becomes an explicit mapping decision rather than an implicit implementation detail.
+
+For provenance, prefer structured record metadata if TimeF provides an appropriate mechanism. If TimeF does not, the proposed record-wide annotations are acceptable. `source_run_id` must remain easily recoverable because we will later use it for leakage/group-split validation.
+
+Please now implement the connector, round-trip it through TimeF, and run the previously specified validation against `dataset_profile.json`. Do not add ML tasks, windowing, LLM orchestration, or Part II yet.
+
+---
+
+can you create a pr with these results
+
+---
+
+what did we change in the timenet repo
+
+---
+
+# Files pasted by the user:
+
+## "We will submit **one hackathon repository only**. Therefore, all code authored …": /home/ugur/.codex/attachments/66e8475b-e389-4cc7-8538-e8666b511647/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
