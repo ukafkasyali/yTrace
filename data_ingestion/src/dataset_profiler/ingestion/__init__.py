@@ -3,12 +3,15 @@
 from .acquisition import AcquiredAsset, AcquisitionError, ZenodoAcquirer
 from .archive import ArchiveError, ExtractedFile, ExtractionResult, SafeArchiveExtractor
 from .contracts import ApprovedManifest, ManifestContractError, parse_manifest
+from .inventory import InventoryError, ResourceInventory
 from .jobs import (
     AssetReceipt,
     IngestionJob,
     IngestionJobConflict,
     IngestionJobStore,
     IngestionState,
+    ResourceFormat,
+    ResourceProfile,
 )
 from .providers import ProviderAcquirer
 from .service import CreateIngestion, IngestionService
@@ -29,8 +32,12 @@ __all__ = [
     "IngestionJobStore",
     "IngestionService",
     "IngestionState",
+    "InventoryError",
     "ManifestContractError",
     "ProviderAcquirer",
+    "ResourceFormat",
+    "ResourceInventory",
+    "ResourceProfile",
     "SafeArchiveExtractor",
     "ZenodoAcquirer",
     "parse_manifest",

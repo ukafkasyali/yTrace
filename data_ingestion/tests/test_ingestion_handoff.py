@@ -23,6 +23,8 @@ from dataset_profiler.ingestion import (
     IngestionService,
     IngestionState,
     ManifestContractError,
+    ResourceFormat,
+    ResourceInventory,
     SafeArchiveExtractor,
     ZenodoAcquirer,
     parse_manifest,
@@ -457,12 +459,13 @@ class AcquisitionWorkerTests(unittest.TestCase):
                 resolver,
                 acquirer,
                 extractor=SafeArchiveExtractor(root / "cache"),
+                inventory=ResourceInventory(),
             )
 
             result = worker.run_once()
 
             assert result is not None
-            self.assertEqual(result.state, IngestionState.INSPECTING)
+            self.assertEqual(result.state, IngestionState.MAPPING)
             receipt = service.jobs.list_receipts(job.ingestion_id)[0]
             extracted = (
                 root
@@ -474,6 +477,10 @@ class AcquisitionWorkerTests(unittest.TestCase):
                 / "signals.csv"
             )
             self.assertEqual(extracted.read_text(), "time,joint\n0,1\n")
+            resources = service.jobs.list_resources(job.ingestion_id)
+            self.assertEqual(len(resources), 1)
+            self.assertEqual(resources[0].format, ResourceFormat.CSV)
+            self.assertEqual(resources[0].logical_path, "nested/signals.csv")
             service.close()
 
 
@@ -603,6 +610,9 @@ class IngestionApiTests(unittest.TestCase):
                 assets = client.get(
                     f"/api/ingestions/{created.json()['ingestionId']}/assets"
                 )
+                resources = client.get(
+                    f"/api/ingestions/{created.json()['ingestionId']}/resources"
+                )
 
                 self.assertEqual(created.status_code, 202)
                 self.assertEqual(repeated.json()["ingestionId"], created.json()["ingestionId"])
@@ -610,6 +620,8 @@ class IngestionApiTests(unittest.TestCase):
                 self.assertEqual(created.json()["state"], "queued")
                 self.assertEqual(assets.status_code, 200)
                 self.assertEqual(assets.json(), [])
+                self.assertEqual(resources.status_code, 200)
+                self.assertEqual(resources.json(), [])
             service.close()
 
     def test_conflicting_asset_selection_returns_409(self) -> None:

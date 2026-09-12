@@ -20,6 +20,8 @@ class IngestionState(StrEnum):
     QUEUED = "queued"
     ACQUIRING = "acquiring"
     INSPECTING = "inspecting"
+    MAPPING = "mapping"
+    UNSUPPORTED_FORMAT = "unsupported_format"
     NEEDS_INPUT = "needs_input"
     FAILED = "failed"
     READY = "ready"
@@ -56,6 +58,31 @@ class AssetReceipt(BaseModel):
     acquired_at: datetime
 
 
+class ResourceFormat(StrEnum):
+    CSV = "CSV"
+    TSV = "TSV"
+    PARQUET = "PARQUET"
+    NPY = "NPY"
+    NPZ = "NPZ"
+    MAT = "MAT"
+    HDF5 = "HDF5"
+    UNSUPPORTED = "UNSUPPORTED"
+
+
+class ResourceProfile(BaseModel):
+    model_config = ConfigDict(alias_generator=_to_camel, populate_by_name=True, extra="forbid")
+
+    resource_id: str = Field(pattern=r"^res_[a-f0-9]{24}$")
+    ingestion_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+    asset_id: str = Field(pattern=r"^asset_[a-f0-9]{16}$")
+    logical_path: str = Field(min_length=1, max_length=1_024)
+    size_bytes: int = Field(ge=0)
+    content_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    format: ResourceFormat
+    details: dict = Field(default_factory=dict)
+    inspected_at: datetime
+
+
 class IngestionJobConflict(ValueError):
     pass
 
@@ -85,6 +112,24 @@ class IngestionJobStore:
                 message TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS resource_profiles (
+                resource_id TEXT PRIMARY KEY,
+                ingestion_id TEXT NOT NULL,
+                asset_id TEXT NOT NULL,
+                logical_path TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                content_sha256 TEXT NOT NULL,
+                format TEXT NOT NULL,
+                details_json TEXT NOT NULL,
+                inspected_at TEXT NOT NULL,
+                UNIQUE (ingestion_id, asset_id, logical_path),
+                FOREIGN KEY (ingestion_id, asset_id)
+                    REFERENCES asset_receipts(ingestion_id, asset_id)
             )
             """
         )
@@ -200,6 +245,66 @@ class IngestionJobStore:
                 )
                 self.connection.execute("COMMIT")
                 return receipt
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
+    @staticmethod
+    def _resource(row: sqlite3.Row) -> ResourceProfile:
+        return ResourceProfile(
+            resource_id=row["resource_id"],
+            ingestion_id=row["ingestion_id"],
+            asset_id=row["asset_id"],
+            logical_path=row["logical_path"],
+            size_bytes=row["size_bytes"],
+            content_sha256=row["content_sha256"],
+            format=row["format"],
+            details=json.loads(row["details_json"]),
+            inspected_at=row["inspected_at"],
+        )
+
+    def list_resources(self, ingestion_id: str) -> list[ResourceProfile]:
+        self.get(ingestion_id)
+        rows = self.connection.execute(
+            "SELECT * FROM resource_profiles WHERE ingestion_id = ? ORDER BY asset_id, logical_path",
+            (ingestion_id,),
+        ).fetchall()
+        return [self._resource(row) for row in rows]
+
+    def record_resource(self, profile: ResourceProfile) -> ResourceProfile:
+        values = (
+            profile.resource_id,
+            profile.ingestion_id,
+            profile.asset_id,
+            profile.logical_path,
+            profile.size_bytes,
+            profile.content_sha256,
+            profile.format.value,
+            json.dumps(profile.details, sort_keys=True, separators=(",", ":")),
+            profile.inspected_at.isoformat(),
+        )
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                existing = self.connection.execute(
+                    "SELECT * FROM resource_profiles "
+                    "WHERE ingestion_id = ? AND asset_id = ? AND logical_path = ?",
+                    (profile.ingestion_id, profile.asset_id, profile.logical_path),
+                ).fetchone()
+                if existing is not None:
+                    persisted = self._resource(existing)
+                    if persisted.model_dump(exclude={"inspected_at"}) != profile.model_dump(
+                        exclude={"inspected_at"}
+                    ):
+                        raise IngestionJobConflict("Resource already has a different profile")
+                    self.connection.execute("COMMIT")
+                    return persisted
+                self.connection.execute(
+                    "INSERT INTO resource_profiles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    values,
+                )
+                self.connection.execute("COMMIT")
+                return profile
             except Exception:
                 self.connection.execute("ROLLBACK")
                 raise

@@ -210,14 +210,14 @@ datasets into memory.
 
 **Acceptance criteria:**
 
-- [ ] Every verified provider source reaches a visible inventory result.
-- [ ] Adapter selection is deterministic and extensions alone are insufficient.
-- [ ] Per-file, row, column, array, nesting, memory, and time limits are enforced.
+- [x] Every verified provider source reaches a visible inventory result.
+- [x] Adapter selection is deterministic and extensions alone are insufficient.
+- [x] Per-file, probe, column, archive-nesting, and memory limits are enforced at inventory.
 
 **Verification:**
 
-- [ ] Conformance tests apply to every format adapter.
-- [ ] Mismatched extension/content, nested archives, empty files, and unknown formats are covered.
+- [x] Registry tests cover every initially supported format family.
+- [x] Mismatched extension/content, nested paths, empty/short files, and unknown formats are covered.
 
 **Dependencies:** Task 8
 

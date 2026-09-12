@@ -98,6 +98,14 @@ matching `cache/extracted/<prefix>/<sha256>` only while the API and worker are s
 explicit retry safely reacquires missing content. Staging directories are temporary and are removed
 after success or failure.
 
+After materialization, the worker inventories every regular file and exposes the persisted result at
+`GET /api/ingestions/{ingestionId}/resources`. Selection is deterministic: Parquet, NPY, NPZ,
+MATLAB v5, and HDF5 require matching magic bytes and extensions; CSV/TSV require bounded UTF-8
+samples with a consistent dialect matching the extension. Empty, executable, unknown, mismatched,
+and nested archive files remain visible as `UNSUPPORTED` with a stable reason and are never opened
+as code. Jobs with at least one supported resource advance to `mapping`; jobs with none end in
+`unsupported_format`.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and

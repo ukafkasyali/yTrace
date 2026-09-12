@@ -12,7 +12,13 @@ from fastapi import Path as ApiPath
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .jobs import AssetReceipt, IngestionJob, IngestionJobConflict, IngestionJobNotFound
+from .jobs import (
+    AssetReceipt,
+    IngestionJob,
+    IngestionJobConflict,
+    IngestionJobNotFound,
+    ResourceProfile,
+)
 from .service import (
     ApprovedSourceResolutionError,
     CreateIngestion,
@@ -102,5 +108,11 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
     ) -> list[AssetReceipt]:
         return ingestion.jobs.list_receipts(ingestion_id)
+
+    @app.get("/api/ingestions/{ingestion_id}/resources", response_model=list[ResourceProfile])
+    def get_ingestion_resources(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+    ) -> list[ResourceProfile]:
+        return ingestion.jobs.list_resources(ingestion_id)
 
     return app

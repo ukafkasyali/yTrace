@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from .archive import SafeArchiveExtractor
+from .inventory import ResourceInventory
 from .jobs import IngestionJobStore
 from .providers import ProviderAcquirer
 from .service import HttpApprovedSourceResolver
@@ -35,6 +36,7 @@ def main() -> int:
         resolver,
         acquirer,
         extractor=SafeArchiveExtractor(data_dir / "cache"),
+        inventory=ResourceInventory(),
     )
     try:
         worker.recover_interrupted()

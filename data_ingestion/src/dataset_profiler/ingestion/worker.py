@@ -7,12 +7,14 @@ from typing import Protocol
 from .acquisition import AcquiredAsset, AcquisitionError
 from .archive import ArchiveError, SafeArchiveExtractor
 from .contracts import ApprovedManifest, ManifestAsset
+from .inventory import InventoryError, ResourceInventory
 from .jobs import (
     AssetReceipt,
     IngestionJob,
     IngestionJobConflict,
     IngestionJobStore,
     IngestionState,
+    ResourceFormat,
 )
 from .service import (
     ApprovedSourceResolutionError,
@@ -36,11 +38,13 @@ class AcquisitionWorker:
         resolver: ApprovedSourceResolver,
         acquirer: AssetAcquirer,
         extractor: SafeArchiveExtractor | None = None,
+        inventory: ResourceInventory | None = None,
     ):
         self.jobs = jobs
         self.resolver = resolver
         self.acquirer = acquirer
         self.extractor = extractor
+        self.inventory = inventory
 
     def recover_interrupted(self) -> int:
         return self.jobs.requeue_interrupted_acquisitions()
@@ -71,6 +75,7 @@ class AcquisitionWorker:
                 if acquired.asset_id != asset.asset_id or acquired.size_bytes != asset.size_bytes:
                     raise AcquisitionError("Acquirer returned content for another approved asset")
                 self.jobs.record_receipt(self._receipt(job, asset, acquired))
+            resource_paths: list[tuple[str, str, Path]] = []
             if self.extractor is not None:
                 receipts = {
                     receipt.asset_id: receipt
@@ -80,10 +85,59 @@ class AcquisitionWorker:
                     asset = assets[asset_id]
                     if self._is_archive(asset.name):
                         receipt = receipts[asset_id]
-                        self.extractor.extract(
+                        extraction = self.extractor.extract(
                             self.acquirer.verified_content_path(receipt.content_sha256),
                             receipt.content_sha256,
                         )
+                        root = (
+                            self.extractor.extracted_dir
+                            / receipt.content_sha256[:2]
+                            / receipt.content_sha256
+                        )
+                        resource_paths.extend(
+                            (asset_id, file.relative_path, root / file.relative_path)
+                            for file in extraction.files
+                        )
+                    else:
+                        receipt = receipts[asset_id]
+                        resource_paths.append(
+                            (
+                                asset_id,
+                                asset.name,
+                                self.acquirer.verified_content_path(receipt.content_sha256),
+                            )
+                        )
+            if self.inventory is not None:
+                self.jobs.set_state(
+                    job.ingestion_id,
+                    IngestionState.INSPECTING,
+                    "Inspecting verified dataset resources",
+                )
+                profiles = [
+                    self.jobs.record_resource(
+                        self.inventory.inspect(
+                            ingestion_id=job.ingestion_id,
+                            asset_id=asset_id,
+                            logical_path=logical_path,
+                            path=path,
+                        )
+                    )
+                    for asset_id, logical_path, path in resource_paths
+                ]
+                supported = [
+                    profile for profile in profiles if profile.format is not ResourceFormat.UNSUPPORTED
+                ]
+                if not supported:
+                    return self.jobs.set_state(
+                        job.ingestion_id,
+                        IngestionState.UNSUPPORTED_FORMAT,
+                        "No supported time-series resources were found",
+                    )
+                return self.jobs.set_state(
+                    job.ingestion_id,
+                    IngestionState.MAPPING,
+                    f"Inventoried {len(profiles)} resource(s); mapping is required",
+                )
             return self.jobs.set_state(
                 job.ingestion_id,
                 IngestionState.INSPECTING,
@@ -93,6 +147,7 @@ class AcquisitionWorker:
             AcquisitionError,
             ApprovedSourceResolutionError,
             ArchiveError,
+            InventoryError,
             IngestionJobConflict,
         ):
             return self.jobs.set_state(
