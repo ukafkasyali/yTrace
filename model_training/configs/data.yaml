@@ -1,0 +1,19 @@
+raw_root: data/raw
+prepared_root: data/prepared/v1
+sampling_hz: 1000
+window_samples: 1024
+event_position_min: 205
+event_position_max: 716
+train_crops_per_event: 2
+eval_crops_per_event: 1
+free_guard_samples: 750
+pre_event_samples: 200
+post_event_samples: 250
+evidence_sustain_samples: 10
+normalization_clip: 20.0
+normalization_sample_stride: 100
+split:
+  train: 0.70
+  validation: 0.15
+  test: 0.15
+seed: 20260912
