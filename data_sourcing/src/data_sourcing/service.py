@@ -15,6 +15,8 @@ from data_sourcing.models import (
     ApprovalRequest,
     CreateSourcingRun,
     RequirementDefinition,
+    RequirementPreviewRequest,
+    RequirementsPreview,
     RunStatus,
     SourcingRun,
 )
@@ -88,6 +90,12 @@ class SourcingService:
             )
             self.artifacts.persist(state)
         return run_id, created
+
+    def preview_requirements(
+        self,
+        request: RequirementPreviewRequest,
+    ) -> RequirementsPreview:
+        return self.scout.planner.preview(request)
 
     def execute_run(self, run_id: str) -> None:
         run = self.artifacts.read_run(run_id)

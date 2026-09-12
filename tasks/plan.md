@@ -39,9 +39,9 @@ accessible Must/Preferred/Disabled editor in the existing dataset scout.
 
 ### Phase 3: Frontend workflow
 
-- [ ] Add preview service contracts and response validation.
-- [ ] Add custom requirement entry and accessible priority controls.
-- [ ] Require a current preview before starting and submit the confirmed contract.
+- [x] Add preview service contracts and response validation.
+- [x] Add custom requirement entry and accessible priority controls.
+- [x] Require a current preview before starting and submit the confirmed contract.
 
 ### Checkpoint: Complete
 

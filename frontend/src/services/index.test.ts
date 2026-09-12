@@ -113,6 +113,26 @@ describe('service contracts', () => {
     }));
   });
 
+  it('previews sourcing requirements before creating a run', async () => {
+    const preview = {
+      requirements: [{
+        id: 'req_provenance', label: 'Canonical provenance', description: 'Versioned source',
+        priority: 'MUST', category: 'PROVENANCE', expectedValues: [], isSystemRequired: true,
+      }],
+    };
+    const fetch = vi.fn().mockResolvedValue(Response.json(preview));
+    vi.stubGlobal('fetch', fetch);
+    const input = {
+      brief: 'Find public robot collision time-series data.',
+      customRequirements: ['At least 200 labelled collision events'],
+    };
+
+    expect(await createServices('/api').previewSourcingRequirements(input)).toEqual(preview);
+    expect(fetch).toHaveBeenCalledWith('/api/sourcing-requirement-previews', expect.objectContaining({
+      method: 'POST', body: JSON.stringify(input),
+    }));
+  });
+
   it('validates sourcing runs and supports approval artifacts', async () => {
     const run = {
       runId: 'run-1', status: 'AWAITING_APPROVAL', brief: 'Find robot collision time-series data.',

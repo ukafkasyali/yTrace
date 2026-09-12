@@ -9,18 +9,35 @@ export type SourcingConstraints = {
   maxDownloadBytes: number;
 };
 
-export type CreateSourcingRun = {
-  brief: string;
-  constraints?: Partial<SourcingConstraints>;
-};
+export type RequirementPriority = 'MUST' | 'SHOULD';
+export type RequirementCategory = 'DOMAIN' | 'TASK_LABELS' | 'SAMPLING_RATE' | 'MODALITY'
+  | 'LICENSE' | 'PROVENANCE' | 'SCHEMA' | 'ACQUISITION' | 'OTHER';
 
-export type ResearchRequirement = {
+export type RequirementDefinition = {
   id: string;
   label: string;
   description: string;
-  priority: 'MUST' | 'SHOULD';
-  category: 'DOMAIN' | 'TASK_LABELS' | 'SAMPLING_RATE' | 'MODALITY' | 'LICENSE' | 'PROVENANCE' | 'SCHEMA' | 'ACQUISITION' | 'OTHER';
+  priority: RequirementPriority;
+  category: RequirementCategory;
   expectedValues: string[];
+  isSystemRequired?: boolean;
+};
+
+export type CreateSourcingRun = {
+  brief: string;
+  constraints?: Partial<SourcingConstraints>;
+  requirements?: RequirementDefinition[];
+};
+
+export type RequirementPreviewRequest = {
+  brief: string;
+  constraints?: Partial<SourcingConstraints>;
+  customRequirements: string[];
+};
+
+export type RequirementsPreview = { requirements: RequirementDefinition[] };
+
+export type ResearchRequirement = RequirementDefinition & {
   status: 'VERIFIED' | 'MISSING' | 'CONFLICTING' | 'UNVERIFIED';
   evidenceIds: string[];
 };
@@ -131,6 +148,7 @@ export type SourcingRun = {
   brief: string;
   constraints: SourcingConstraints;
   requirements: ResearchRequirement[];
+  requirementsConfirmed?: boolean;
   hypotheses: { id: string; rationale: string; query: string; status: 'PLANNED' | 'SEARCHED' | 'EXHAUSTED'; isGapQuery: boolean }[];
   candidates: DatasetCandidate[];
   profiles: DatasetProfile[];
@@ -201,6 +219,27 @@ function isNativeSourceUrl(value: unknown) {
   catch { return false; }
 }
 
+function isRequirementDefinition(value: unknown): value is RequirementDefinition {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.label === 'string'
+    && typeof value.description === 'string' && ['MUST', 'SHOULD'].includes(value.priority as string)
+    && ['DOMAIN', 'TASK_LABELS', 'SAMPLING_RATE', 'MODALITY', 'LICENSE', 'PROVENANCE', 'SCHEMA', 'ACQUISITION', 'OTHER'].includes(value.category as string)
+    && Array.isArray(value.expectedValues)
+    && value.expectedValues.every(item => typeof item === 'string')
+    && (value.isSystemRequired === undefined || typeof value.isSystemRequired === 'boolean');
+}
+
+export function isRequirementsPreview(value: unknown): value is RequirementsPreview {
+  return isRecord(value) && Array.isArray(value.requirements)
+    && value.requirements.every(isRequirementDefinition);
+}
+
+function isResearchRequirement(value: unknown): value is ResearchRequirement {
+  if (!isRequirementDefinition(value)) return false;
+  const record = value as unknown as Record<string, unknown>;
+  return ['VERIFIED', 'MISSING', 'CONFLICTING', 'UNVERIFIED'].includes(record.status as string)
+    && Array.isArray(record.evidenceIds);
+}
+
 export function isRunAccepted(value: unknown): value is RunAccepted {
   return isRecord(value) && typeof value.runId === 'string'
     && statuses.has(value.status as SourcingStatus) && typeof value.statusUrl === 'string';
@@ -220,11 +259,8 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
   return typeof run.runId === 'string' && statuses.has(run.status as SourcingStatus)
     && ['LIVE', 'CACHED', 'PARTIAL'].includes(run.executionMode as string)
     && typeof run.brief === 'string' && Array.isArray(run.requirements)
-    && run.requirements.every(item => isRecord(item) && typeof item.id === 'string' && typeof item.label === 'string'
-      && ['MUST', 'SHOULD'].includes(item.priority as string)
-      && ['DOMAIN', 'TASK_LABELS', 'SAMPLING_RATE', 'MODALITY', 'LICENSE', 'PROVENANCE', 'SCHEMA', 'ACQUISITION', 'OTHER'].includes(item.category as string)
-      && ['VERIFIED', 'MISSING', 'CONFLICTING', 'UNVERIFIED'].includes(item.status as string)
-      && Array.isArray(item.evidenceIds))
+    && run.requirements.every(isResearchRequirement)
+    && (run.requirementsConfirmed === undefined || typeof run.requirementsConfirmed === 'boolean')
     && Array.isArray(run.candidates) && Array.isArray(run.profiles)
     && run.candidates.every(item => isRecord(item) && typeof item.id === 'string'
       && typeof item.name === 'string' && isNativeSourceUrl(item.canonicalUrl)

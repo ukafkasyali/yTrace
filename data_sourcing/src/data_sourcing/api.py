@@ -121,7 +121,7 @@ def create_app(
     def preview_sourcing_requirements(
         body: RequirementPreviewRequest,
     ) -> RequirementsPreview:
-        return sourcing.scout.planner.preview(body)
+        return sourcing.preview_requirements(body)
 
     @app.get("/api/sourcing-runs/{run_id}", response_model=SourcingRun)
     def get_sourcing_run(run_id: str) -> SourcingRun:

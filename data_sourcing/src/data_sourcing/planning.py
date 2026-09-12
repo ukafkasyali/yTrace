@@ -246,13 +246,17 @@ class RequirementPlanner:
         self,
         definitions: list[RequirementDefinition],
     ) -> list[ResearchRequirement]:
+        system_requirements = self._system_requirements()
         fixed_categories = {RequirementCategory.PROVENANCE, RequirementCategory.MODALITY}
+        fixed_ids = {item.id for item in system_requirements}
         configurable = [
-            ResearchRequirement.model_validate(item.model_dump())
+            ResearchRequirement.model_validate(
+                item.model_copy(update={"is_system_required": False}).model_dump()
+            )
             for item in definitions
-            if item.category not in fixed_categories
+            if item.category not in fixed_categories and item.id not in fixed_ids
         ]
-        return [*self._system_requirements(), *configurable]
+        return [*system_requirements, *configurable]
 
     def preview(self, request: RequirementPreviewRequest) -> RequirementsPreview:
         run_request = CreateSourcingRun(
@@ -264,7 +268,7 @@ class RequirementPlanner:
         seen: set[str] = set()
         for raw in request.custom_requirements:
             text = " ".join(raw.split())
-            if len(text) < 3 or text.casefold() in seen:
+            if text.casefold() in seen:
                 continue
             seen.add(text.casefold())
             digest = hashlib.sha256(text.casefold().encode()).hexdigest()[:12]

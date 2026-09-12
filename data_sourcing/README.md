@@ -7,6 +7,12 @@ verification. Deterministic gates and scoring remain separate from model-generat
 The service never starts ingestion. An approved sourcing run produces a manifest for the
 ingestion team.
 
+Before starting a run, the frontend previews a research contract. Reviewers can keep an inferred
+requirement mandatory, make it preferred, disable it, or add a natural-language rule such as
+"Contains at least 200 labelled collision events." Canonical provenance and usable time-series
+files remain fixed integrity checks. Custom rules fail closed: they count as supported only when
+the configured model identifies a verbatim quote in a fetched native source.
+
 ## Development
 
 ```bash
@@ -22,6 +28,14 @@ the bundled robot-collision fixture is used only when the brief explicitly conta
 `NEEDS_INPUT` instead of returning sample data as live evidence.
 
 ## Demo request
+
+Preview the editable contract without spending search credits:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/sourcing-requirement-previews \
+  -H 'Content-Type: application/json' \
+  -d '{"brief":"Find CNC telemetry with labelled accidental head contact for observability.","customRequirements":["Contains at least 200 labelled contact events"]}'
+```
 
 ```bash
 curl -i http://127.0.0.1:8000/api/sourcing-runs \

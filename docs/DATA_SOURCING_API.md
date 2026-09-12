@@ -19,6 +19,23 @@ of cached and live results is labelled `PARTIAL`.
 
 ## Endpoints
 
+### `POST /api/sourcing-requirement-previews`
+
+Builds the research contract without spending Tavily credits or starting a run. The frontend uses
+this preview to let a reviewer mark inferred requirements as `MUST` or `SHOULD`, disable them, and
+add up to ten custom natural-language requirements.
+
+```json
+{
+  "brief": "Find CNC telemetry with labelled accidental head contact...",
+  "customRequirements": ["Contains at least 200 labelled contact events"]
+}
+```
+
+The response is a list of typed requirement definitions. Canonical provenance and usable
+time-series files have `isSystemRequired: true`; clients may display them but cannot disable or
+replace them. Custom text is represented as category `OTHER` and defaults to `MUST`.
+
 ### `POST /api/sourcing-runs`
 
 Requires an `Idempotency-Key` header. Repeating the same key and body returns the same run; reusing
@@ -32,9 +49,26 @@ the key with another body returns `409 IDEMPOTENCY_CONFLICT`.
     "preferred": ["MATLAB"],
     "allowedLicenses": ["cc-by-4.0"],
     "maxDownloadBytes": 25000000000
-  }
+  },
+  "requirements": [
+    {
+      "id": "req_schema",
+      "label": "Schema documentation",
+      "description": "Channels and units are documented.",
+      "priority": "SHOULD",
+      "category": "SCHEMA",
+      "expectedValues": [],
+      "isSystemRequired": false
+    }
+  ]
 }
 ```
+
+`requirements` is optional for backward compatibility. When absent, the planner uses its inferred
+defaults. When present, it is authoritative for configurable requirements: omit a requirement to
+disable it, use `MUST` to make missing evidence disqualifying, or use `SHOULD` to influence scoring
+without creating a hard failure. The server always restores its fixed integrity requirements and
+canonicalizes client definitions so they cannot claim system-required status.
 
 The `202` response is:
 
@@ -142,12 +176,18 @@ review-directed refinements, eight deeply verified dataset artifacts, twelve Tav
 ninety seconds of active research time. The scout may inspect up to sixteen discovery leads over
 at most two native-link hops. Time spent waiting for human review does not consume the active
 research clock. Tavily advanced search costs two credits per query, so reviewer refinements use
-only the credits remaining after initial and gap searches. Mandatory gates are source-local
-dataset identity, canonical provenance, explicit allowed licence, usable time-series files,
-requested task labels, schema documentation and bounded acquisition size. Dataset identity first
+only the credits remaining after initial and gap searches. Mandatory gates always include
+source-local dataset identity, canonical provenance and usable time-series files. Licence, task
+labels, schema, acquisition, domain and other configurable checks become mandatory only when
+their confirmed priority is `MUST`. Dataset identity first
 requires a direct, non-empty supported data or archive file on the candidate's own native source.
 Model-assisted semantic support must cite a verbatim excerpt from that same source and fails
 closed on model errors; linked pages cannot lend evidence to a parent.
+
+Custom `OTHER` requirements are evaluated only against fetched native-source documents. The model
+must return the requirement ID, source-document index and a verbatim supporting quote; the service
+independently validates all three before recording evidence. An absent model, invented quote or
+uncertain result remains unsupported, and a custom `MUST` therefore prevents recommendation.
 
 Server-side fetches accept only HTTPS native URLs on the exact GitHub, Zenodo and Hugging Face
 allowlist, reject embedded credentials and non-default ports, resolve only to public addresses,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
@@ -119,8 +119,17 @@ class RequirementDefinition(WireModel):
     description: str = Field(min_length=1, max_length=500)
     priority: RequirementPriority
     category: RequirementCategory
-    expected_values: list[str] = Field(default_factory=list, max_length=30)
+    expected_values: list[Annotated[str, Field(min_length=1, max_length=500)]] = Field(
+        default_factory=list,
+        max_length=30,
+    )
     is_system_required: bool = False
+
+    @model_validator(mode="after")
+    def custom_requirement_has_text(self) -> RequirementDefinition:
+        if self.category is RequirementCategory.OTHER and len(self.expected_values) != 1:
+            raise ValueError("custom requirements must contain exactly one expected value")
+        return self
 
 
 class CreateSourcingRun(WireModel):
@@ -134,13 +143,24 @@ class CreateSourcingRun(WireModel):
             ids = [item.id for item in self.requirements]
             if len(ids) != len(set(ids)):
                 raise ValueError("requirement IDs must be unique")
+            fixed_categories = {
+                "req_provenance": RequirementCategory.PROVENANCE,
+                "req_time_series": RequirementCategory.MODALITY,
+            }
+            if any(
+                item.id in fixed_categories and item.category is not fixed_categories[item.id]
+                for item in self.requirements
+            ):
+                raise ValueError("system requirement IDs cannot be reassigned")
         return self
 
 
 class RequirementPreviewRequest(WireModel):
     brief: str = Field(min_length=20, max_length=8_000)
     constraints: SourcingConstraints = Field(default_factory=SourcingConstraints)
-    custom_requirements: list[str] = Field(default_factory=list, max_length=10)
+    custom_requirements: list[
+        Annotated[str, Field(min_length=3, max_length=500)]
+    ] = Field(default_factory=list, max_length=10)
 
 
 class ResearchRequirement(RequirementDefinition):

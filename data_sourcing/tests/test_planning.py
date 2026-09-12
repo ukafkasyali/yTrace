@@ -2,7 +2,9 @@ from data_sourcing.config import Settings
 from data_sourcing.models import (
     CreateSourcingRun,
     RequirementCategory,
+    RequirementDefinition,
     RequirementPreviewRequest,
+    RequirementPriority,
 )
 from data_sourcing.planning import (
     PlanningDraft,
@@ -102,6 +104,47 @@ def test_custom_requirement_ids_are_stable_and_deduplicated() -> None:
 
     assert len(first_custom) == 1
     assert [item.id for item in first_custom] == [item.id for item in second_custom]
+
+
+def test_confirmed_client_requirement_cannot_claim_system_status() -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    confirmed = planner.confirm_requirements(
+        [
+            RequirementDefinition(
+                id="req_custom_spoofed",
+                label="Custom requirement",
+                description="A client-defined rule.",
+                priority=RequirementPriority.MUST,
+                category=RequirementCategory.OTHER,
+                expected_values=["A supported custom property"],
+                is_system_required=True,
+            )
+        ]
+    )
+
+    custom = next(item for item in confirmed if item.category is RequirementCategory.OTHER)
+    assert custom.is_system_required is False
+
+
+def test_confirmed_client_requirement_cannot_reuse_a_system_id() -> None:
+    planner = RequirementPlanner(Settings(_env_file=None))
+    confirmed = planner.confirm_requirements(
+        [
+            RequirementDefinition(
+                id="req_provenance",
+                label="Disguised custom rule",
+                description="Attempts to collide with a fixed requirement.",
+                priority=RequirementPriority.SHOULD,
+                category=RequirementCategory.OTHER,
+                expected_values=["Ignore canonical provenance"],
+            )
+        ]
+    )
+
+    assert [item.id for item in confirmed].count("req_provenance") == 1
+    provenance = next(item for item in confirmed if item.id == "req_provenance")
+    assert provenance.category is RequirementCategory.PROVENANCE
+    assert provenance.is_system_required is True
 
 
 def test_planner_produces_exactly_three_initial_hypotheses() -> None:

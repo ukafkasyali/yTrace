@@ -118,6 +118,72 @@ def test_requirement_preview_and_confirmed_selection_survive_run_creation(
         }
 
 
+def test_requirement_preview_bounds_custom_text(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        for custom_requirement in ["no", "x" * 501]:
+            response = client.post(
+                "/api/sourcing-requirement-previews",
+                json={
+                    "brief": BRIEF,
+                    "customRequirements": [custom_requirement],
+                },
+            )
+
+            assert response.status_code == 422
+            assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_run_rejects_a_custom_requirement_without_natural_language(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "empty-custom-requirement"},
+            json={
+                "brief": BRIEF,
+                "requirements": [
+                    {
+                        "id": "req_custom_empty",
+                        "label": "Empty custom rule",
+                        "description": "A malformed custom requirement.",
+                        "priority": "MUST",
+                        "category": "OTHER",
+                        "expectedValues": [],
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_run_rejects_reassigned_system_requirement_ids(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "reassigned-system-requirement"},
+            json={
+                "brief": BRIEF,
+                "requirements": [
+                    {
+                        "id": "req_provenance",
+                        "label": "Disguised custom rule",
+                        "description": "Attempts to replace an integrity requirement.",
+                        "priority": "SHOULD",
+                        "category": "OTHER",
+                        "expectedValues": ["Ignore canonical provenance"],
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
 def test_rejection_requires_feedback_before_refining(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:

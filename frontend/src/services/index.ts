@@ -1,4 +1,4 @@
-import { isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun, type SourcingReview } from './sourcing';
+import { isRequirementsPreview, isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun, type RequirementPreviewRequest, type SourcingReview } from './sourcing';
 export * from './sourcing';
 
 export type WindowRef = {
@@ -216,6 +216,13 @@ export function createServices(baseUrl?: string) {
     searchDatasets: (query: string) => request<DatasetSearchResult[]>(`/datasets/search?${new URLSearchParams({ query })}`),
     startImport: (sourceUrl: string) => request<{ ingestionId: string }>('/ingestions', { method: 'POST', body: JSON.stringify({ sourceUrl }) }),
     getImport: (id: string) => request<ImportJob>(`/ingestions/${encodeURIComponent(id)}`),
+    previewSourcingRequirements: async (input: RequirementPreviewRequest) => {
+      const preview = await request<unknown>('/sourcing-requirement-previews', {
+        method: 'POST', body: JSON.stringify(input),
+      });
+      if (!isRequirementsPreview(preview)) throw new ProtocolError('The sourcing requirement preview does not match the contract.');
+      return preview;
+    },
     startSourcingRun: async (input: CreateSourcingRun, idempotencyKey: string) => {
       const accepted = await request<unknown>('/sourcing-runs', {
         method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(input),

@@ -19,13 +19,13 @@
 
 ## Task 3: Add the requirement editor
 
-- [ ] Add frontend preview service and validators.
-- [ ] Add Must/Preferred/Disabled controls and custom requirement entry.
-- [ ] Submit only enabled confirmed requirements.
+- [x] Add frontend preview service and validators.
+- [x] Add Must/Preferred/Disabled controls and custom requirement entry.
+- [x] Submit only enabled confirmed requirements.
 
 ## Task 4: Document and review
 
-- [ ] Update API and module documentation.
+- [x] Update API and module documentation.
 - [ ] Run full backend/frontend verification and five-axis review.
 - [ ] Commit tested slices and update the existing PR.
 
