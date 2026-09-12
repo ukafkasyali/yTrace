@@ -445,30 +445,35 @@ def generation_eval(
     with output_path.open("w", encoding="utf-8") as handle:
         for batch in loader:
             outputs = model.generate(batch, max_new_tokens=128, do_sample=False)
-            for sample, output in zip(batch, outputs):
+            first_predictions = [parse_answer(output) for output in outputs]
+            retry_positions = [
+                index
+                for index, (output, prediction) in enumerate(zip(outputs, first_predictions))
+                if not str(output).strip() or prediction is None
+            ]
+            final_outputs = list(outputs)
+            final_predictions = list(first_predictions)
+            if retry_positions:
+                retry_outputs = model.generate(
+                    [batch[index] for index in retry_positions],
+                    max_new_tokens=128,
+                    min_new_tokens=16,
+                    do_sample=False,
+                )
+                for index, retry_output in zip(retry_positions, retry_outputs):
+                    final_outputs[index] = retry_output
+                    final_predictions[index] = parse_answer(retry_output)
+            for index, (sample, output) in enumerate(zip(batch, outputs)):
                 metadata = sample["metadata"]
-                first_prediction = parse_answer(output)
-                retry_used = not str(output).strip() or first_prediction is None
-                final_output = output
-                final_prediction = first_prediction
-                if retry_used:
-                    retry_outputs = model.generate(
-                        [sample],
-                        max_new_tokens=128,
-                        min_new_tokens=16,
-                        do_sample=False,
-                    )
-                    final_output = retry_outputs[0]
-                    final_prediction = parse_answer(final_output)
                 row = {
                     "record_id": sample["record_id"],
                     "intent": sample["intent"],
                     "target": answer_payload(metadata, sample["intent"]),
                     "first_pass_output": output,
-                    "first_pass_prediction": first_prediction,
-                    "retry_used": retry_used,
-                    "output": final_output,
-                    "prediction": final_prediction,
+                    "first_pass_prediction": first_predictions[index],
+                    "retry_used": index in retry_positions,
+                    "output": final_outputs[index],
+                    "prediction": final_predictions[index],
                 }
                 rows.append(row)
                 handle.write(json.dumps(row, sort_keys=True) + "\n")
@@ -549,6 +554,15 @@ def intent_fit_metrics(rows: list[dict[str, object]]) -> dict[str, float | int]:
         for key in sorted(metrics):
             result[f"intent/{intent}/{key}"] = metrics[key]
     return result
+
+
+def should_run_generation(phase: str, step: int, cadence: int, *, generation_at_start: bool) -> bool:
+    """Schedule expensive decoded evaluation consistently for smoke and full runs."""
+    if phase in {"epoch", "final"}:
+        return True
+    if phase == "start":
+        return generation_at_start
+    return phase == "step" and cadence > 0 and step % cadence == 0
 
 
 class ZeroSignalDataset:
@@ -679,9 +693,21 @@ def run(args: argparse.Namespace) -> None:
         output_format=output_format,
     )
     if args.smoke:
-        train_dataset = fixed_subset(train_dataset, 32, seed)
-        validation_dataset = fixed_subset(validation_dataset, 32, seed + 1)
-        validation_summary_dataset = fixed_subset(validation_summary_dataset, 32, seed + 1)
+        fit_probe_config = config.get("fit_probe", {})
+        train_dataset = stratified_training_probe_subset(
+            train_dataset,
+            min(len(train_dataset), int(fit_probe_config.get("train_examples", 48))),
+            seed,
+        )
+        validation_examples = int(fit_probe_config.get("validation_examples", 48))
+        validation_dataset = fixed_subset(
+            validation_dataset, min(len(validation_dataset), validation_examples), seed + 1
+        )
+        validation_summary_dataset = stratified_summary_subset(
+            validation_summary_dataset,
+            min(len(validation_summary_dataset), validation_examples),
+            seed + 1,
+        )
     elif config.get("training", {}).get("max_examples"):
         train_dataset = fixed_subset(
             train_dataset,
@@ -863,9 +889,18 @@ def run(args: argparse.Namespace) -> None:
             )
             wandb_run.summary.update(parameter_inventory)
 
+    precision = str(config.get("precision", "float32"))
+    if precision not in {"float32", "bfloat16"}:
+        raise ValueError(f"Unsupported precision: {precision}")
+
+    def training_precision_context():
+        if device == "cuda" and precision == "bfloat16":
+            return torch.autocast(device_type="cuda", dtype=torch.bfloat16)
+        return nullcontext()
+
     # Fail early on shape, checkpoint, and forward incompatibilities.
     first_batch = next(iter(train_loader))
-    with torch.no_grad():
+    with torch.no_grad(), training_precision_context():
         initial_loss = float(model.compute_loss(first_batch).detach().cpu())
     emit(metrics_path, "forward_smoke", loss=initial_loss)
 
@@ -876,6 +911,7 @@ def run(args: argparse.Namespace) -> None:
     patience = 0
     stop_reason = "epochs_complete"
     validation_config = config["validation"]
+    generation_at_start = bool(config["observability"].get("generation_at_start", False))
     validation_every_steps = int(validation_config.get("every_steps", 0))
     initial_train_probe_loss: float | None = None
 
@@ -917,7 +953,12 @@ def run(args: argparse.Namespace) -> None:
             store_runtime_checkpoint(model, run_root / "best_model.pt")
         probe_every_steps = int(probe_config.get("every_steps", 100))
         probe_generation_every = int(probe_config.get("generation_every_steps", 250))
-        should_generate_probe = phase != "step" or step % probe_generation_every == 0
+        should_generate_probe = should_run_generation(
+            phase,
+            step,
+            probe_generation_every,
+            generation_at_start=generation_at_start,
+        )
         should_run_probe_loss = probe_enabled and (
             phase != "step" or step % probe_every_steps == 0 or should_generate_probe
         )
@@ -1052,7 +1093,12 @@ def run(args: argparse.Namespace) -> None:
                     }
                 )
         validation_generation_every = int(config["observability"].get("sample_generations_every_steps", 250))
-        should_generate_validation = phase != "step" or step % validation_generation_every == 0
+        should_generate_validation = should_run_generation(
+            phase,
+            step,
+            validation_generation_every,
+            generation_at_start=generation_at_start,
+        )
         if should_generate_validation:
             generation_metrics, generation_rows = generation_eval(
                 model,
@@ -1157,7 +1203,8 @@ def run(args: argparse.Namespace) -> None:
             if time.monotonic() >= deadline:
                 stop_reason = "wall_time_limit"
                 break
-            loss = model.compute_loss(batch) / accumulation
+            with training_precision_context():
+                loss = model.compute_loss(batch) / accumulation
             loss.backward()
             epoch_losses.append(float(loss.detach().cpu()) * accumulation)
             should_step = (batch_index + 1) % accumulation == 0 or batch_index + 1 == len(train_loader)
@@ -1251,16 +1298,20 @@ def run(args: argparse.Namespace) -> None:
                 )
 
         store_runtime_checkpoint(model, run_root / "last_model.pt")
-        _, improved = validate("epoch", epoch, global_step)
-        if improved:
-            patience = 0
-        else:
-            patience += 1
-        if patience >= int(config["early_stopping_patience"]):
-            stop_reason = "early_stopping"
-            break
+        if not args.smoke:
+            _, improved = validate("epoch", epoch, global_step)
+            if improved:
+                patience = 0
+            else:
+                patience += 1
+            if patience >= int(config["early_stopping_patience"]):
+                stop_reason = "early_stopping"
+                break
         if stop_reason != "epochs_complete":
             break
+
+    if args.smoke:
+        validate("final", epoch, global_step)
 
     elapsed = time.monotonic() - start_time
     writer.close()

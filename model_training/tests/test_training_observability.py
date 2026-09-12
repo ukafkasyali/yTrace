@@ -11,10 +11,47 @@ from robot_observability.train_opentslm import (
     optimizer_group_snapshots,
     optimizer_group_stats,
     optimizer_group_update_stats,
+    should_run_generation,
     signal_preview,
+    stratified_training_probe_subset,
     training_manifest_rows,
     wandb_manifest_table,
 )
+
+
+@pytest.mark.parametrize("phase", ["epoch", "final"])
+def test_generation_schedule_always_runs_at_checkpoints(phase: str) -> None:
+    assert should_run_generation(phase, 1, 250, generation_at_start=False)
+
+
+def test_generation_schedule_can_skip_expensive_start_decode() -> None:
+    assert not should_run_generation("start", 0, 250, generation_at_start=False)
+    assert should_run_generation("start", 0, 250, generation_at_start=True)
+    assert should_run_generation("step", 250, 250, generation_at_start=False)
+    assert not should_run_generation("step", 251, 250, generation_at_start=True)
+
+
+def test_training_probe_subset_balances_event_and_intent_groups() -> None:
+    rows = []
+    for event_type in ("free", "intentional_contact", "accidental_collision"):
+        for intent in ("contact", "semantics", "summary"):
+            for duplicate in range(5):
+                rows.append(
+                    {
+                        "metadata": {"event_type": event_type},
+                        "intent": intent,
+                        "duplicate": duplicate,
+                    }
+                )
+
+    subset = stratified_training_probe_subset(rows, 18, seed=7)
+    counts = {}
+    for sample in subset:
+        key = (sample["metadata"]["event_type"], sample["intent"])
+        counts[key] = counts.get(key, 0) + 1
+
+    assert len(counts) == 9
+    assert set(counts.values()) == {2}
 
 
 def test_mean_loss_is_weighted_by_supervised_tokens() -> None:
