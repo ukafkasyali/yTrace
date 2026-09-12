@@ -32,17 +32,17 @@ class FakeRuntime:
         self.release.wait(3)
         if self.failure:
             raise RuntimeError("private runtime detail")
-        return "A generated test response."
+        return 'Answer: {"contact":true}\nEvidence: generated test evidence.'
 
 
 def fixture():
-    times = [i / 2 for i in range(21)]
+    times = [i / 1000 for i in range(10000)]
     channels = [{"id": f"joint_{i}", "name": f"Joint {i}", "unit": "Nm", "values": [t * i for t in times]} for i in range(1, 8)]
     return {"recording": {"id": "recording", "name": "Test recording", "durationSeconds": 10,
-            "channelCount": 7, "sampleRateHz": 2, "displaySampleRateHz": 2, "sourceUrl": "https://example.test"},
+            "channelCount": 7, "sampleRateHz": 1000, "displaySampleRateHz": 1000, "sourceUrl": "https://example.test"},
             "times": times, "channels": channels,
-            "detail": {"startSeconds": 4, "endSeconds": 9, "times": times[8:18],
-                       "channels": [{**c, "values": c["values"][8:18]} for c in channels]},
+            "detail": {"startSeconds": 4, "endSeconds": 9, "times": times[4000:9000],
+                       "channels": [{**c, "values": c["values"][4000:9000]} for c in channels]},
             "events": [{"id": "event", "timeSeconds": 6, "kind": "publisher_annotation", "label": "secret label", "source": "publisher"}]}
 
 
@@ -57,7 +57,7 @@ class ServerTests(unittest.TestCase):
         self.thread.start()
         self.request = {"mode": "direct", "modelId": "opentslm", "question": "Describe torque changes",
             "playheadSec": 8, "window": {"datasetId": DATASET_ID, "recordingId": "recording",
-            "startSec": 4, "endSec": 5.5, "channelIds": ["joint_1", "joint_2"]}}
+            "startSec": 4, "endSec": 5.024, "channelIds": [f"joint_{i}" for i in range(1, 8)]}}
 
     def tearDown(self):
         self.runtime.release.set()
@@ -94,15 +94,15 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.http("POST", "/api/queries", self.request)[0], 503)
 
     def test_half_open_windows_and_display_resolution(self):
-        path = "/api/recordings/recording/signals?channelIds=joint_1&maxPoints=100&startSec=4&endSec=5"
+        path = "/api/recordings/recording/signals?channelIds=joint_1&maxPoints=2000&startSec=4&endSec=5"
         status, result = self.http("GET", path)
         self.assertEqual(status, 200)
-        self.assertEqual(result["series"][0]["timeSec"], [4, 4.5])
+        self.assertEqual(result["series"][0]["timeSec"], [i / 1000 for i in range(4000, 5000)])
         self.assertEqual(result["resolution"], "raw")
         result = self.http("GET", path.replace("startSec=4", "startSec=3"))[1]
         self.assertEqual(result["resolution"], "display")
         self.assertIn("aggregation", result)
-        self.assertEqual(self.http("GET", path.replace("maxPoints=100", "maxPoints=1"))[1]["resolution"], "display")
+        self.assertEqual(self.http("GET", path.replace("maxPoints=2000", "maxPoints=1"))[1]["resolution"], "display")
 
     def test_actual_runtime_stream_and_no_publisher_labels(self):
         self.request["events"] = [{"label": "injected label"}]
@@ -111,14 +111,25 @@ class ServerTests(unittest.TestCase):
         self.assertEqual([e["type"] for e in events], ["tool.started", "tool.completed", "answer.completed"])
         self.assertEqual([e["id"] for e in events], ["1", "2", "3"])
         answer = events[-1]["payload"]
-        self.assertEqual(answer["answer"], "A generated test response.")
+        self.assertIn("Measured in this selected window", answer["answer"])
+        self.assertIn("OpenTSLM predicts external contact", answer["answer"])
+        self.assertIn('"contact":true', answer["modelOutput"])
         self.assertEqual(answer["modelRevision"], "test-revision")
         self.assertIn("not a verified explanation", answer["evidence"][0]["label"])
         request, series = self.runtime.received
         self.assertNotIn("events", request)
         self.assertNotIn("secret label", json.dumps(self.runtime.received))
-        self.assertEqual(series[0]["timeSec"], [4, 4.5, 5])
-        self.assertEqual(series[0]["values"], [4, 4.5, 5])
+        self.assertEqual(series[0]["timeSec"], [i / 1000 for i in range(4000, 5024)])
+        self.assertEqual(series[0]["values"], [i / 1000 for i in range(4000, 5024)])
+
+    def test_assistant_orchestrates_measurement_and_opentslm(self):
+        self.request.pop("modelId")
+        self.request["mode"] = "assistant"
+        events = self.events(self.start())
+        self.assertEqual([event["type"] for event in events], ["tool.started", "tool.completed", "tool.started", "tool.completed", "answer.completed"])
+        self.assertEqual(events[0]["payload"]["tool"], "measurement_summary")
+        self.assertEqual(events[2]["payload"]["tool"], "opentslm")
+        self.assertIn("Largest observed torque ranges", events[-1]["payload"]["answer"])
 
     def test_cancel_retains_busy_slot_until_runtime_exits(self):
         self.runtime.release.clear()
@@ -138,12 +149,12 @@ class ServerTests(unittest.TestCase):
 
     def test_malformed_future_unknown_and_unsupported_queries(self):
         cases = [("window.startSec", 3, "RAW_DATA_UNAVAILABLE"),
-                 ("window.endSec", 7, "WINDOW_TOO_LONG"), ("playheadSec", 5, "FUTURE_CONTEXT"),
+                 ("window.endSec", 7, "MODEL_INPUT_SHAPE"), ("playheadSec", 5, "FUTURE_CONTEXT"),
                  ("window.recordingId", "missing", "RECORDING_NOT_FOUND"),
                  ("window.channelIds", ["unknown"], "INVALID_CHANNELS"),
                  ("window.channelIds", ["joint_1", "joint_1"], "INVALID_CHANNELS"),
                  ("window.startSec", float("nan"), "INVALID_WINDOW"),
-                 ("window.startSec", True, "INVALID_WINDOW"), ("mode", "assistant", "MODE_UNAVAILABLE"),
+                 ("window.startSec", True, "INVALID_WINDOW"), ("mode", "unsupported", "MODE_UNAVAILABLE"),
                  ("modelId", "cnn-1d", "MODEL_UNAVAILABLE"), ("question", "", "INVALID_QUERY")]
         for key, value, code in cases:
             with self.subTest(code=code, key=key):
@@ -156,6 +167,14 @@ class ServerTests(unittest.TestCase):
                 status, error = self.http("POST", "/api/queries", request)
                 self.assertGreaterEqual(status, 400)
                 self.assertEqual(error["error"]["code"], code)
+
+    def test_model_requires_all_channels_and_contiguous_1024_samples(self):
+        for ids in (["joint_1"], list(reversed(self.request["window"]["channelIds"]))):
+            request = copy.deepcopy(self.request)
+            request["window"]["channelIds"] = ids
+            self.assertEqual(self.http("POST", "/api/queries", request)[1]["error"]["code"], "MODEL_INPUT_SHAPE")
+        self.server.bridge.data["detail"]["times"][100] += .0001
+        self.assertEqual(self.http("POST", "/api/queries", self.request)[1]["error"]["code"], "MODEL_INPUT_SHAPE")
 
     def test_body_limits_and_json_errors(self):
         self.assertEqual(self.http("POST", "/api/queries", raw="x" * (MAX_BODY + 1))[0], 413)
@@ -228,6 +247,22 @@ class ServerTests(unittest.TestCase):
         self.assertEqual([len(channel["values"]) for channel in series], [1024] * 7)
         self.assertEqual(series[0]["timeSec"][0], 5.787)
         self.assertEqual(series[0]["timeSec"][-1], 6.81)
+
+    def test_demo_cases_have_distinct_raw_inputs_and_matching_replay_data(self):
+        from inference.server import Bridge
+        root = Path(__file__).resolve().parents[1]
+        bridge = Bridge(self.runtime, root / "frontend/public/data/kuka-demo.json", root / "inference/demo_cases.json")
+        self.assertEqual([case["id"] for case in bridge.cases], ["accidental", "intentional", "free"])
+        fingerprints = set()
+        for case in bridge.cases:
+            window = bridge.validate_window({"datasetId": DATASET_ID, "recordingId": case["recordingId"],
+                "startSec": case["interval"]["start"], "endSec": case["interval"]["end"],
+                "channelIds": [f"joint_{i}" for i in range(1, 8)]}, raw_only=True)
+            signals = bridge.signals(window)
+            self.assertEqual(signals["resolution"], "raw")
+            self.assertEqual([len(c["values"]) for c in signals["series"]], [1024] * 7)
+            fingerprints.add(json.dumps(signals["series"]))
+        self.assertEqual(len(fingerprints), 3)
 
 
 if __name__ == "__main__":

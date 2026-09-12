@@ -1,3 +1,5 @@
+import type { DemoCase } from '../types';
+import { validateDemoData } from '../lib/data';
 import { isRequirementsPreview, isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun, type RequirementPreviewRequest, type SourcingReview } from './sourcing';
 export * from './sourcing';
 
@@ -26,8 +28,7 @@ export type ModelProfile = {
   reason?: string; revision?: string;
 };
 export const DECLARED_MODELS: readonly ModelProfile[] = [
-  { id: 'cnn-1d', label: '1D CNN', available: false, capabilities: ['classification'], reason: 'Model service not connected' },
-  { id: 'direct-llm', label: 'Direct LLM', available: false, capabilities: ['language'], reason: 'Model service not connected' },
+  { id: 'assistant', label: 'Telemetry assistant', available: false, capabilities: ['language'], reason: 'Model service not connected' },
   { id: 'opentslm', label: 'OpenTSLM', available: false, capabilities: ['language'], reason: 'Model service not connected' },
 ];
 export type QueryRequest = {
@@ -203,6 +204,8 @@ export function createServices(baseUrl?: string) {
   }
   return {
     connected,
+    listDemoCases: () => request<DemoCase[]>('/demo-cases'),
+    getReplay: async (recordingId: string) => validateDemoData(await request(`/recordings/${encodeURIComponent(recordingId)}/replay`)),
     listDatasets: () => request<Dataset[]>('/datasets'),
     listRecordings: (datasetId: string) => request<Recording[]>(`/datasets/${encodeURIComponent(datasetId)}/recordings`),
     getWindow: async (recordingId: string, startSec: number, endSec: number, channelIds: string[], maxPoints: number) => {

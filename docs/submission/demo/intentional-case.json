@@ -1,0 +1,159 @@
+{
+  "demoCase": {
+    "id": "intentional",
+    "title": "Intentional contact",
+    "recordingId": "03-22-11-18",
+    "interval": {
+      "start": 5.496,
+      "end": 6.52
+    },
+    "note": "Publisher intentional experiment \u00b7 test recording. The marker is an annotation; the model makes its own prediction."
+  },
+  "purpose": "Connection smoke test, not a KUKA accuracy benchmark",
+  "request": {
+    "mode": "assistant",
+    "modelId": "opentslm",
+    "question": "Analyze this robot telemetry window.",
+    "window": {
+      "datasetId": "zenodo-21927431",
+      "recordingId": "03-22-11-18",
+      "startSec": 5.496,
+      "endSec": 6.52,
+      "channelIds": [
+        "joint_1",
+        "joint_2",
+        "joint_3",
+        "joint_4",
+        "joint_5",
+        "joint_6",
+        "joint_7"
+      ]
+    },
+    "playheadSec": 6.52
+  },
+  "model": {
+    "id": "opentslm",
+    "label": "OpenTSLM",
+    "available": true,
+    "capabilities": [
+      "language"
+    ],
+    "revision": "checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown"
+  },
+  "events": [
+    {
+      "id": "1",
+      "queryId": "d12a68c9cad24083ae72021245ec1091",
+      "type": "tool.started",
+      "payload": {
+        "callId": "measure-d12a68c9cad24083ae72021245ec1091",
+        "tool": "measurement_summary",
+        "label": "Measuring torque ranges in the selected samples"
+      }
+    },
+    {
+      "id": "2",
+      "queryId": "d12a68c9cad24083ae72021245ec1091",
+      "type": "tool.completed",
+      "payload": {
+        "callId": "measure-d12a68c9cad24083ae72021245ec1091",
+        "summary": "Calculated per-joint torque ranges from the selected raw telemetry."
+      }
+    },
+    {
+      "id": "3",
+      "queryId": "d12a68c9cad24083ae72021245ec1091",
+      "type": "tool.started",
+      "payload": {
+        "callId": "inference-d12a68c9cad24083ae72021245ec1091",
+        "tool": "opentslm",
+        "label": "Running OpenTSLM on selected raw telemetry"
+      }
+    },
+    {
+      "id": "4",
+      "queryId": "d12a68c9cad24083ae72021245ec1091",
+      "type": "tool.completed",
+      "payload": {
+        "callId": "inference-d12a68c9cad24083ae72021245ec1091",
+        "summary": "OpenTSLM generation completed; explanation has not been independently verified."
+      }
+    },
+    {
+      "id": "5",
+      "queryId": "d12a68c9cad24083ae72021245ec1091",
+      "type": "answer.completed",
+      "payload": {
+        "answer": "Measured in this selected window\nLargest observed torque ranges: Joint 2 (6.129 Nm range), Joint 4 (3.507 Nm range), Joint 1 (1.699 Nm range).\n\nOpenTSLM interpretation\nOpenTSLM predicts external contact. Interaction class: intentional. Strongest predicted disturbance: J4. Affected joints: J4, J2. Predicted onset: 312 ms after the window starts. Predicted evidence interval: 511\u2013562 ms. Treat these generated predictions as leads, not verified physical facts.",
+        "modelOutput": "Answer: {\"affected_joints\":[\"J4\",\"J2\"],\"contact\":true,\"event_type\":\"intentional\",\"evidence_end_ms\":562,\"evidence_start_ms\":511,\"onset_ms\":312,\"strongest_joint\":\"J4\"}\nEvidence: The manual event marker is at 312 ms; calibrated top joint scores are J4=1.71, J2=1.50, J6=0.62. Sustained evidence spans 511\u2013562 ms.",
+        "modelId": "team-opentslm",
+        "modelRevision": "checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown",
+        "inputTrace": {
+          "model": "team-opentslm",
+          "revision": "checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown",
+          "window": {
+            "datasetId": "zenodo-21927431",
+            "recordingId": "03-22-11-18",
+            "startSec": 5.496,
+            "endSec": 6.52,
+            "channelIds": [
+              "joint_1",
+              "joint_2",
+              "joint_3",
+              "joint_4",
+              "joint_5",
+              "joint_6",
+              "joint_7"
+            ]
+          },
+          "playheadSec": 6.52,
+          "samplesPerChannel": 1024,
+          "inputSha256": "15c0fdd1d512141fa04cf14f25ed4fef448226c60c103b0a130758205f7d5dcb",
+          "normalization": "train_robust",
+          "padding": "zero to multiple of 4 after normalization; no resampling",
+          "latencyMs": 2193
+        },
+        "evidence": [
+          {
+            "id": "input-d12a68c9cad24083ae72021245ec1091",
+            "window": {
+              "datasetId": "zenodo-21927431",
+              "recordingId": "03-22-11-18",
+              "startSec": 5.496,
+              "endSec": 6.52,
+              "channelIds": [
+                "joint_1",
+                "joint_2",
+                "joint_3",
+                "joint_4",
+                "joint_5",
+                "joint_6",
+                "joint_7"
+              ]
+            },
+            "label": "Input telemetry (not a verified explanation)",
+            "source": "team-opentslm@checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown"
+          }
+        ],
+        "measurements": [
+          {
+            "channel": "joint_2",
+            "range": 6.128749132156372,
+            "peak": 5.606595516204834
+          },
+          {
+            "channel": "joint_4",
+            "range": 3.50727716088295,
+            "peak": 3.3881754875183105
+          },
+          {
+            "channel": "joint_1",
+            "range": 1.6986884474754333,
+            "peak": 0.9524185061454773
+          }
+        ]
+      }
+    }
+  ],
+  "roundTripMs": 2302
+}

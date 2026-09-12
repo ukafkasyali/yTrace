@@ -72,14 +72,15 @@ The existing typed client is in `src/services/index.ts`; the wider handoff is
 before starting or building Vite, for example:
 
 ```sh
-VITE_API_BASE_URL=http://localhost:8000/api npm run dev
+VITE_API_BASE_URL=/api npm run dev
 ```
 
-Or set `VITE_API_BASE_URL=/api` to use Vite's local development proxies:
-`/api/sourcing-runs` goes to the dataset scout on `127.0.0.1:8001`, while the
-remaining `/api` routes go to the inference bridge on `127.0.0.1:8000`. The client
-uses `credentials: 'same-origin'`; cross-origin cookie authentication is not
-configured. Never place model keys or other secrets in `VITE_*` variables.
+Vite's local development proxies route `/api/sourcing-runs` and
+`/api/sourcing-requirement-previews` to the dataset scout on `127.0.0.1:8001`,
+while the remaining `/api` routes go to the inference bridge on `127.0.0.1:8000`
+(the local SSH tunnel). A separate backend origin must provide appropriate CORS. The
+client uses `credentials: 'same-origin'`; cross-origin cookie authentication is
+not configured. Never place model keys or other secrets in `VITE_*` variables.
 Setting the URL enables requests; it does not prove a service is healthy.
 
 For an integrated local run, start the scout from the repository root:
@@ -102,7 +103,7 @@ to the existing ingestion form. Approval never starts ingestion automatically.
   manifest endpoints. A shared deployment should route these paths through the
   authenticated same-origin API gateway.
 - **Model team:** provide `/models`, `/queries`, query SSE streams and query
-  cancellation. Expected model IDs are `cnn-1d`, `direct-llm` and `opentslm`.
+  cancellation. The deployed model IDs are `assistant` and `opentslm`.
   Assistant requests allow server-side tool orchestration; comparison requests
   run available models directly. CNN labels have their own results rendering.
 - **Shared contract:** seconds from recording start, half-open intervals, stable
@@ -112,8 +113,8 @@ to the existing ingestion form. Approval never starts ingestion automatically.
 
 The private Nebius bridge and Vite proxy have been verified against the real data
 endpoint: seven channels and exactly 1,024 raw samples per channel for the initial
-interval. Model loading is blocked by Hugging Face access to the Llama backbone;
-no actual generated answer or agentic ingestion run has passed acceptance yet.
+interval. The promoted canary-v4 checkpoint generates real answers through this
+path; ingestion/search capabilities are separate.
 See [inference setup](../inference/README.md) for authentication and resume steps.
 
 ## Design and ownership
@@ -125,3 +126,47 @@ explorer and measured 3D articulation. See
 check and its calibration limits.
 “Trace” is a provisional interface name. Samet owns this frontend; ingestion and
 model-training implementations stay in the team's separately owned modules.
+
+## Investigation reports
+
+Each completed assistant or local analysis has an **Export investigation** button. It downloads
+a JSON report with the snapshotted recording/window, publisher annotations, all seven sampled
+channel measurements, answer, evidence links and available model revision/input receipt. Exports
+retain the original answer interval even after replay moves. Reduced overview measurements are
+labeled explicitly. Choose **Measurements only** to use numerical tools without a model.
+
+See the [verified browser export](../docs/submission/demo/investigation-example.json) and
+[two-minute demo](../docs/submission/DEMO.md).
+
+## Investigation and replay
+
+Choose a recording example, then **Analyze interval**. **Robot** is visible by
+default, with the two largest-range joint signals in the selected interval beneath
+it; selecting a robot joint focuses that trace. **All 7 signals** and **Publisher
+markers** are direct views, not hidden inside the chat. On mobile, **Replay** and
+**Investigation** switch between the visual workbench and the answer.
+
+Playback moves the robot and visual cursor without changing the investigation
+interval or scrolling the answer. **Select at cursor** explicitly selects the last
+1.024 seconds; selecting a marker or dragging a signal also changes the interval.
+An older answer and its export retain the original input regardless of current
+selection. The model is run only on user action, not automatically on page load.
+
+The answer leads with a compact generated interpretation, then measured torque.
+**Inspect 7 input channels** opens the full signal view at that answer's interval.
+**Model & input details** contains the full answer, raw generation, exact checkpoint,
+1,024-sample receipt and tool steps. **Export investigation** retains all evidence.
+Unsupported or inconsistent model fields fall back to the full response rather
+than being converted into a cleaner-looking prediction.
+
+Seven canonical joints, exactly 1,024 contiguous raw 1-kHz samples and the historical
+replay boundary are still enforced. **Use 1.024 s window** repairs a selection when
+raw coverage and history permit. **Measurements only** supports other intervals;
+**Model + measurements** runs the deployed OpenTSLM service. Both API modes share
+one checkpoint; the header reports OpenTSLM connected rather than two models.
+
+Original recording `05-28-21-25` has raw detail in `[4,9)`. The backend examples add
+`[0,8)` detail for collision/free recording `03-15-12-53` (train split) and intentional
+recording `03-22-11-18` (test split). These fixed examples are not a new benchmark.
+Each now has its own recorded position fixture; see the position-validation report
+for the distinction between the original Jacobian check and reference-mapped examples.

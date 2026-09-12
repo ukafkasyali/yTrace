@@ -1,0 +1,10 @@
+Use only the seven-panel telemetry plot as evidence. Diagnose the complete telemetry window. The panels are synchronized and their x axis starts at 0 ms. Return one short evidence sentence, then `Answer:` and compact valid JSON with exactly these keys: contact, event_type, onset_ms, strongest_joint, affected_joints, evidence_start_ms, evidence_end_ms. Use null onset/joint/interval values and an empty affected_joints list for free motion. Event types are free, intentional, or accidental. Joint names are J1 through J7. Do not use markdown fences.
+
+Channel schema (not measurements from this example):
+J1 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.
+J2 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.
+J3 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.
+J4 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.
+J5 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.
+J6 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.
+J7 external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. The numeric values are normalized with train-only robust statistics.

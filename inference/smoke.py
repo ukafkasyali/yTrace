@@ -11,6 +11,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://127.0.0.1:8000/api")
     parser.add_argument("--output", default="inference/smoke-result.json")
+    parser.add_argument("--case", choices=["accidental", "intentional", "free"], help="Run one fixed raw-telemetry UI example")
     args = parser.parse_args()
     base = args.base_url.rstrip("/")
     with urlopen(base + "/models", timeout=10) as response:
@@ -28,6 +29,14 @@ def main():
         },
         "playheadSec": 8,
     }
+    demo_case = None
+    if args.case:
+        with urlopen(base + "/demo-cases", timeout=10) as response:
+            demo_case = next(item for item in json.load(response) if item["id"] == args.case)
+        request["mode"] = "assistant"
+        request["question"] = "Analyze this robot telemetry window."
+        request["window"].update(recordingId=demo_case["recordingId"], startSec=demo_case["interval"]["start"], endSec=demo_case["interval"]["end"])
+        request["playheadSec"] = demo_case["interval"]["end"]
     began = time.monotonic()
     created = Request(base + "/queries", data=json.dumps(request).encode(),
                       headers={"Content-Type": "application/json"})
@@ -63,7 +72,9 @@ def main():
     trace = payload.get("inputTrace")
     if not trace or trace.get("window") != request["window"] or trace.get("samplesPerChannel") != 1024:
         raise SystemExit("Missing exact-input receipt from the real runtime")
-    result = {"purpose": "Connection smoke test, not a KUKA accuracy benchmark",
+    if payload["modelRevision"] != model["revision"] or trace.get("revision") != model["revision"]:
+        raise SystemExit("Model revision changed between registry and result")
+    result = {"demoCase": demo_case, "purpose": "Connection smoke test, not a KUKA accuracy benchmark",
               "request": request, "model": model, "events": events,
               "roundTripMs": round((time.monotonic() - began) * 1000)}
     Path(args.output).write_text(json.dumps(result, indent=2) + "\n")

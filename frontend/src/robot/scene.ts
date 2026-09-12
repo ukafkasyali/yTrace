@@ -112,7 +112,7 @@ export function createRobotScene(host: HTMLDivElement, description: RobotGeometr
   // Fit once around the initial measured pose, with room for articulation. Playback never moves the camera.
   const bounds = new THREE.Box3().setFromObject(robot).expandByScalar(reach * .04);
   const target = bounds.getCenter(new THREE.Vector3());
-  const distance = bounds.getSize(new THREE.Vector3()).length() * 1.25;
+  const distance = bounds.getSize(new THREE.Vector3()).length() * 1.7;
   function reset() {
     controls.target.copy(target);
     camera.position.copy(target).add(new THREE.Vector3(1.1, .6, 1.7).normalize().multiplyScalar(distance));

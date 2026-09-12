@@ -1,3 +1,6 @@
 *
 !.gitignore
 !dataset_profile.json
+!kuka_contact_part2_profile.json
+!kuka_contact_part2_timef_validation.json
+!kuka_timef_validation.json

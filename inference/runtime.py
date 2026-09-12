@@ -13,50 +13,120 @@ import time
 
 DEFAULT_CONFIG = Path(__file__).with_name("smoke.config.json")
 
+SUMMARY_KEYS = [
+    "contact",
+    "event_type",
+    "onset_ms",
+    "strongest_joint",
+    "affected_joints",
+    "evidence_start_ms",
+    "evidence_end_ms",
+]
 
-def prepare_sample(request: dict, series: list[dict], normalization: str) -> dict:
-    """Preserve every selected sample; normalize each channel independently.
 
-    The smoke preprocessing follows TSQA's sample standard deviation. It must
-    be replaced with the team's training preprocessing before evaluating KUKA.
-    No annotation, event label, answer, or future sample is accepted here.
+def question_contract(question: str) -> tuple[str, list[str], str]:
+    """Route operator wording onto the question families used during training."""
+    text = question.casefold()
+    if any(word in text for word in ("summar", "diagnos", "analy", "main change", "what do you notice")):
+        return "Diagnose this robot telemetry window.", SUMMARY_KEYS, "summary"
+    if "strongest" in text and "joint" in text:
+        return "Which joint has the strongest normalized disturbance evidence?", ["strongest_joint"], "strongest_joint"
+    if ("affected" in text or "materially" in text) and "joint" in text:
+        return "Which joints are materially affected, ranked by disturbance?", ["affected_joints"], "affected_joints"
+    if "evidence" in text and any(word in text for word in ("where", "interval", "sustained")):
+        return "Where is the strongest temporal evidence?", ["evidence_start_ms", "evidence_end_ms"], "evidence_interval"
+    if any(word in text for word in ("intentional", "accidental", "semantics", "classify", "free motion")):
+        return "Was the motion free, an intentional contact, or an accidental collision?", ["event_type"], "semantics"
+    if any(word in text for word in ("when", "onset", "begin", "timing")):
+        return "When did external contact begin?", ["onset_ms"], "onset"
+    if "contact" in text:
+        return "Did external contact occur?", ["contact"], "contact"
+    return "Diagnose this robot telemetry window.", SUMMARY_KEYS, "summary"
+
+
+def load_robust_normalization(path: str | Path) -> tuple[list[float], list[float], float]:
+    """Load immutable training-split statistics, never statistics from a query."""
+    payload = json.loads(Path(path).read_text())
+    center = payload.get("center_nm")
+    scale = payload.get("scale_nm")
+    clip = payload.get("clip")
+    if (not isinstance(center, list) or not isinstance(scale, list) or len(center) != 7 or len(scale) != 7
+            or not isinstance(clip, (int, float)) or clip <= 0
+            or any(not isinstance(x, (int, float)) or x <= 0 for x in scale)):
+        raise ValueError("Invalid robust normalization metadata")
+    return [float(x) for x in center], [float(x) for x in scale], float(clip)
+
+
+def prepare_sample(request: dict, series: list[dict], normalization: str, normalization_path: str | None = None) -> dict:
+    """Preserve selected samples and apply the declared training-compatible encoding.
+
+    ``train_robust`` uses immutable train-split median/MAD statistics rather
+    than statistics from the queried window. No annotation, event label,
+    answer, or future sample is accepted here.
     """
-    if normalization not in ("zscore_sample", "none"):
-        raise ValueError("Unknown normalization; expected zscore_sample or none")
+    if normalization not in ("zscore_sample", "train_robust", "none"):
+        raise ValueError("Unknown normalization")
+    robust = load_robust_normalization(normalization_path) if normalization == "train_robust" and normalization_path else None
+    if normalization == "train_robust" and robust is None:
+        raise ValueError("train_robust requires normalization_path")
     window = request["window"]
     if not (0 <= window["startSec"] < window["endSec"] <= request["playheadSec"]):
         raise ValueError("Invalid historical interval")
     if [s["channelId"] for s in series] != window["channelIds"]:
         raise ValueError("Channel order does not match query")
-    if not series:
-        raise ValueError("No input channels")
+    canonical_ids = [f"joint_{i}" for i in range(1, 8)]
+    if window["channelIds"] != canonical_ids or len(series) != 7:
+        raise ValueError("OpenTSLM requires all seven joints in canonical order")
+    if abs(window["endSec"] - window["startSec"] - 1.024) > 1e-8:
+        raise ValueError("OpenTSLM requires a 1.024-second window")
+    canonical_question, schema_keys, intent = question_contract(request["question"])
     descriptions, values = [], []
     reference_times = series[0]["timeSec"]
     for channel in series:
         times, raw = channel["timeSec"], channel["values"]
-        if len(raw) < 2 or len(raw) != len(times) or times != reference_times:
-            raise ValueError("Input channels must be aligned and contain at least two samples")
+        if len(raw) != 1024 or len(raw) != len(times) or times != reference_times:
+            raise ValueError("Input channels must be aligned and contain exactly 1024 raw samples")
         if any(not math.isfinite(v) for v in raw):
             raise ValueError("Input contains missing/nonfinite values")
         if any(not math.isfinite(t) or not window["startSec"] <= t < window["endSec"]
                or (i and t <= times[i - 1]) for i, t in enumerate(times)):
             raise ValueError("Input extends outside selected half-open interval")
+        if any(abs(t - (window["startSec"] + i / 1000)) > 1e-8 for i, t in enumerate(times)):
+            raise ValueError("Input must contain contiguous raw 1 kHz samples aligned to the window")
         mean, std = statistics.mean(raw), statistics.stdev(raw)
-        values.append([(v - mean) / (std + 1e-8) for v in raw]
-                      if normalization == "zscore_sample" else list(raw))
+        if normalization == "zscore_sample":
+            encoded = [(v - mean) / (std + 1e-8) for v in raw]
+        elif normalization == "train_robust":
+            center, scale, clip = robust
+            try:
+                joint_index = int(channel["channelId"].removeprefix("joint_")) - 1
+                joint_center, joint_scale = center[joint_index], scale[joint_index]
+            except (ValueError, IndexError):
+                raise ValueError(f"Unknown joint identity: {channel['channelId']}") from None
+            encoded = [max(-clip, min(clip, (v - joint_center) / joint_scale)) for v in raw]
+        else:
+            encoded = list(raw)
+        values.append(encoded)
+        joint_name = f"J{int(channel['channelId'].removeprefix('joint_'))}"
         descriptions.append(
-            f"{channel['channelId']}: signed external joint torque in Nm, sampled at 1000 Hz. "
-            f"{len(raw)} samples from {times[0]:.6f} to {times[-1]:.6f} seconds. "
-            f"Original mean {mean:.4f} Nm and sample std {std:.4f} Nm. "
-            f"Encoding: {normalization}."
+            f"{joint_name} external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. "
+            "The numeric values are normalized with train-only robust statistics."
         )
     return {
-        "pre_prompt": request["question"],
+        "pre_prompt": (
+            "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
+            "Use the numeric time series as primary evidence. "
+        ),
         "time_series_text": descriptions,
         "time_series": values,
-        "post_prompt": "Describe the observed time-series patterns. Answer:",
+        "post_prompt": (
+            f"\nQuestion: {canonical_question}\n"
+            f"Respond with `Answer:` and valid compact JSON containing only {schema_keys}, "
+            "then one short `Evidence:` sentence."
+        ),
         # Flamingo's training collator expects this field; never put targets here.
         "answer": "",
+        "intent": intent,
     }
 
 
@@ -96,7 +166,7 @@ class Runtime:
         cfg = self.config
         if cfg.get("architecture") != "sp":
             raise ValueError("This initial runtime supports SP only. Flamingo needs a checkpoint-specific loader review.")
-        if cfg.get("normalization") not in ("zscore_sample", "none"):
+        if cfg.get("normalization") not in ("zscore_sample", "train_robust", "none"):
             raise ValueError("Set normalization explicitly to match training")
         device = os.environ.get("TRACE_DEVICE", "cuda")
         if device not in ("cpu", "cuda"):
@@ -154,7 +224,7 @@ class Runtime:
 
         if cancelled.is_set():
             raise InterruptedError("Query cancelled")
-        sample = prepare_sample(request, series, self.config["normalization"])
+        sample = prepare_sample(request, series, self.config["normalization"], self.config.get("normalization_path"))
         trace = {
             "model": self.model_id, "revision": self.revision,
             "window": request["window"], "playheadSec": request["playheadSec"],

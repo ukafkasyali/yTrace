@@ -1,0 +1,40 @@
+# Evaluation-only baseline: benchmark labels are never used for fitting or model selection.
+model: Qwen/Qwen3-VL-4B-Instruct
+# Exact cached Hugging Face revision; vLLM must be started with this revision too.
+model_revision: ebb281ec70b05090aa6165b016eac8ec08e71b17
+endpoint: http://127.0.0.1:8000
+engine: vllm_openai_compatible
+minimum_vllm_version: "0.11.0"
+# Must describe the server that produced responses (none, bitsandbytes, awq, fp8, ...).
+quantization: none
+
+evaluation:
+  split: test
+  samples: 512
+  selection_seed: 20260912
+
+inference:
+  max_tokens: 256
+  temperature: 0.0
+  seed: 20260912
+  timeout_seconds: 180
+  max_retries: 3
+
+plot:
+  width_px: 1600
+  height_px: 1200
+  dpi: 100
+  # A shared per-window scale preserves cross-joint amplitude comparisons.
+  shared_y_axis: true
+  # Matches configs/data.yaml normalization_clip and is fixed across examples.
+  y_limit: 20.0
+  sampling_hz: 1000
+  line_width: 0.8
+
+wandb:
+  project: robot-observability
+  entity: null
+  run_name: qwen3-vl-4b-zero-shot-plots
+  mode: online
+  table_examples: 48
+  log_every: 10

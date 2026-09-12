@@ -1,0 +1,31 @@
+{
+  "limitations": [
+    "One KUKA LWR4+ platform; device transfer is untested.",
+    "Subject identifiers are unavailable; subject-disjoint evaluation cannot be certified.",
+    "Joint attribution and evidence intervals are deterministic pseudo-labels, not physical impact localization.",
+    "The model performs retrospective diagnosis on a complete window, not causal safety control."
+  ],
+  "session_counts": {
+    "test": 67,
+    "train": 311,
+    "validation": 67
+  },
+  "sessions": 445,
+  "window_counts": {
+    "test": {
+      "accidental": 1033,
+      "free": 1969,
+      "intentional": 1200
+    },
+    "train": {
+      "accidental": 9740,
+      "free": 9037,
+      "intentional": 10616
+    },
+    "validation": {
+      "accidental": 1057,
+      "free": 1946,
+      "intentional": 1075
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "verified_date": "2026-09-12",
+  "base_commit": "126a8c6",
+  "python": "3.14.4",
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "timenet_commit": "c39ca32b64ad0c89ea54093dbcb285c1a93eb006",
+  "environment": "Fresh isolated venv, installed data_ingestion[dev] and model_training[dev]",
+  "scope": "One original full recording from each part; not full-corpus validation",
+  "datasets": {
+    "part1": {
+      "dataset_id": "kuka/collision-part1",
+      "passed": true,
+      "checks": 17
+    },
+    "part2": {
+      "dataset_id": "kuka/contact-part2",
+      "passed": true,
+      "checks": 17
+    }
+  },
+  "source_files": {
+    "collision/03-15-12-53/JK_MsrExtTrq.mat": {
+      "bytes": 14848094,
+      "sha256": "c41126da7b26fc4aef6c4eea5470354ed2fa2156d87dce3ae5ce263fa1ee2d9e"
+    },
+    "collision/03-15-12-53/JK_PosMsr.mat": {
+      "bytes": 14848091,
+      "sha256": "b41d529ac54735ea242c7271447870866a969fef35c486105b8d96061a61a24d"
+    },
+    "collision/03-15-12-53/JK_moments.mat": {
+      "bytes": 292,
+      "sha256": "a00e831dc522bd2bef34e21aff99a8b82a9552e3b71f3566e803420f9b07ae2e"
+    },
+    "collision/03-15-12-53/JsmoExp.mat": {
+      "bytes": 1856200,
+      "sha256": "2783a02d8e6417740bfd07867668d16d7768fdf90a9e63cbe411192e3f8e068e"
+    },
+    "contact/03-22-11-18/JK_MsrExtTrq.mat": {
+      "bytes": 10822110,
+      "sha256": "3c060303b9aaf9d1150fc0b699bbd478600cb5d81a282c0a0b29899126c2e988"
+    },
+    "contact/03-22-11-18/JK_PosMsr.mat": {
+      "bytes": 10822107,
+      "sha256": "26da5d76440bcc80b9b6b0ea058e01c9433ab9f3e7cb05bd2a31f77acdcab06d"
+    },
+    "contact/03-22-11-18/JK_moments.mat": {
+      "bytes": 327,
+      "sha256": "83789a91b13f825a4bb0cf9bd9cba387217d9a42e7ecd4176b7bd37afe257525"
+    },
+    "contact/03-22-11-18/JsmoExp.mat": {
+      "bytes": 1352952,
+      "sha256": "140882371d0d17e1f70c977951e380e00108ae921287fe4295b234902fcb8891"
+    }
+  },
+  "built_registry_files": {
+    "kuka/collision-part1/1.0.0/annotations/part-00000000.parquet": {
+      "bytes": 4500,
+      "sha256": "f18be6842b00ab0e6b5afa7a8cde7362975215c2a8c6f60eb0ff5395ddb5917a"
+    },
+    "kuka/collision-part1/1.0.0/manifest.json": {
+      "bytes": 5754,
+      "sha256": "2f811d7ed5c3333a719b00e2daf208b943bee63bb12a3f86a72d1e4e02d66acf"
+    },
+    "kuka/collision-part1/1.0.0/records/part-00000000.parquet": {
+      "bytes": 7686,
+      "sha256": "54d3cac0d420025877e6b16748012a3ee939a3dcfd79b924a4f0faaff0b66aaa"
+    },
+    "kuka/collision-part1/1.0.0/time_series/part-00000000.parquet": {
+      "bytes": 4564067,
+      "sha256": "b38d13c3c286d96baf24e4499c9bc40bc2ff79cc419cf4827b487e448e3431c2"
+    },
+    "kuka/collision-part1/1.0.0/time_series/part-00000001.parquet": {
+      "bytes": 2841452,
+      "sha256": "40f9bba6f1dcd8a0f93f6562ddbcd9dd7ea19f029dfaf5c77296d485dfed6684"
+    },
+    "kuka/collision-part1/1.0.0/time_series_index/part-00000000.parquet": {
+      "bytes": 3568,
+      "sha256": "c14ceecf2ccacbe846f754b5a8101bcd9a6a7e4191a1711f10328c629c81627a"
+    },
+    "kuka/contact-part2/1.0.0/annotations/part-00000000.parquet": {
+      "bytes": 4711,
+      "sha256": "7cba5d66cd6b3a1145f3d94b170f59f97d88c370dd0d45d2f8eb6f4dad2398e4"
+    },
+    "kuka/contact-part2/1.0.0/manifest.json": {
+      "bytes": 5755,
+      "sha256": "d28b529fcf7418a308a5419c03dceaa3050afa570033ef3475b23ba80b3d500b"
+    },
+    "kuka/contact-part2/1.0.0/records/part-00000000.parquet": {
+      "bytes": 7721,
+      "sha256": "43ee908bf43a5ae0f1e13407d2809f8ba8f58ea0ff5504807356416437610323"
+    },
+    "kuka/contact-part2/1.0.0/time_series/part-00000000.parquet": {
+      "bytes": 3389361,
+      "sha256": "5195c888c6343293b52970ba5f11f8f1219e51487bec330fc64711ea265a345a"
+    },
+    "kuka/contact-part2/1.0.0/time_series/part-00000001.parquet": {
+      "bytes": 2118405,
+      "sha256": "d8343a5a887514d9ffa02ab15b60a0c75d94849fbc2690dea574192a68fc93ea"
+    },
+    "kuka/contact-part2/1.0.0/time_series_index/part-00000000.parquet": {
+      "bytes": 3568,
+      "sha256": "da58503747de210a1bb6a3925064be285302c0706d0fddf444d14d9251fa290c"
+    }
+  }
+}

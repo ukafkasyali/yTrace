@@ -6,12 +6,14 @@ from typing import Any
 
 import numpy as np
 
-from ..io.matlab import load_matlab
 from ..models import Event, Inference
+from .kuka_parser import collision_time_seconds, parse_collision_indices
 
 
 class KukaCollisionHints:
     """Evidence-backed hints specific to Part I of the KUKA collision dataset."""
+
+    event_label = "collision"
 
     signal_names = {
         "CmdTrq": "commanded_joint_torque",
@@ -49,22 +51,22 @@ class KukaCollisionHints:
         path = run_dir / "JK_moments.mat"
         if not path.exists():
             return []
-        loaded = load_matlab(path).variables
-        raw = np.asarray(loaded.get("JK_moments", [])).reshape(-1)
+        raw = parse_collision_indices(
+            path,
+            n_samples=int(time_axis.size) if time_axis is not None else None,
+        )
         result: list[Event] = []
         for position, raw_index in enumerate(raw):
             # MATLAB indices are one-based. Preserve the original and use index-1 only for lookup.
             index = int(raw_index)
-            event_time = None
-            if time_axis is not None and 1 <= index <= time_axis.size:
-                event_time = float(time_axis[index - 1])
+            event_time = collision_time_seconds(time_axis, index) if time_axis is not None else None
             result.append(
                 Event(
                     event_id=f"{run_dir.name}:event:{position + 1:03d}",
                     observed_index=index,
                     inferred_time_seconds=event_time,
                     interpretation=Inference(
-                        value="collision",
+                        value=self.event_label,
                         confidence=0.99,
                         evidence=[
                             "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
@@ -116,3 +118,37 @@ class KukaCollisionHints:
             "The intended prediction target and evaluation protocol are not specified by the raw batch.",
         ]
 
+
+class KukaContactPart2Hints(KukaCollisionHints):
+    """Part II semantics over the same shared KUKA MAT layout."""
+
+    event_label = "intentional_contact"
+
+    def parse_run_metadata(self, run_dir: Path) -> dict[str, Any]:
+        result = super().parse_run_metadata(run_dir)
+        result.update(
+            event_semantics=self.event_label,
+            event_semantics_source="Part II dataset identity",
+            raw_readme_event_label="Collision(ball)" if result.get("collision_object") else None,
+        )
+        return result
+
+    def semantic_claims(self) -> list[dict[str, Any]]:
+        claims = super().semantic_claims()
+        claims[1] = {
+            "subject": "JK_moments",
+            "value": "one_based_intentional_contact_sample_indices",
+            "confidence": 0.95,
+            "evidence": [
+                "Part II dataset identity describes intentional contacts",
+                "GenMoments.m defines JK_moments as the source marker vector",
+                "indices are one-based and are converted against the 1 kHz time axis",
+            ],
+        }
+        return claims
+
+    def unknowns(self) -> list[str]:
+        return super().unknowns() + [
+            "The downloaded per-run ReadMe.txt still labels its marker list Collision(ball); "
+            "the raw batch alone does not explain this conflict with the Part II intentional-contact identity."
+        ]

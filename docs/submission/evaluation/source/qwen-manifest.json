@@ -1,0 +1,3128 @@
+{
+  "actual_samples": 512,
+  "benchmark": "plot_vlm_zero_shot",
+  "class_counts": {
+    "accidental": 118,
+    "free": 241,
+    "intentional": 153
+  },
+  "inference": {
+    "max_tokens": 256,
+    "seed": 20260912,
+    "temperature": 0.0
+  },
+  "manifest_version": 1,
+  "model": "Qwen/Qwen3-VL-4B-Instruct",
+  "model_revision": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+  "plot": {
+    "dpi": 100,
+    "height_px": 1200,
+    "line_width": 0.8,
+    "sampling_hz": 1000,
+    "shared_y_axis": true,
+    "width_px": 1600,
+    "y_limit": 20.0
+  },
+  "prepared_records_sha256": "b58905b0f08d1b0f3bda56412f60c9299c4ad3a1aa593f4fd556d7b7b311b836",
+  "prepared_signals": {
+    "dtype": "float32",
+    "path": "data/prepared/v1/test/signals.npy",
+    "sha256": "a364a44013cec1680e1e47bc42b9f2de2a3a39d145155a86859a7d7b6e68cb70",
+    "shape": [
+      4202,
+      7,
+      1024
+    ],
+    "size_bytes": 120479872
+  },
+  "prompt_sha256": "876c1cb65cc4ec7c8c95a399f024322aa3869b7cbdf85262a6b2b4d3ab65d24c",
+  "prompt_version": "plot-summary-v1",
+  "quantization": "none",
+  "records": [
+    {
+      "dataset_index": 28,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-23/event-0028/crop-0",
+      "session_id": "accidental/05-26-11-23"
+    },
+    {
+      "dataset_index": 29,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-23/event-0029/crop-0",
+      "session_id": "accidental/05-26-11-23"
+    },
+    {
+      "dataset_index": 48,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-23/free-0016",
+      "session_id": "accidental/05-26-11-23"
+    },
+    {
+      "dataset_index": 60,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-23/free-0028",
+      "session_id": "accidental/05-26-11-23"
+    },
+    {
+      "dataset_index": 77,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-28/event-0014/crop-0",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 83,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-28/event-0020/crop-0",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 94,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0001",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 95,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0002",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 99,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0006",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 100,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0007",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 101,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0008",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 105,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0012",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 111,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0018",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 117,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-28/free-0024",
+      "session_id": "accidental/03-15-14-28"
+    },
+    {
+      "dataset_index": 123,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-13-38/event-0001/crop-0",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 128,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-13-38/event-0006/crop-0",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 153,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-13-38/event-0031/crop-0",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 155,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-13-38/event-0033/crop-0",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 158,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-13-38/event-0036/crop-0",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 163,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-13-38/event-0041/crop-0",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 170,
+      "event_type": "free",
+      "record_id": "accidental/05-26-13-38/free-0002",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 180,
+      "event_type": "free",
+      "record_id": "accidental/05-26-13-38/free-0012",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 197,
+      "event_type": "free",
+      "record_id": "accidental/05-26-13-38/free-0030",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 208,
+      "event_type": "free",
+      "record_id": "accidental/05-26-13-38/free-0041",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 211,
+      "event_type": "free",
+      "record_id": "accidental/05-26-13-38/free-0044",
+      "session_id": "accidental/05-26-13-38"
+    },
+    {
+      "dataset_index": 222,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-14-40/event-0010/crop-0",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 223,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-14-40/event-0011/crop-0",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 224,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-14-40/event-0012/crop-0",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 242,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-14-40/event-0030/crop-0",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 253,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-14-40/event-0041/crop-0",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 256,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-14-40/event-0044/crop-0",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 266,
+      "event_type": "free",
+      "record_id": "accidental/05-26-14-40/free-0022",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 268,
+      "event_type": "free",
+      "record_id": "accidental/05-26-14-40/free-0037",
+      "session_id": "accidental/05-26-14-40"
+    },
+    {
+      "dataset_index": 278,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-48/event-0002/crop-0",
+      "session_id": "accidental/05-27-16-48"
+    },
+    {
+      "dataset_index": 298,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-48/event-0022/crop-0",
+      "session_id": "accidental/05-27-16-48"
+    },
+    {
+      "dataset_index": 303,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-48/event-0027/crop-0",
+      "session_id": "accidental/05-27-16-48"
+    },
+    {
+      "dataset_index": 308,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-48/free-0001",
+      "session_id": "accidental/05-27-16-48"
+    },
+    {
+      "dataset_index": 316,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-48/free-0009",
+      "session_id": "accidental/05-27-16-48"
+    },
+    {
+      "dataset_index": 329,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-48/free-0022",
+      "session_id": "accidental/05-27-16-48"
+    },
+    {
+      "dataset_index": 344,
+      "event_type": "accidental",
+      "record_id": "accidental/05-25-18-58/event-0007/crop-0",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 357,
+      "event_type": "accidental",
+      "record_id": "accidental/05-25-18-58/event-0020/crop-0",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 371,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0005",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 372,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0007",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 375,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0010",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 376,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0011",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 381,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0016",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 385,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0020",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 389,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0024",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 391,
+      "event_type": "free",
+      "record_id": "accidental/05-25-18-58/free-0026",
+      "session_id": "accidental/05-25-18-58"
+    },
+    {
+      "dataset_index": 393,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-58/event-0000/crop-0",
+      "session_id": "accidental/03-15-14-58"
+    },
+    {
+      "dataset_index": 415,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-14/event-0005/crop-0",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 419,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-14/event-0009/crop-0",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 424,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-14/event-0014/crop-0",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 429,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-14/event-0019/crop-0",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 433,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-14/event-0023/crop-0",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 436,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-14/event-0026/crop-0",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 446,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-14/free-0001",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 447,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-14/free-0002",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 458,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-14/free-0013",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 460,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-14/free-0015",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 463,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-14/free-0018",
+      "session_id": "accidental/05-27-14-14"
+    },
+    {
+      "dataset_index": 480,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-15-54/event-0001/crop-0",
+      "session_id": "accidental/05-27-15-54"
+    },
+    {
+      "dataset_index": 488,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-15-54/event-0009/crop-0",
+      "session_id": "accidental/05-27-15-54"
+    },
+    {
+      "dataset_index": 506,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-15-54/event-0027/crop-0",
+      "session_id": "accidental/05-27-15-54"
+    },
+    {
+      "dataset_index": 511,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-15-54/event-0032/crop-0",
+      "session_id": "accidental/05-27-15-54"
+    },
+    {
+      "dataset_index": 535,
+      "event_type": "free",
+      "record_id": "accidental/05-27-15-54/free-0023",
+      "session_id": "accidental/05-27-15-54"
+    },
+    {
+      "dataset_index": 540,
+      "event_type": "free",
+      "record_id": "accidental/05-27-15-54/free-0028",
+      "session_id": "accidental/05-27-15-54"
+    },
+    {
+      "dataset_index": 544,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-47/event-0000/crop-0",
+      "session_id": "accidental/03-15-14-47"
+    },
+    {
+      "dataset_index": 547,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-47/event-0003/crop-0",
+      "session_id": "accidental/03-15-14-47"
+    },
+    {
+      "dataset_index": 549,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-47/event-0005/crop-0",
+      "session_id": "accidental/03-15-14-47"
+    },
+    {
+      "dataset_index": 575,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-26/event-0012/crop-0",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 580,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-26/event-0017/crop-0",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 584,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-26/event-0021/crop-0",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 597,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-26/event-0034/crop-0",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 622,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-26/free-0020",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 630,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-26/free-0028",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 636,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-26/free-0034",
+      "session_id": "accidental/05-27-11-26"
+    },
+    {
+      "dataset_index": 647,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-02/event-0007/crop-0",
+      "session_id": "accidental/05-28-20-02"
+    },
+    {
+      "dataset_index": 651,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-02/event-0011/crop-0",
+      "session_id": "accidental/05-28-20-02"
+    },
+    {
+      "dataset_index": 653,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-02/event-0013/crop-0",
+      "session_id": "accidental/05-28-20-02"
+    },
+    {
+      "dataset_index": 654,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-02/event-0014/crop-0",
+      "session_id": "accidental/05-28-20-02"
+    },
+    {
+      "dataset_index": 660,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-02/event-0020/crop-0",
+      "session_id": "accidental/05-28-20-02"
+    },
+    {
+      "dataset_index": 683,
+      "event_type": "free",
+      "record_id": "accidental/05-28-20-02/free-0013",
+      "session_id": "accidental/05-28-20-02"
+    },
+    {
+      "dataset_index": 711,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-22/event-0016/crop-0",
+      "session_id": "accidental/05-27-11-22"
+    },
+    {
+      "dataset_index": 736,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-22/free-0004",
+      "session_id": "accidental/05-27-11-22"
+    },
+    {
+      "dataset_index": 740,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-22/free-0008",
+      "session_id": "accidental/05-27-11-22"
+    },
+    {
+      "dataset_index": 746,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-22/free-0014",
+      "session_id": "accidental/05-27-11-22"
+    },
+    {
+      "dataset_index": 752,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-22/free-0020",
+      "session_id": "accidental/05-27-11-22"
+    },
+    {
+      "dataset_index": 762,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-22/free-0030",
+      "session_id": "accidental/05-27-11-22"
+    },
+    {
+      "dataset_index": 791,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-17/event-0023/crop-0",
+      "session_id": "accidental/05-26-11-17"
+    },
+    {
+      "dataset_index": 793,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-17/event-0025/crop-0",
+      "session_id": "accidental/05-26-11-17"
+    },
+    {
+      "dataset_index": 815,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-17/free-0013",
+      "session_id": "accidental/05-26-11-17"
+    },
+    {
+      "dataset_index": 816,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-17/free-0014",
+      "session_id": "accidental/05-26-11-17"
+    },
+    {
+      "dataset_index": 833,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-17/free-0032",
+      "session_id": "accidental/05-26-11-17"
+    },
+    {
+      "dataset_index": 843,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0009/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 845,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0011/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 848,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0014/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 849,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0015/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 850,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0016/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 856,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0022/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 857,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0023/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 863,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-12-09/event-0029/crop-0",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 890,
+      "event_type": "free",
+      "record_id": "accidental/05-26-12-09/free-0022",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 894,
+      "event_type": "free",
+      "record_id": "accidental/05-26-12-09/free-0026",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 897,
+      "event_type": "free",
+      "record_id": "accidental/05-26-12-09/free-0029",
+      "session_id": "accidental/05-26-12-09"
+    },
+    {
+      "dataset_index": 901,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-09/event-0000/crop-0",
+      "session_id": "accidental/05-28-20-09"
+    },
+    {
+      "dataset_index": 903,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-09/event-0002/crop-0",
+      "session_id": "accidental/05-28-20-09"
+    },
+    {
+      "dataset_index": 918,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-09/event-0017/crop-0",
+      "session_id": "accidental/05-28-20-09"
+    },
+    {
+      "dataset_index": 927,
+      "event_type": "accidental",
+      "record_id": "accidental/05-28-20-09/event-0026/crop-0",
+      "session_id": "accidental/05-28-20-09"
+    },
+    {
+      "dataset_index": 932,
+      "event_type": "free",
+      "record_id": "accidental/05-28-20-09/free-0001",
+      "session_id": "accidental/05-28-20-09"
+    },
+    {
+      "dataset_index": 959,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-53/event-0004/crop-0",
+      "session_id": "accidental/05-27-16-53"
+    },
+    {
+      "dataset_index": 971,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-53/event-0016/crop-0",
+      "session_id": "accidental/05-27-16-53"
+    },
+    {
+      "dataset_index": 975,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-53/event-0020/crop-0",
+      "session_id": "accidental/05-27-16-53"
+    },
+    {
+      "dataset_index": 985,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-53/event-0030/crop-0",
+      "session_id": "accidental/05-27-16-53"
+    },
+    {
+      "dataset_index": 990,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-53/free-0001",
+      "session_id": "accidental/05-27-16-53"
+    },
+    {
+      "dataset_index": 1015,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-53/free-0026",
+      "session_id": "accidental/05-27-16-53"
+    },
+    {
+      "dataset_index": 1037,
+      "event_type": "accidental",
+      "record_id": "accidental/04-22-13-19/event-0015/crop-0",
+      "session_id": "accidental/04-22-13-19"
+    },
+    {
+      "dataset_index": 1056,
+      "event_type": "free",
+      "record_id": "accidental/04-22-13-19/free-0001",
+      "session_id": "accidental/04-22-13-19"
+    },
+    {
+      "dataset_index": 1058,
+      "event_type": "free",
+      "record_id": "accidental/04-22-13-19/free-0003",
+      "session_id": "accidental/04-22-13-19"
+    },
+    {
+      "dataset_index": 1077,
+      "event_type": "free",
+      "record_id": "accidental/04-22-13-19/free-0022",
+      "session_id": "accidental/04-22-13-19"
+    },
+    {
+      "dataset_index": 1078,
+      "event_type": "free",
+      "record_id": "accidental/04-22-13-19/free-0023",
+      "session_id": "accidental/04-22-13-19"
+    },
+    {
+      "dataset_index": 1088,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-15-46/event-0001/crop-0",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1091,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-15-46/event-0004/crop-0",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1093,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-15-46/event-0006/crop-0",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1117,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-15-46/event-0030/crop-0",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1122,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0000",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1124,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0002",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1127,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0005",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1131,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0009",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1136,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0014",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1138,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0016",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1143,
+      "event_type": "free",
+      "record_id": "accidental/03-15-15-46/free-0021",
+      "session_id": "accidental/03-15-15-46"
+    },
+    {
+      "dataset_index": 1161,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-53/event-0007/crop-0",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1170,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-53/event-0016/crop-0",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1177,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-53/event-0023/crop-0",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1185,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-11-53/event-0031/crop-0",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1186,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-53/free-0000",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1188,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-53/free-0002",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1200,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-53/free-0014",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1210,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-53/free-0024",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1214,
+      "event_type": "free",
+      "record_id": "accidental/05-26-11-53/free-0028",
+      "session_id": "accidental/05-26-11-53"
+    },
+    {
+      "dataset_index": 1224,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0007/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1229,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0012/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1230,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0013/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1235,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0018/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1237,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0020/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1238,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0021/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1241,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0024/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1243,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0026/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1247,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-23/event-0030/crop-0",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1253,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0002",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1256,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0005",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1258,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0007",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1265,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0014",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1272,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0021",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1277,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0026",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1278,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-23/free-0027",
+      "session_id": "accidental/05-27-14-23"
+    },
+    {
+      "dataset_index": 1289,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-28/event-0005/crop-0",
+      "session_id": "accidental/05-27-16-28"
+    },
+    {
+      "dataset_index": 1323,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-28/free-0008",
+      "session_id": "accidental/05-27-16-28"
+    },
+    {
+      "dataset_index": 1341,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-28/free-0026",
+      "session_id": "accidental/05-27-16-28"
+    },
+    {
+      "dataset_index": 1343,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-28/free-0028",
+      "session_id": "accidental/05-27-16-28"
+    },
+    {
+      "dataset_index": 1364,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-36/event-0019/crop-0",
+      "session_id": "accidental/05-27-11-36"
+    },
+    {
+      "dataset_index": 1375,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-11-36/event-0030/crop-0",
+      "session_id": "accidental/05-27-11-36"
+    },
+    {
+      "dataset_index": 1399,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-36/free-0017",
+      "session_id": "accidental/05-27-11-36"
+    },
+    {
+      "dataset_index": 1403,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-36/free-0021",
+      "session_id": "accidental/05-27-11-36"
+    },
+    {
+      "dataset_index": 1405,
+      "event_type": "free",
+      "record_id": "accidental/05-27-11-36/free-0023",
+      "session_id": "accidental/05-27-11-36"
+    },
+    {
+      "dataset_index": 1419,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-17-01/event-0001/crop-0",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1420,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-17-01/event-0002/crop-0",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1434,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-17-01/event-0016/crop-0",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1438,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-17-01/event-0020/crop-0",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1439,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-17-01/event-0021/crop-0",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1447,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-17-01/event-0029/crop-0",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1450,
+      "event_type": "free",
+      "record_id": "accidental/05-27-17-01/free-0002",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1460,
+      "event_type": "free",
+      "record_id": "accidental/05-27-17-01/free-0012",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1473,
+      "event_type": "free",
+      "record_id": "accidental/05-27-17-01/free-0025",
+      "session_id": "accidental/05-27-17-01"
+    },
+    {
+      "dataset_index": 1481,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0004/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1483,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0006/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1488,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0011/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1499,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0022/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1502,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0025/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1504,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0027/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1511,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-14-57/event-0034/crop-0",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1513,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0000",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1516,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0003",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1518,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0005",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1520,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0007",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1537,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0024",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1538,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0025",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1539,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0026",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1547,
+      "event_type": "free",
+      "record_id": "accidental/05-27-14-57/free-0034",
+      "session_id": "accidental/05-27-14-57"
+    },
+    {
+      "dataset_index": 1548,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-13-41/event-0000/crop-0",
+      "session_id": "accidental/03-15-13-41"
+    },
+    {
+      "dataset_index": 1559,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-13-41/event-0011/crop-0",
+      "session_id": "accidental/03-15-13-41"
+    },
+    {
+      "dataset_index": 1581,
+      "event_type": "free",
+      "record_id": "accidental/03-15-13-41/free-0003",
+      "session_id": "accidental/03-15-13-41"
+    },
+    {
+      "dataset_index": 1584,
+      "event_type": "free",
+      "record_id": "accidental/03-15-13-41/free-0006",
+      "session_id": "accidental/03-15-13-41"
+    },
+    {
+      "dataset_index": 1585,
+      "event_type": "free",
+      "record_id": "accidental/03-15-13-41/free-0007",
+      "session_id": "accidental/03-15-13-41"
+    },
+    {
+      "dataset_index": 1592,
+      "event_type": "free",
+      "record_id": "accidental/03-15-13-41/free-0014",
+      "session_id": "accidental/03-15-13-41"
+    },
+    {
+      "dataset_index": 1609,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-16-57/event-0002/crop-0",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1613,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-16-57/event-0006/crop-0",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1624,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-16-57/event-0017/crop-0",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1637,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-16-57/event-0030/crop-0",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1650,
+      "event_type": "free",
+      "record_id": "accidental/03-15-16-57/free-0009",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1658,
+      "event_type": "free",
+      "record_id": "accidental/03-15-16-57/free-0017",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1672,
+      "event_type": "free",
+      "record_id": "accidental/03-15-16-57/free-0031",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1674,
+      "event_type": "free",
+      "record_id": "accidental/03-15-16-57/free-0033",
+      "session_id": "accidental/03-15-16-57"
+    },
+    {
+      "dataset_index": 1679,
+      "event_type": "accidental",
+      "record_id": "accidental/04-22-13-34/event-0004/crop-0",
+      "session_id": "accidental/04-22-13-34"
+    },
+    {
+      "dataset_index": 1703,
+      "event_type": "accidental",
+      "record_id": "accidental/04-22-13-34/event-0028/crop-0",
+      "session_id": "accidental/04-22-13-34"
+    },
+    {
+      "dataset_index": 1721,
+      "event_type": "free",
+      "record_id": "accidental/04-22-13-34/free-0012",
+      "session_id": "accidental/04-22-13-34"
+    },
+    {
+      "dataset_index": 1740,
+      "event_type": "free",
+      "record_id": "accidental/04-22-13-34/free-0031",
+      "session_id": "accidental/04-22-13-34"
+    },
+    {
+      "dataset_index": 1742,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-10-38/event-0000/crop-0",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1761,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-10-38/event-0019/crop-0",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1764,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-10-38/event-0022/crop-0",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1766,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-10-38/event-0024/crop-0",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1768,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-10-38/event-0026/crop-0",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1775,
+      "event_type": "accidental",
+      "record_id": "accidental/05-26-10-38/event-0033/crop-0",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1788,
+      "event_type": "free",
+      "record_id": "accidental/05-26-10-38/free-0012",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1790,
+      "event_type": "free",
+      "record_id": "accidental/05-26-10-38/free-0014",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1792,
+      "event_type": "free",
+      "record_id": "accidental/05-26-10-38/free-0016",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1794,
+      "event_type": "free",
+      "record_id": "accidental/05-26-10-38/free-0019",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1798,
+      "event_type": "free",
+      "record_id": "accidental/05-26-10-38/free-0023",
+      "session_id": "accidental/05-26-10-38"
+    },
+    {
+      "dataset_index": 1808,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-38/event-0000/crop-0",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1809,
+      "event_type": "accidental",
+      "record_id": "accidental/05-27-16-38/event-0001/crop-0",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1840,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0002",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1843,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0005",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1845,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0007",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1850,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0012",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1857,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0019",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1859,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0021",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1866,
+      "event_type": "free",
+      "record_id": "accidental/05-27-16-38/free-0028",
+      "session_id": "accidental/05-27-16-38"
+    },
+    {
+      "dataset_index": 1873,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-50/event-0006/crop-0",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1889,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-50/event-0022/crop-0",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1905,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-50/event-0038/crop-0",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1911,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-50/event-0044/crop-0",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1921,
+      "event_type": "accidental",
+      "record_id": "accidental/03-15-14-50/event-0054/crop-0",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1928,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0003",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1930,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0005",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1934,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0009",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1940,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0015",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1941,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0016",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1943,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0018",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1961,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0040",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1976,
+      "event_type": "free",
+      "record_id": "accidental/03-15-14-50/free-0055",
+      "session_id": "accidental/03-15-14-50"
+    },
+    {
+      "dataset_index": 1993,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-40/event-0015/crop-0",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 1996,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-40/event-0018/crop-0",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 2013,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-40/free-0002",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 2014,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-40/free-0003",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 2022,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-40/free-0011",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 2025,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-40/free-0014",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 2028,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-40/free-0019",
+      "session_id": "intentional/03-23-11-40"
+    },
+    {
+      "dataset_index": 2039,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-10-24/event-0004/crop-0",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2048,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-10-24/event-0013/crop-0",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2050,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-10-24/event-0015/crop-0",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2054,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-10-24/event-0019/crop-0",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2055,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-10-24/event-0020/crop-0",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2078,
+      "event_type": "free",
+      "record_id": "intentional/03-23-10-24/free-0012",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2083,
+      "event_type": "free",
+      "record_id": "intentional/03-23-10-24/free-0018",
+      "session_id": "intentional/03-23-10-24"
+    },
+    {
+      "dataset_index": 2103,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-24/event-0009/crop-0",
+      "session_id": "intentional/03-27-16-24"
+    },
+    {
+      "dataset_index": 2105,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-24/event-0011/crop-0",
+      "session_id": "intentional/03-27-16-24"
+    },
+    {
+      "dataset_index": 2124,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-24/event-0030/crop-0",
+      "session_id": "intentional/03-27-16-24"
+    },
+    {
+      "dataset_index": 2125,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-24/event-0031/crop-0",
+      "session_id": "intentional/03-27-16-24"
+    },
+    {
+      "dataset_index": 2139,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-24/free-0013",
+      "session_id": "intentional/03-27-16-24"
+    },
+    {
+      "dataset_index": 2148,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-24/free-0025",
+      "session_id": "intentional/03-27-16-24"
+    },
+    {
+      "dataset_index": 2163,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-18/event-0005/crop-0",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2168,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-18/event-0010/crop-0",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2169,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-18/event-0011/crop-0",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2173,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-18/event-0015/crop-0",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2179,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-18/event-0021/crop-0",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2200,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-18/free-0002",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2221,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-18/free-0024",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2225,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-18/free-0028",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2233,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-18/free-0036",
+      "session_id": "intentional/03-27-16-18"
+    },
+    {
+      "dataset_index": 2247,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0011/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2248,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0012/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2249,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0013/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2264,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0028/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2269,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0033/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2272,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0036/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2273,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-46/event-0037/crop-0",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2274,
+      "event_type": "free",
+      "record_id": "intentional/04-13-14-46/free-0000",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2293,
+      "event_type": "free",
+      "record_id": "intentional/04-13-14-46/free-0019",
+      "session_id": "intentional/04-13-14-46"
+    },
+    {
+      "dataset_index": 2310,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-40/event-0001/crop-0",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2311,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-40/event-0002/crop-0",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2324,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-40/event-0015/crop-0",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2355,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-40/free-0014",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2356,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-40/free-0015",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2357,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-40/free-0016",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2358,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-40/free-0017",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2367,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-40/free-0026",
+      "session_id": "intentional/03-23-09-40"
+    },
+    {
+      "dataset_index": 2386,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-42/event-0014/crop-0",
+      "session_id": "intentional/04-13-14-42"
+    },
+    {
+      "dataset_index": 2388,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-42/event-0016/crop-0",
+      "session_id": "intentional/04-13-14-42"
+    },
+    {
+      "dataset_index": 2390,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-14-42/event-0018/crop-0",
+      "session_id": "intentional/04-13-14-42"
+    },
+    {
+      "dataset_index": 2395,
+      "event_type": "free",
+      "record_id": "intentional/04-13-14-42/free-0004",
+      "session_id": "intentional/04-13-14-42"
+    },
+    {
+      "dataset_index": 2399,
+      "event_type": "free",
+      "record_id": "intentional/04-13-14-42/free-0008",
+      "session_id": "intentional/04-13-14-42"
+    },
+    {
+      "dataset_index": 2409,
+      "event_type": "intentional",
+      "record_id": "intentional/04-10-15-07/event-0000/crop-0",
+      "session_id": "intentional/04-10-15-07"
+    },
+    {
+      "dataset_index": 2420,
+      "event_type": "intentional",
+      "record_id": "intentional/04-10-15-07/event-0011/crop-0",
+      "session_id": "intentional/04-10-15-07"
+    },
+    {
+      "dataset_index": 2436,
+      "event_type": "free",
+      "record_id": "intentional/04-10-15-07/free-0007",
+      "session_id": "intentional/04-10-15-07"
+    },
+    {
+      "dataset_index": 2439,
+      "event_type": "free",
+      "record_id": "intentional/04-10-15-07/free-0010",
+      "session_id": "intentional/04-10-15-07"
+    },
+    {
+      "dataset_index": 2445,
+      "event_type": "free",
+      "record_id": "intentional/04-10-15-07/free-0016",
+      "session_id": "intentional/04-10-15-07"
+    },
+    {
+      "dataset_index": 2451,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-33/event-0002/crop-0",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2456,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-33/event-0007/crop-0",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2472,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-33/event-0023/crop-0",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2478,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-33/event-0029/crop-0",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2483,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-33/event-0034/crop-0",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2491,
+      "event_type": "free",
+      "record_id": "intentional/03-29-15-33/free-0008",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2503,
+      "event_type": "free",
+      "record_id": "intentional/03-29-15-33/free-0020",
+      "session_id": "intentional/03-29-15-33"
+    },
+    {
+      "dataset_index": 2521,
+      "event_type": "intentional",
+      "record_id": "intentional/04-10-17-19/event-0004/crop-0",
+      "session_id": "intentional/04-10-17-19"
+    },
+    {
+      "dataset_index": 2549,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-13-55/event-0011/crop-0",
+      "session_id": "intentional/03-23-13-55"
+    },
+    {
+      "dataset_index": 2568,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-13-55/event-0030/crop-0",
+      "session_id": "intentional/03-23-13-55"
+    },
+    {
+      "dataset_index": 2577,
+      "event_type": "free",
+      "record_id": "intentional/03-23-13-55/free-0007",
+      "session_id": "intentional/03-23-13-55"
+    },
+    {
+      "dataset_index": 2581,
+      "event_type": "free",
+      "record_id": "intentional/03-23-13-55/free-0011",
+      "session_id": "intentional/03-23-13-55"
+    },
+    {
+      "dataset_index": 2588,
+      "event_type": "free",
+      "record_id": "intentional/03-23-13-55/free-0018",
+      "session_id": "intentional/03-23-13-55"
+    },
+    {
+      "dataset_index": 2605,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-30/event-0005/crop-0",
+      "session_id": "intentional/03-23-11-30"
+    },
+    {
+      "dataset_index": 2613,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-30/event-0013/crop-0",
+      "session_id": "intentional/03-23-11-30"
+    },
+    {
+      "dataset_index": 2614,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-30/event-0014/crop-0",
+      "session_id": "intentional/03-23-11-30"
+    },
+    {
+      "dataset_index": 2615,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-30/event-0015/crop-0",
+      "session_id": "intentional/03-23-11-30"
+    },
+    {
+      "dataset_index": 2622,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-30/event-0022/crop-0",
+      "session_id": "intentional/03-23-11-30"
+    },
+    {
+      "dataset_index": 2657,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-44/event-0000/crop-0",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2668,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-44/event-0011/crop-0",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2678,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-44/event-0021/crop-0",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2681,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-44/event-0024/crop-0",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2682,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-44/event-0025/crop-0",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2692,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-44/event-0035/crop-0",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2698,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-44/free-0001",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2705,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-44/free-0009",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2722,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-44/free-0028",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2731,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-44/free-0037",
+      "session_id": "intentional/04-13-15-44"
+    },
+    {
+      "dataset_index": 2738,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-14/event-0005/crop-0",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2752,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-14/event-0019/crop-0",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2754,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-14/event-0021/crop-0",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2759,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-14/event-0026/crop-0",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2765,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-14/event-0032/crop-0",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2784,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-14/free-0006",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2790,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-14/free-0015",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2791,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-14/free-0016",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2799,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-14/free-0025",
+      "session_id": "intentional/04-13-15-14"
+    },
+    {
+      "dataset_index": 2817,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-38/event-0003/crop-0",
+      "session_id": "intentional/04-13-15-38"
+    },
+    {
+      "dataset_index": 2818,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-38/event-0004/crop-0",
+      "session_id": "intentional/04-13-15-38"
+    },
+    {
+      "dataset_index": 2825,
+      "event_type": "intentional",
+      "record_id": "intentional/04-13-15-38/event-0011/crop-0",
+      "session_id": "intentional/04-13-15-38"
+    },
+    {
+      "dataset_index": 2838,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-38/free-0007",
+      "session_id": "intentional/04-13-15-38"
+    },
+    {
+      "dataset_index": 2845,
+      "event_type": "free",
+      "record_id": "intentional/04-13-15-38/free-0014",
+      "session_id": "intentional/04-13-15-38"
+    },
+    {
+      "dataset_index": 2857,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0009/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2869,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0021/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2872,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0024/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2873,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0025/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2882,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0034/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2883,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0035/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2887,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-33/event-0039/crop-0",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2900,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-33/free-0016",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2902,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-33/free-0019",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2910,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-33/free-0027",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2913,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-33/free-0031",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2915,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-33/free-0033",
+      "session_id": "intentional/03-27-16-33"
+    },
+    {
+      "dataset_index": 2930,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-14-17/event-0011/crop-0",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 2937,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-14-17/event-0018/crop-0",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 2951,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-14-17/event-0032/crop-0",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 2963,
+      "event_type": "free",
+      "record_id": "intentional/03-29-14-17/free-0002",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 2978,
+      "event_type": "free",
+      "record_id": "intentional/03-29-14-17/free-0017",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 2984,
+      "event_type": "free",
+      "record_id": "intentional/03-29-14-17/free-0024",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 2998,
+      "event_type": "free",
+      "record_id": "intentional/03-29-14-17/free-0040",
+      "session_id": "intentional/03-29-14-17"
+    },
+    {
+      "dataset_index": 3003,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-40/event-0004/crop-0",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3004,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-40/event-0005/crop-0",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3009,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-40/event-0010/crop-0",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3018,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-40/event-0019/crop-0",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3027,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-40/event-0028/crop-0",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3041,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-40/event-0042/crop-0",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3043,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-40/free-0001",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3047,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-40/free-0008",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3051,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-40/free-0014",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3052,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-40/free-0017",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3056,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-40/free-0022",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3064,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-40/free-0030",
+      "session_id": "intentional/03-27-16-40"
+    },
+    {
+      "dataset_index": 3078,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-14-12/event-0002/crop-0",
+      "session_id": "intentional/03-29-14-12"
+    },
+    {
+      "dataset_index": 3079,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-14-12/event-0003/crop-0",
+      "session_id": "intentional/03-29-14-12"
+    },
+    {
+      "dataset_index": 3085,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-14-12/event-0009/crop-0",
+      "session_id": "intentional/03-29-14-12"
+    },
+    {
+      "dataset_index": 3092,
+      "event_type": "free",
+      "record_id": "intentional/03-29-14-12/free-0004",
+      "session_id": "intentional/03-29-14-12"
+    },
+    {
+      "dataset_index": 3103,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0006/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3105,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0008/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3106,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0009/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3111,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0014/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3116,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0019/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3117,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0020/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3125,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-55/event-0028/crop-0",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3158,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-55/free-0025",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3159,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-55/free-0026",
+      "session_id": "intentional/03-23-16-55"
+    },
+    {
+      "dataset_index": 3168,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-17-05/event-0000/crop-0",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3188,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-17-05/event-0020/crop-0",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3191,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-17-05/event-0023/crop-0",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3198,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-17-05/event-0030/crop-0",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3228,
+      "event_type": "free",
+      "record_id": "intentional/03-22-17-05/free-0027",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3230,
+      "event_type": "free",
+      "record_id": "intentional/03-22-17-05/free-0029",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3233,
+      "event_type": "free",
+      "record_id": "intentional/03-22-17-05/free-0032",
+      "session_id": "intentional/03-22-17-05"
+    },
+    {
+      "dataset_index": 3234,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-20/event-0000/crop-0",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3238,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-20/event-0004/crop-0",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3245,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-20/event-0011/crop-0",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3269,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-20/event-0035/crop-0",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3273,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-20/free-0004",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3277,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-20/free-0008",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3298,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-20/free-0030",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3300,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-20/free-0032",
+      "session_id": "intentional/03-23-16-20"
+    },
+    {
+      "dataset_index": 3304,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-38/event-0001/crop-0",
+      "session_id": "intentional/03-29-15-38"
+    },
+    {
+      "dataset_index": 3311,
+      "event_type": "intentional",
+      "record_id": "intentional/03-29-15-38/event-0008/crop-0",
+      "session_id": "intentional/03-29-15-38"
+    },
+    {
+      "dataset_index": 3346,
+      "event_type": "free",
+      "record_id": "intentional/03-29-15-38/free-0009",
+      "session_id": "intentional/03-29-15-38"
+    },
+    {
+      "dataset_index": 3362,
+      "event_type": "free",
+      "record_id": "intentional/03-29-15-38/free-0025",
+      "session_id": "intentional/03-29-15-38"
+    },
+    {
+      "dataset_index": 3366,
+      "event_type": "free",
+      "record_id": "intentional/03-29-15-38/free-0029",
+      "session_id": "intentional/03-29-15-38"
+    },
+    {
+      "dataset_index": 3372,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0002/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3376,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0006/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3379,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0009/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3385,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0015/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3389,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0019/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3392,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0022/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3397,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-24/event-0027/crop-0",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3410,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-24/free-0004",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3411,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-24/free-0005",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3422,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-24/free-0016",
+      "session_id": "intentional/03-22-11-24"
+    },
+    {
+      "dataset_index": 3446,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0004/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3456,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0014/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3459,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0017/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3464,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0022/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3467,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0025/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3472,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0030/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3474,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-17-22/event-0032/crop-0",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3481,
+      "event_type": "free",
+      "record_id": "intentional/03-27-17-22/free-0007",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3482,
+      "event_type": "free",
+      "record_id": "intentional/03-27-17-22/free-0008",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3484,
+      "event_type": "free",
+      "record_id": "intentional/03-27-17-22/free-0010",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3486,
+      "event_type": "free",
+      "record_id": "intentional/03-27-17-22/free-0014",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3491,
+      "event_type": "free",
+      "record_id": "intentional/03-27-17-22/free-0019",
+      "session_id": "intentional/03-27-17-22"
+    },
+    {
+      "dataset_index": 3505,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-12-00/event-0001/crop-0",
+      "session_id": "intentional/03-23-12-00"
+    },
+    {
+      "dataset_index": 3512,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-12-00/event-0008/crop-0",
+      "session_id": "intentional/03-23-12-00"
+    },
+    {
+      "dataset_index": 3515,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-12-00/event-0011/crop-0",
+      "session_id": "intentional/03-23-12-00"
+    },
+    {
+      "dataset_index": 3517,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-12-00/event-0013/crop-0",
+      "session_id": "intentional/03-23-12-00"
+    },
+    {
+      "dataset_index": 3524,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-12-00/event-0020/crop-0",
+      "session_id": "intentional/03-23-12-00"
+    },
+    {
+      "dataset_index": 3545,
+      "event_type": "free",
+      "record_id": "intentional/03-23-12-00/free-0008",
+      "session_id": "intentional/03-23-12-00"
+    },
+    {
+      "dataset_index": 3592,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-25/event-0027/crop-0",
+      "session_id": "intentional/03-23-11-25"
+    },
+    {
+      "dataset_index": 3593,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-11-25/event-0028/crop-0",
+      "session_id": "intentional/03-23-11-25"
+    },
+    {
+      "dataset_index": 3606,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-25/free-0009",
+      "session_id": "intentional/03-23-11-25"
+    },
+    {
+      "dataset_index": 3610,
+      "event_type": "free",
+      "record_id": "intentional/03-23-11-25/free-0013",
+      "session_id": "intentional/03-23-11-25"
+    },
+    {
+      "dataset_index": 3631,
+      "event_type": "free",
+      "record_id": "intentional/03-23-18-19/free-0000",
+      "session_id": "intentional/03-23-18-19"
+    },
+    {
+      "dataset_index": 3651,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-18/event-0014/crop-0",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3654,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-18/event-0017/crop-0",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3659,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-11-18/event-0022/crop-0",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3675,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0002",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3679,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0006",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3680,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0007",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3682,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0009",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3684,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0011",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3685,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0013",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3687,
+      "event_type": "free",
+      "record_id": "intentional/03-22-11-18/free-0015",
+      "session_id": "intentional/03-22-11-18"
+    },
+    {
+      "dataset_index": 3710,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0003/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3717,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0010/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3720,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0013/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3726,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0019/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3730,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0023/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3742,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0035/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3744,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-14-03/event-0037/crop-0",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3752,
+      "event_type": "free",
+      "record_id": "intentional/03-23-14-03/free-0007",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3756,
+      "event_type": "free",
+      "record_id": "intentional/03-23-14-03/free-0011",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3763,
+      "event_type": "free",
+      "record_id": "intentional/03-23-14-03/free-0021",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3775,
+      "event_type": "free",
+      "record_id": "intentional/03-23-14-03/free-0035",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3776,
+      "event_type": "free",
+      "record_id": "intentional/03-23-14-03/free-0036",
+      "session_id": "intentional/03-23-14-03"
+    },
+    {
+      "dataset_index": 3792,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-15-11/event-0015/crop-0",
+      "session_id": "intentional/03-27-15-11"
+    },
+    {
+      "dataset_index": 3815,
+      "event_type": "free",
+      "record_id": "intentional/03-27-15-11/free-0003",
+      "session_id": "intentional/03-27-15-11"
+    },
+    {
+      "dataset_index": 3821,
+      "event_type": "free",
+      "record_id": "intentional/03-27-15-11/free-0009",
+      "session_id": "intentional/03-27-15-11"
+    },
+    {
+      "dataset_index": 3824,
+      "event_type": "free",
+      "record_id": "intentional/03-27-15-11/free-0012",
+      "session_id": "intentional/03-27-15-11"
+    },
+    {
+      "dataset_index": 3837,
+      "event_type": "free",
+      "record_id": "intentional/03-27-15-11/free-0025",
+      "session_id": "intentional/03-27-15-11"
+    },
+    {
+      "dataset_index": 3843,
+      "event_type": "free",
+      "record_id": "intentional/03-27-15-11/free-0031",
+      "session_id": "intentional/03-27-15-11"
+    },
+    {
+      "dataset_index": 3853,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-28/event-0007/crop-0",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3858,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-28/event-0012/crop-0",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3865,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-28/event-0019/crop-0",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3872,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-28/event-0026/crop-0",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3882,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-28/event-0036/crop-0",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3888,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-16-28/event-0042/crop-0",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3899,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-28/free-0012",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3901,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-28/free-0014",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3913,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-28/free-0029",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3920,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-28/free-0036",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3921,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-28/free-0037",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3928,
+      "event_type": "free",
+      "record_id": "intentional/03-27-16-28/free-0044",
+      "session_id": "intentional/03-27-16-28"
+    },
+    {
+      "dataset_index": 3937,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-13-15/event-0007/crop-0",
+      "session_id": "intentional/03-22-13-15"
+    },
+    {
+      "dataset_index": 3948,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-13-15/event-0018/crop-0",
+      "session_id": "intentional/03-22-13-15"
+    },
+    {
+      "dataset_index": 3950,
+      "event_type": "intentional",
+      "record_id": "intentional/03-22-13-15/event-0020/crop-0",
+      "session_id": "intentional/03-22-13-15"
+    },
+    {
+      "dataset_index": 3973,
+      "event_type": "free",
+      "record_id": "intentional/03-22-13-15/free-0008",
+      "session_id": "intentional/03-22-13-15"
+    },
+    {
+      "dataset_index": 3975,
+      "event_type": "free",
+      "record_id": "intentional/03-22-13-15/free-0010",
+      "session_id": "intentional/03-22-13-15"
+    },
+    {
+      "dataset_index": 3987,
+      "event_type": "free",
+      "record_id": "intentional/03-22-13-15/free-0025",
+      "session_id": "intentional/03-22-13-15"
+    },
+    {
+      "dataset_index": 3997,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-50/event-0002/crop-0",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4002,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-50/event-0007/crop-0",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4005,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-50/event-0010/crop-0",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4015,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-50/event-0020/crop-0",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4022,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-09-50/event-0027/crop-0",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4033,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-50/free-0004",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4045,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-50/free-0016",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4046,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-50/free-0017",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4049,
+      "event_type": "free",
+      "record_id": "intentional/03-23-09-50/free-0020",
+      "session_id": "intentional/03-23-09-50"
+    },
+    {
+      "dataset_index": 4066,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0003/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4068,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0005/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4074,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0011/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4075,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0012/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4085,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0022/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4087,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0024/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4091,
+      "event_type": "intentional",
+      "record_id": "intentional/03-23-16-25/event-0028/crop-0",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4096,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-25/free-0002",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4100,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-25/free-0006",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4122,
+      "event_type": "free",
+      "record_id": "intentional/03-23-16-25/free-0028",
+      "session_id": "intentional/03-23-16-25"
+    },
+    {
+      "dataset_index": 4130,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-13-43/event-0006/crop-0",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4146,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-13-43/event-0022/crop-0",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4147,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-13-43/event-0023/crop-0",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4148,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-13-43/event-0024/crop-0",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4165,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-13-43/event-0041/crop-0",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4166,
+      "event_type": "intentional",
+      "record_id": "intentional/03-27-13-43/event-0042/crop-0",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4174,
+      "event_type": "free",
+      "record_id": "intentional/03-27-13-43/free-0005",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4179,
+      "event_type": "free",
+      "record_id": "intentional/03-27-13-43/free-0011",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4190,
+      "event_type": "free",
+      "record_id": "intentional/03-27-13-43/free-0026",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4194,
+      "event_type": "free",
+      "record_id": "intentional/03-27-13-43/free-0035",
+      "session_id": "intentional/03-27-13-43"
+    },
+    {
+      "dataset_index": 4197,
+      "event_type": "free",
+      "record_id": "intentional/03-27-13-43/free-0039",
+      "session_id": "intentional/03-27-13-43"
+    }
+  ],
+  "requested_samples": 512,
+  "selection": "NumPy PCG64 fixed random subset without replacement; sorted dataset indices",
+  "selection_seed": 20260912,
+  "server_info": {
+    "endpoint": "http://127.0.0.1:8001",
+    "served_models": [
+      "Qwen/Qwen3-VL-4B-Instruct"
+    ],
+    "vllm_version": "0.29.0"
+  },
+  "serving_backend": "vllm_openai_compatible",
+  "split": "test",
+  "training_performed": false
+}

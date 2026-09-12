@@ -1,0 +1,130 @@
+{
+  "purpose": "Connection smoke test, not a KUKA accuracy benchmark",
+  "request": {
+    "mode": "direct",
+    "modelId": "opentslm",
+    "question": "Describe how the joint torque signals change during this interval.",
+    "window": {
+      "datasetId": "zenodo-21927431",
+      "recordingId": "05-28-21-25",
+      "startSec": 5.787,
+      "endSec": 6.811,
+      "channelIds": [
+        "joint_1",
+        "joint_2",
+        "joint_3",
+        "joint_4",
+        "joint_5",
+        "joint_6",
+        "joint_7"
+      ]
+    },
+    "playheadSec": 8
+  },
+  "model": {
+    "id": "opentslm",
+    "label": "OpenTSLM",
+    "available": true,
+    "capabilities": [
+      "language"
+    ],
+    "revision": "checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown"
+  },
+  "events": [
+    {
+      "id": "1",
+      "queryId": "592d52673d32469a960a0ef638a3c8d4",
+      "type": "tool.started",
+      "payload": {
+        "callId": "inference-592d52673d32469a960a0ef638a3c8d4",
+        "tool": "opentslm",
+        "label": "Running OpenTSLM on selected raw telemetry"
+      }
+    },
+    {
+      "id": "2",
+      "queryId": "592d52673d32469a960a0ef638a3c8d4",
+      "type": "tool.completed",
+      "payload": {
+        "callId": "inference-592d52673d32469a960a0ef638a3c8d4",
+        "summary": "OpenTSLM generation completed; explanation has not been independently verified."
+      }
+    },
+    {
+      "id": "3",
+      "queryId": "592d52673d32469a960a0ef638a3c8d4",
+      "type": "answer.completed",
+      "payload": {
+        "answer": "Measured in this selected window\nLargest observed torque ranges: Joint 2 (4.456 Nm range), Joint 1 (3.088 Nm range), Joint 4 (2.451 Nm range).\n\nOpenTSLM interpretation\nOpenTSLM predicts external contact. Interaction class: accidental. Strongest predicted disturbance: J4. Affected joints: J4, J1. Predicted onset: 276 ms after the window starts. Predicted evidence interval: 295\u2013325 ms. Treat these generated predictions as leads, not verified physical facts.",
+        "modelOutput": "Answer: {\"affected_joints\":[\"J4\",\"J1\"],\"contact\":true,\"event_type\":\"accidental\",\"evidence_end_ms\":325,\"evidence_start_ms\":295,\"onset_ms\":276,\"strongest_joint\":\"J4\"}\nEvidence: The manual event marker is at 276 ms; calibrated top joint scores are J4=1.31, J1=1.28, J2=0.91. Sustained evidence spans 295\u2013325 ms.",
+        "modelId": "team-opentslm",
+        "modelRevision": "checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown",
+        "inputTrace": {
+          "model": "team-opentslm",
+          "revision": "checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown",
+          "window": {
+            "datasetId": "zenodo-21927431",
+            "recordingId": "05-28-21-25",
+            "startSec": 5.787,
+            "endSec": 6.811,
+            "channelIds": [
+              "joint_1",
+              "joint_2",
+              "joint_3",
+              "joint_4",
+              "joint_5",
+              "joint_6",
+              "joint_7"
+            ]
+          },
+          "playheadSec": 8,
+          "samplesPerChannel": 1024,
+          "inputSha256": "7e78c56206491b03af817e11f1aaec165c5271675164d2e0a68ea579c4c92915",
+          "normalization": "train_robust",
+          "padding": "zero to multiple of 4 after normalization; no resampling",
+          "latencyMs": 2165
+        },
+        "evidence": [
+          {
+            "id": "input-592d52673d32469a960a0ef638a3c8d4",
+            "window": {
+              "datasetId": "zenodo-21927431",
+              "recordingId": "05-28-21-25",
+              "startSec": 5.787,
+              "endSec": 6.811,
+              "channelIds": [
+                "joint_1",
+                "joint_2",
+                "joint_3",
+                "joint_4",
+                "joint_5",
+                "joint_6",
+                "joint_7"
+              ]
+            },
+            "label": "Input telemetry (not a verified explanation)",
+            "source": "team-opentslm@checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown"
+          }
+        ],
+        "measurements": [
+          {
+            "channel": "joint_2",
+            "range": 4.456374,
+            "peak": 3.154086
+          },
+          {
+            "channel": "joint_1",
+            "range": 3.088358,
+            "peak": 3.070161
+          },
+          {
+            "channel": "joint_4",
+            "range": 2.4510229999999997,
+            "peak": 2.006147
+          }
+        ]
+      }
+    }
+  ],
+  "roundTripMs": 2307
+}

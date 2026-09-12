@@ -1,0 +1,71 @@
+{
+  "source": "Team Nebius training artifacts, retrieved 2026-09-12; original bytes preserved",
+  "checkpoint_sha256": "8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23",
+  "files": {
+    "opentslm.jsonl.gz": {
+      "sha256_uncompressed": "edbe79047a85f01c021b514fc153b256a72f8345a12ee026a08581057bda3bc2",
+      "bytes_uncompressed": 340429,
+      "original_relative_path": "artifacts/evaluation/llama-har-sp-canary-v4-20260912-test/predictions.jsonl"
+    },
+    "zero-signal.jsonl.gz": {
+      "sha256_uncompressed": "a095d6261b5a5c16f33184a6fb852e59469dcb1e929a9d90b4ecd430ee8ab4db",
+      "bytes_uncompressed": 263718,
+      "original_relative_path": "artifacts/evaluation/llama-har-sp-canary-v4-20260912-test-zero-signal/predictions.jsonl"
+    },
+    "qwen.jsonl.gz": {
+      "sha256_uncompressed": "de56d632d9553684cd4b07e5cc8bfbcc00fc4971b087294a4f227fae75b66ca8",
+      "bytes_uncompressed": 587237,
+      "original_relative_path": "artifacts/evaluation/qwen3-vl-4b-bf16-plot-test/predictions.jsonl"
+    },
+    "features.jsonl.gz": {
+      "sha256_uncompressed": "f41f7772ca7a0b6543c6cd5a47c110706f314077d86345b73805dde55d355f4c",
+      "bytes_uncompressed": 233971,
+      "original_relative_path": "artifacts/baseline/signal-features-512/test_predictions.jsonl"
+    },
+    "test-records.jsonl.gz": {
+      "sha256_uncompressed": "b58905b0f08d1b0f3bda56412f60c9299c4ad3a1aa593f4fd556d7b7b311b836",
+      "bytes_uncompressed": 5032514,
+      "original_relative_path": "data/prepared/v1/test/records.jsonl"
+    },
+    "splits.json": {
+      "sha256_uncompressed": "399923b13605703115022bf39c8de2cfdad512e96e39529fd82ac630cfac860c",
+      "bytes_uncompressed": 16975,
+      "original_relative_path": "data/prepared/v1/splits.json"
+    },
+    "normalization.json": {
+      "sha256_uncompressed": "f29e5dea6846d14ef7dc4da6ee55addca264b33439d0de4f8c57201a578f334b",
+      "bytes_uncompressed": 628,
+      "original_relative_path": "data/prepared/v1/normalization.json"
+    },
+    "features-manifest.json": {
+      "sha256_uncompressed": "8010c26bcfcd4b84f933e7b37e9c6a7fad40e27ee4470e768dff77bac3729f02",
+      "bytes_uncompressed": 23237,
+      "original_relative_path": "artifacts/baseline/signal-features-512/manifest.json"
+    },
+    "qwen-manifest.json": {
+      "sha256_uncompressed": "7e9f262b586b9f2de14442d2bc98812cd5e4e080e95f59cf80af2a42160d1173",
+      "bytes_uncompressed": 92891,
+      "original_relative_path": "artifacts/evaluation/qwen3-vl-4b-bf16-plot-test/manifest.json"
+    },
+    "opentslm-metrics.json": {
+      "sha256_uncompressed": "e4b77e8203caad3111fe12e10b6d14533fa88a52b0b7dde253a275d9e666a7d1",
+      "bytes_uncompressed": 1377,
+      "original_relative_path": "artifacts/evaluation/llama-har-sp-canary-v4-20260912-test/metrics.json"
+    },
+    "qwen-metrics.json": {
+      "sha256_uncompressed": "d0180ebf0a7a38a7062d93f2be3a0486a8221366b80e68a4f7b4af398f54756b",
+      "bytes_uncompressed": 1470,
+      "original_relative_path": "artifacts/evaluation/qwen3-vl-4b-bf16-plot-test/metrics.json"
+    },
+    "features-metrics.json": {
+      "sha256_uncompressed": "b1364081b4e155c7d3cf2b2b72b0ea2b9e5310df21399e29373b55ec220fec90",
+      "bytes_uncompressed": 1250,
+      "original_relative_path": "artifacts/baseline/signal-features-512/metrics.json"
+    },
+    "dataset-summary.json": {
+      "sha256_uncompressed": "f3a5de5835cddae38ccc2ceece54f6dc62d94eeab287abd881bc8d163440740e",
+      "bytes_uncompressed": 807,
+      "original_relative_path": "data/prepared/v1/dataset_summary.json"
+    }
+  }
+}

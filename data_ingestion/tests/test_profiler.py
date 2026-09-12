@@ -14,6 +14,16 @@ from dataset_profiler.profiler import profile_dataset
 
 
 class ProfilerTests(unittest.TestCase):
+    def test_event_indices_are_not_inferred_as_a_time_axis(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            savemat(root / "JK_moments.mat", {"JK_moments": np.array([[100, 200, 300]])})
+            profile = profile_dataset(root, "fixture", hints=KukaCollisionHints())
+            self.assertIsNone(profile.runs[0].sampling_rate_hz)
+            self.assertIsNone(profile.runs[0].sequence_length)
+            self.assertEqual(len(profile.runs[0].events), 3)
+            self.assertTrue(all(e.inferred_time_seconds is None for e in profile.runs[0].events))
+
     def test_inspector_reports_numeric_details(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "signal.mat"

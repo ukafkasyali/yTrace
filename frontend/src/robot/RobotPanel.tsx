@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Flag, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { COLORS } from '../lib/format';
-import type { DemoData } from '../types';
+import type { DemoData, Interval } from '../types';
 import { createRobotScene, validateGeometry, type RobotGeometry } from './scene';
-import { positionAtPlayhead, torqueAtPlayhead, validatePositions, type PositionData } from './telemetry';
+import { positionAtPlayhead, positionFixture, torqueAtPlayhead, validatePositions, type PositionData } from './telemetry';
 
-type Props = { data: DemoData; playhead: number; highlighted: string[]; onHighlight: (id: string) => void };
-export default function RobotPanel({ data, playhead, highlighted, onHighlight }: Props) {
+type Props = { data: DemoData; playhead: number; interval: Interval; highlighted: string[]; onHighlight: (id: string) => void };
+export default function RobotPanel({ data, playhead, interval, highlighted, onHighlight }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<ReturnType<typeof createRobotScene> | null>(null);
   const callback = useRef(onHighlight); callback.current = onHighlight;
@@ -21,11 +21,12 @@ export default function RobotPanel({ data, playhead, highlighted, onHighlight }:
   useEffect(() => {
     const controller = new AbortController(); let alive = true;
     setLoading(true); setError(''); setPositions(null); setPositionError('');
-    const positionRequest = data.recording.id === '05-28-21-25'
-      ? fetch('/robot/kuka/positions.json', { signal: controller.signal }).then(async response => {
+    const positionUrl = positionFixture(data.recording.id);
+    const positionRequest = positionUrl
+      ? fetch(positionUrl, { signal: controller.signal }).then(async response => {
         if (!response.ok) throw new Error('Measured joint positions could not be loaded.');
         const value: unknown = await response.json(); validatePositions(value, data.recording.id);
-        if (value.times[value.times.length - 1] > data.recording.durationSeconds) throw new Error('Position timing does not match this recording.');
+        if ((value.endSeconds ?? value.times[value.times.length - 1]) > data.recording.durationSeconds + 1e-8) throw new Error('Position timing does not match this recording.');
         return { value, message: '' };
       }).catch(() => ({ value: null, message: 'Positions unavailable · fixed illustrative pose' }))
       : Promise.resolve({ value: null, message: 'No validated positions for this recording · fixed illustrative pose' });
@@ -58,12 +59,14 @@ export default function RobotPanel({ data, playhead, highlighted, onHighlight }:
   }, [positions, playhead, data.recording.id]);
   const sample = torqueAtPlayhead(data, playhead);
   const measured = positions ? positionAtPlayhead(positions, data.recording.id, playhead) : null;
-  const poseStatus = measured ? `Measured articulation · ${measured.time.toFixed(3)} s` : loading ? 'Loading joint positions…' : 'Fixed illustrative pose';
+  const poseStatus = measured ? `Recorded articulation · ${measured.time.toFixed(3)} s` : loading ? 'Loading joint positions…' : 'Fixed illustrative pose';
+  const selectedMarker = data.events.find(event => event.timeSeconds >= interval.start && event.timeSeconds < interval.end);
   return <div className="robot-panel">
     <div className="robot-caption"><strong>KUKA LWR4+ <span>· schematic</span></strong><span>{poseStatus}</span></div>
     <div className="robot-content">
       <div className="robot-stage">
-        <div className="robot-canvas" ref={host} role="img" aria-label={measured ? `Seven-joint schematic with measured articulation at ${measured.time.toFixed(3)} seconds. Body shape and global base orientation are illustrative. Use joint buttons to highlight telemetry.` : 'Seven-joint robot schematic in a fixed illustrative pose. Measured articulation is unavailable at this time. Use joint buttons to highlight telemetry.'}/>
+        <div className="robot-canvas" ref={host} role="img" aria-label={measured ? `Seven-joint schematic with recorded articulation at ${measured.time.toFixed(3)} seconds. Body shape and global base orientation are illustrative. Use joint buttons to highlight telemetry.` : 'Seven-joint robot schematic in a fixed illustrative pose. Measured articulation is unavailable at this time. Use joint buttons to highlight telemetry.'}/>
+        {selectedMarker && <div className="robot-marker-note"><Flag size={12}/><div><strong>{selectedMarker.label} · {selectedMarker.timeSeconds.toFixed(3)} s</strong><span>Publisher annotation · pose shown only as time context</span></div></div>}
         {loading && <div className="robot-message" role="status">Loading robot reference…</div>}
         {error && <div className="robot-message" role="alert"><p>{error}</p><button className="btn" onClick={() => setAttempt(n => n + 1)}>Retry 3D</button></div>}
         {!loading && !error && <div className="robot-camera" role="group" aria-label="Robot camera controls">
@@ -83,6 +86,6 @@ export default function RobotPanel({ data, playhead, highlighted, onHighlight }:
         <p className="mono">{sample ? `${sample.time.toFixed(3)} s` : 'No sample'}</p>
       </div>
     </div>
-    <footer className="robot-footer"><span>{measured ? 'Measured positions · 100 Hz. Body and base frame are schematic.' : positionError || 'No position sample at this cursor · fixed pose'}</span><span>{sample?.resolution === 'raw' ? 'Torque · 1 kHz raw' : 'Torque · 100 Hz overview'}</span></footer>
+    <footer className="robot-footer" title={positions?.validation.scope}><span>{measured ? positions?.validation.mappingVerified ? 'Recorded angles · schematic frame' : 'Recorded angles · reference mapping; schematic frame' : positionError || 'No position sample at this cursor · fixed pose'}</span><span>{sample?.resolution === 'raw' ? 'Torque · 1 kHz raw' : 'Torque · 100 Hz overview'}</span></footer>
   </div>;
 }

@@ -1,0 +1,1103 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "kuka/contact-part2",
+  "source": {
+    "path": "SOURCE_ROOT",
+    "scope": "Part I Batch 01",
+    "raw_data_copied": false
+  },
+  "discovery": {
+    "run_directories": 1,
+    "mat_files": 4,
+    "all_files": 4,
+    "matlab_formats": {
+      "matlab-v4-or-earlier": 2,
+      "matlab-v5": 2
+    },
+    "compression_layout": "already extracted; no archive found inside source directory"
+  },
+  "files": [
+    {
+      "relative_path": "03-22-11-18/JK_MsrExtTrq.mat",
+      "source_run_id": "03-22-11-18",
+      "format": "matlab-v4-or-earlier",
+      "size_bytes": 10822110,
+      "sha256": "3c060303b9aaf9d1150fc0b699bbd478600cb5d81a282c0a0b29899126c2e988",
+      "variables": [
+        {
+          "name": "MsrExtTrq",
+          "python_type": "numpy.ndarray",
+          "shape": [
+            8,
+            169095
+          ],
+          "dtype": "float64",
+          "ndim": 2,
+          "size": 1352760,
+          "minimum": -9.709335327148438,
+          "maximum": 169.094,
+          "nan_count": 0,
+          "inf_count": 0,
+          "first_values": [
+            0.0,
+            0.001,
+            0.002,
+            0.003,
+            0.004,
+            0.005,
+            0.006,
+            0.007
+          ],
+          "channel_stats": [
+            {
+              "index": 0,
+              "count": 169095,
+              "minimum": 0.0,
+              "maximum": 169.094,
+              "mean": 84.547,
+              "standard_deviation": 48.813521883456296,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 1,
+              "count": 169095,
+              "minimum": -9.709335327148438,
+              "maximum": 12.121405601501465,
+              "mean": 0.4738399895340372,
+              "standard_deviation": 1.215687281982236,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 2,
+              "count": 169095,
+              "minimum": -9.131041526794434,
+              "maximum": 5.191072463989258,
+              "mean": -1.099766904987437,
+              "standard_deviation": 1.1244770926577927,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 3,
+              "count": 169095,
+              "minimum": -6.539577960968018,
+              "maximum": 5.590473175048828,
+              "mean": 0.1486592840274337,
+              "standard_deviation": 0.8115399427485045,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 4,
+              "count": 169095,
+              "minimum": -7.746547698974609,
+              "maximum": 5.945198059082031,
+              "mean": 0.2819869898551456,
+              "standard_deviation": 0.9299477069845855,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 5,
+              "count": 169095,
+              "minimum": -2.695220708847046,
+              "maximum": 3.3440463542938232,
+              "mean": 0.2754800280706038,
+              "standard_deviation": 0.40419605851975604,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 6,
+              "count": 169095,
+              "minimum": -4.19507360458374,
+              "maximum": 2.395906925201416,
+              "mean": -0.2569657923814376,
+              "standard_deviation": 0.5005968037271045,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 7,
+              "count": 169095,
+              "minimum": -1.1155339479446411,
+              "maximum": 0.8531746864318848,
+              "mean": -0.1590721413070516,
+              "standard_deviation": 0.2676953908404443,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            }
+          ],
+          "content_sha256": "39c504659fb8dcc61024915a73c8a504fc37c91d0808d2afc3d5f469a8258836",
+          "nested_structure": null
+        }
+      ],
+      "loader": "scipy.io.loadmat"
+    },
+    {
+      "relative_path": "03-22-11-18/JK_PosMsr.mat",
+      "source_run_id": "03-22-11-18",
+      "format": "matlab-v4-or-earlier",
+      "size_bytes": 10822107,
+      "sha256": "26da5d76440bcc80b9b6b0ea058e01c9433ab9f3e7cb05bd2a31f77acdcab06d",
+      "variables": [
+        {
+          "name": "PosMsr",
+          "python_type": "numpy.ndarray",
+          "shape": [
+            8,
+            169095
+          ],
+          "dtype": "float64",
+          "ndim": 2,
+          "size": 1352760,
+          "minimum": -1.4169518947601318,
+          "maximum": 169.094,
+          "nan_count": 0,
+          "inf_count": 0,
+          "first_values": [
+            0.0,
+            0.001,
+            0.002,
+            0.003,
+            0.004,
+            0.005,
+            0.006,
+            0.007
+          ],
+          "channel_stats": [
+            {
+              "index": 0,
+              "count": 169095,
+              "minimum": 0.0,
+              "maximum": 169.094,
+              "mean": 84.547,
+              "standard_deviation": 48.813521883456296,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 1,
+              "count": 169095,
+              "minimum": -0.0011261911131441593,
+              "maximum": 1.4593713283538818,
+              "mean": 0.6600074459717064,
+              "standard_deviation": 0.5072539853060662,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 2,
+              "count": 169095,
+              "minimum": -0.04644637182354927,
+              "maximum": 1.4144858121871948,
+              "mean": 0.6681563579857002,
+              "standard_deviation": 0.5103689502060997,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 3,
+              "count": 169095,
+              "minimum": -8.307766984216869e-05,
+              "maximum": 1.4009523391723633,
+              "mean": 0.6616818849939405,
+              "standard_deviation": 0.5060342902120267,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 4,
+              "count": 169095,
+              "minimum": -1.4169518947601318,
+              "maximum": 1.4108935594558716,
+              "mean": -0.0010849901433181409,
+              "standard_deviation": 0.834304675651244,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 5,
+              "count": 169095,
+              "minimum": -1.4027371406555176,
+              "maximum": 1.395768404006958,
+              "mean": -0.0014584774187380812,
+              "standard_deviation": 0.8334308089010257,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 6,
+              "count": 169095,
+              "minimum": -1.4003466367721558,
+              "maximum": 1.3964351415634155,
+              "mean": 0.0010441799340939624,
+              "standard_deviation": 0.8339021304482295,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            },
+            {
+              "index": 7,
+              "count": 169095,
+              "minimum": -1.3961081504821777,
+              "maximum": 1.401991605758667,
+              "mean": 0.0007299083145413586,
+              "standard_deviation": 0.8334376663708146,
+              "nan_count": 0,
+              "inf_count": 0,
+              "constant": false,
+              "near_constant": false
+            }
+          ],
+          "content_sha256": "c6cac78d5c726697220c28d69e814fb7ea98bc1a0a272ccaf41e761e5c82c549",
+          "nested_structure": null
+        }
+      ],
+      "loader": "scipy.io.loadmat"
+    },
+    {
+      "relative_path": "03-22-11-18/JK_moments.mat",
+      "source_run_id": "03-22-11-18",
+      "format": "matlab-v5",
+      "size_bytes": 327,
+      "sha256": "83789a91b13f825a4bb0cf9bd9cba387217d9a42e7ecd4176b7bd37afe257525",
+      "variables": [
+        {
+          "name": "JK_moments",
+          "python_type": "numpy.ndarray",
+          "shape": [
+            36,
+            1
+          ],
+          "dtype": "int32",
+          "ndim": 2,
+          "size": 36,
+          "minimum": 5897.0,
+          "maximum": 158614.0,
+          "nan_count": 0,
+          "inf_count": 0,
+          "first_values": [
+            5897,
+            9069,
+            14092,
+            18451,
+            23046,
+            27362,
+            30651,
+            34709
+          ],
+          "channel_stats": [],
+          "content_sha256": "737cab2f2cfb4985130fb7680956c04364f18ada7f162a274947af00b4398eb5",
+          "nested_structure": null
+        }
+      ],
+      "loader": "scipy.io.loadmat"
+    },
+    {
+      "relative_path": "03-22-11-18/JsmoExp.mat",
+      "source_run_id": "03-22-11-18",
+      "format": "matlab-v5",
+      "size_bytes": 1352952,
+      "sha256": "140882371d0d17e1f70c977951e380e00108ae921287fe4295b234902fcb8891",
+      "variables": [
+        {
+          "name": "rt_tout",
+          "python_type": "numpy.ndarray",
+          "shape": [
+            169095,
+            1
+          ],
+          "dtype": "float64",
+          "ndim": 2,
+          "size": 169095,
+          "minimum": 0.0,
+          "maximum": 169.094,
+          "nan_count": 0,
+          "inf_count": 0,
+          "first_values": [
+            0.0,
+            0.001,
+            0.002,
+            0.003,
+            0.004,
+            0.005,
+            0.006,
+            0.007
+          ],
+          "channel_stats": [],
+          "content_sha256": "b089401f2447257ad0f7c051d9788c0f1c3ca3314b7f9630f35c40d6601cfebe",
+          "nested_structure": null
+        }
+      ],
+      "loader": "scipy.io.loadmat"
+    }
+  ],
+  "runs": [
+    {
+      "internal_id": "kuka/contact-part2:03-22-11-18:e5eb60b2b903",
+      "dataset_id": "kuka/contact-part2",
+      "source_run_id": "03-22-11-18",
+      "original_sequence_id": "03-22-11-18",
+      "source_directory": "03-22-11-18",
+      "source_files": [
+        "03-22-11-18/JK_MsrExtTrq.mat",
+        "03-22-11-18/JK_PosMsr.mat",
+        "03-22-11-18/JK_moments.mat",
+        "03-22-11-18/JsmoExp.mat"
+      ],
+      "sequence_length": 169095,
+      "channel_counts": {
+        "MsrExtTrq": 7,
+        "PosMsr": 7
+      },
+      "sampling_rate_hz": 1000.0,
+      "time_start": 0.0,
+      "time_end": 169.094,
+      "timestamps_monotonic": true,
+      "metadata": {
+        "metadata_source": null,
+        "event_semantics": "intentional_contact",
+        "event_semantics_source": "Part II dataset identity",
+        "raw_readme_event_label": null,
+        "time_axis_source": "JsmoExp.mat:rt_tout"
+      },
+      "events": [
+        {
+          "event_id": "03-22-11-18:event:001",
+          "observed_index": 5897,
+          "inferred_time_seconds": 5.896,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:002",
+          "observed_index": 9069,
+          "inferred_time_seconds": 9.068,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:003",
+          "observed_index": 14092,
+          "inferred_time_seconds": 14.091000000000001,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:004",
+          "observed_index": 18451,
+          "inferred_time_seconds": 18.45,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:005",
+          "observed_index": 23046,
+          "inferred_time_seconds": 23.045,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:006",
+          "observed_index": 27362,
+          "inferred_time_seconds": 27.361,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:007",
+          "observed_index": 30651,
+          "inferred_time_seconds": 30.650000000000002,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:008",
+          "observed_index": 34709,
+          "inferred_time_seconds": 34.708,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:009",
+          "observed_index": 39224,
+          "inferred_time_seconds": 39.223,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:010",
+          "observed_index": 43334,
+          "inferred_time_seconds": 43.333,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:011",
+          "observed_index": 48700,
+          "inferred_time_seconds": 48.699,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:012",
+          "observed_index": 52739,
+          "inferred_time_seconds": 52.738,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:013",
+          "observed_index": 57749,
+          "inferred_time_seconds": 57.748000000000005,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:014",
+          "observed_index": 60145,
+          "inferred_time_seconds": 60.144,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:015",
+          "observed_index": 64170,
+          "inferred_time_seconds": 64.169,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:016",
+          "observed_index": 68784,
+          "inferred_time_seconds": 68.783,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:017",
+          "observed_index": 74008,
+          "inferred_time_seconds": 74.007,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:018",
+          "observed_index": 78632,
+          "inferred_time_seconds": 78.631,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:019",
+          "observed_index": 84345,
+          "inferred_time_seconds": 84.34400000000001,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:020",
+          "observed_index": 88807,
+          "inferred_time_seconds": 88.806,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:021",
+          "observed_index": 94019,
+          "inferred_time_seconds": 94.018,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:022",
+          "observed_index": 98106,
+          "inferred_time_seconds": 98.105,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:023",
+          "observed_index": 104685,
+          "inferred_time_seconds": 104.684,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:024",
+          "observed_index": 109127,
+          "inferred_time_seconds": 109.126,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:025",
+          "observed_index": 114719,
+          "inferred_time_seconds": 114.718,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:026",
+          "observed_index": 119009,
+          "inferred_time_seconds": 119.008,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:027",
+          "observed_index": 124221,
+          "inferred_time_seconds": 124.22,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:028",
+          "observed_index": 127895,
+          "inferred_time_seconds": 127.894,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:029",
+          "observed_index": 130751,
+          "inferred_time_seconds": 130.75,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:030",
+          "observed_index": 135088,
+          "inferred_time_seconds": 135.087,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:031",
+          "observed_index": 138710,
+          "inferred_time_seconds": 138.709,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:032",
+          "observed_index": 142953,
+          "inferred_time_seconds": 142.952,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:033",
+          "observed_index": 147539,
+          "inferred_time_seconds": 147.538,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:034",
+          "observed_index": 150370,
+          "inferred_time_seconds": 150.369,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:035",
+          "observed_index": 154695,
+          "inferred_time_seconds": 154.69400000000002,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        },
+        {
+          "event_id": "03-22-11-18:event:036",
+          "observed_index": 158614,
+          "inferred_time_seconds": 158.613,
+          "interpretation": {
+            "value": "intentional_contact",
+            "confidence": 0.99,
+            "evidence": [
+              "run ReadMe.txt labels matching wall-clock entries as Collision(ball)",
+              "GenMoments.m assigns the same values to JK_moments"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "observed_structure": {
+    "record_boundary": "directory containing MAT files",
+    "variable_schema": {
+      "JK_moments": [
+        {
+          "shape": [
+            36,
+            1
+          ],
+          "dtype": "int32",
+          "ndim": 2
+        }
+      ],
+      "MsrExtTrq": [
+        {
+          "shape": [
+            8,
+            169095
+          ],
+          "dtype": "float64",
+          "ndim": 2
+        }
+      ],
+      "PosMsr": [
+        {
+          "shape": [
+            8,
+            169095
+          ],
+          "dtype": "float64",
+          "ndim": 2
+        }
+      ],
+      "rt_tout": [
+        {
+          "shape": [
+            169095,
+            1
+          ],
+          "dtype": "float64",
+          "ndim": 2
+        }
+      ]
+    },
+    "sequence_lengths": [
+      169095
+    ],
+    "sampling_rates_hz": [
+      1000.0
+    ]
+  },
+  "signals": [
+    {
+      "observed_name": "JK_moments",
+      "observed_shapes": [
+        [
+          36,
+          1
+        ]
+      ],
+      "observed_dtypes": [
+        "int32"
+      ],
+      "files_count": 1,
+      "has_embedded_time_row": false,
+      "data_channel_count": null,
+      "inferred_semantic_name": {
+        "value": "event_sample_indices",
+        "confidence": 0.98,
+        "evidence": [
+          "dataset-specific KUKA hint mapping"
+        ]
+      }
+    },
+    {
+      "observed_name": "MsrExtTrq",
+      "observed_shapes": [
+        [
+          8,
+          169095
+        ]
+      ],
+      "observed_dtypes": [
+        "float64"
+      ],
+      "files_count": 1,
+      "has_embedded_time_row": true,
+      "data_channel_count": [
+        7
+      ],
+      "inferred_semantic_name": {
+        "value": "measured_external_joint_torque",
+        "confidence": 0.98,
+        "evidence": [
+          "dataset-specific KUKA hint mapping"
+        ]
+      }
+    },
+    {
+      "observed_name": "PosMsr",
+      "observed_shapes": [
+        [
+          8,
+          169095
+        ]
+      ],
+      "observed_dtypes": [
+        "float64"
+      ],
+      "files_count": 1,
+      "has_embedded_time_row": true,
+      "data_channel_count": [
+        7
+      ],
+      "inferred_semantic_name": {
+        "value": "measured_joint_position",
+        "confidence": 0.98,
+        "evidence": [
+          "dataset-specific KUKA hint mapping"
+        ]
+      }
+    },
+    {
+      "observed_name": "rt_tout",
+      "observed_shapes": [
+        [
+          169095,
+          1
+        ]
+      ],
+      "observed_dtypes": [
+        "float64"
+      ],
+      "files_count": 1,
+      "has_embedded_time_row": false,
+      "data_channel_count": null,
+      "inferred_semantic_name": {
+        "value": "time",
+        "confidence": 0.98,
+        "evidence": [
+          "dataset-specific KUKA hint mapping"
+        ]
+      }
+    }
+  ],
+  "entities": [
+    {
+      "entity_type": "experimental_run",
+      "count": 1,
+      "identifier_fields": [
+        "dataset_id",
+        "source_run_id",
+        "original_sequence_id",
+        "internal_id"
+      ],
+      "future_window_provenance_fields": [
+        "source_run_id",
+        "window_start",
+        "window_end"
+      ]
+    }
+  ],
+  "metadata": {
+    "run_metadata_sources": [],
+    "dataset_specific_hints": "KukaContactPart2Hints"
+  },
+  "quality": {
+    "checks_run": [
+      "missing_values",
+      "infinities",
+      "empty_signals",
+      "inconsistent_channel_count",
+      "inconsistent_schema",
+      "sequence_length_distribution",
+      "timestamp_monotonicity",
+      "sampling_rate_variation",
+      "constant_or_near_constant_channels",
+      "exact_duplicate_files_or_arrays",
+      "duplicate_ids"
+    ],
+    "issues": [],
+    "counts_by_severity": {},
+    "checks_without_issues": [
+      "missing_values",
+      "infinities",
+      "empty_signals",
+      "inconsistent_channel_count",
+      "inconsistent_schema",
+      "sequence_length_distribution",
+      "timestamp_monotonicity",
+      "sampling_rate_variation",
+      "constant_or_near_constant_channels",
+      "exact_duplicate_files_or_arrays",
+      "duplicate_ids"
+    ]
+  },
+  "inferred_semantics": [
+    {
+      "subject": "rows_after_time_in_8_row_torque_matrices",
+      "value": "seven_robot_joint_channels",
+      "confidence": 0.99,
+      "evidence": [
+        "dataset documentation describes KUKA joint torque sensors",
+        "MATLAB example plots row 1 against rows 2:8",
+        "all six torque/position matrices have 8 rows and an identical time first row"
+      ]
+    },
+    {
+      "subject": "JK_moments",
+      "value": "one_based_intentional_contact_sample_indices",
+      "confidence": 0.95,
+      "evidence": [
+        "Part II dataset identity describes intentional contacts",
+        "GenMoments.m defines JK_moments as the source marker vector",
+        "indices are one-based and are converted against the 1 kHz time axis"
+      ]
+    },
+    {
+      "subject": "record_boundary",
+      "value": "timestamped_directory",
+      "confidence": 0.98,
+      "evidence": [
+        "each directory has one shared 232-second time axis and one event list",
+        "each directory ReadMe.txt provides one start time"
+      ]
+    }
+  ],
+  "unknowns": [
+    "The robot model/serial or other hardware identifier is not present in Batch 01 files.",
+    "Physical units are not explicitly encoded in the MAT files; torque/force/position units rely on external documentation.",
+    "The 42- and 49-value flattening order for Jacobian and mass-matrix rows is not documented in the batch.",
+    "The experimental date/year and timezone are not present in per-run metadata.",
+    "The intended prediction target and evaluation protocol are not specified by the raw batch.",
+    "The downloaded per-run ReadMe.txt still labels its marker list Collision(ball); the raw batch alone does not explain this conflict with the Part II intentional-contact identity."
+  ]
+}

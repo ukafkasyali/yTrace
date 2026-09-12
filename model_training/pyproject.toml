@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "robot-observability-training"
+version = "0.1.0"
+description = "Leakage-aware data preparation and TSLM training for robot collision observability"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2.0,<3",
+  "pyarrow>=18,<24",
+  "PyYAML>=6.0,<7",
+  "scipy>=1.14,<2",
+  "scikit-learn>=1.6,<2",
+  "typer>=0.15,<1",
+]
+
+[project.optional-dependencies]
+train = [
+  "accelerate==1.12.0",
+  "peft==0.18.0",
+  "tensorboard>=2.18,<3",
+  "torch==2.9.1",
+  "torchvision==0.24.1",
+  "transformers==4.57.3",
+  "tqdm>=4.67,<5",
+  "wandb==0.30.0",
+]
+dev = [
+  "pytest>=8.3,<9",
+  "ruff==0.16.7",
+]
+timenet = [
+  "timenet @ git+https://github.com/OpenTSLM/TimeNet.git@c39ca32b64ad0c89ea54093dbcb285c1a93eb006#subdirectory=packages/timenet",
+  "timenet-connectors @ git+https://github.com/OpenTSLM/TimeNet.git@c39ca32b64ad0c89ea54093dbcb285c1a93eb006#subdirectory=packages/timenet-connectors",
+]
+plot-baseline = [
+  "matplotlib>=3.9,<4",
+  "wandb==0.30.0",
+]
+
+[project.scripts]
+robot-observe = "robot_observability.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/robot_observability"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"

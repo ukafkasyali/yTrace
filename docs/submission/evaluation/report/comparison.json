@@ -1,0 +1,239 @@
+{
+  "schema_version": 1,
+  "split": "test",
+  "selection_seed": 20260912,
+  "window_count": 512,
+  "recording_count": 67,
+  "class_counts": {
+    "accidental": 118,
+    "free": 241,
+    "intentional": 153
+  },
+  "record_ids_sha256": "6ade06d04c8ecf739b4c19942659d1823c845dabdc319f2390e16a59fca7157c",
+  "checkpoint_sha256": "8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23",
+  "source_inventory_sha256": "3de06e4a51cc0bb87316f072c500cc2a5fb9da00fb3024c7fff001dcdb6c2ef9",
+  "models": {
+    "features": {
+      "label": "Signal features + logistic regression",
+      "n": 512,
+      "contact_events": 271,
+      "json_object_rate": 1.0,
+      "usable_summary_rate": 0.970703125,
+      "semantics_macro_f1": 0.9879649312043058,
+      "semantics_accuracy": 0.98828125,
+      "semantics_per_class_f1": {
+        "free": 0.9896049896049897,
+        "intentional": 0.9868421052631579,
+        "accidental": 0.9874476987447699
+      },
+      "semantics_confusion": {
+        "free": {
+          "free": 238,
+          "accidental": 2,
+          "intentional": 1
+        },
+        "intentional": {
+          "intentional": 150,
+          "free": 2,
+          "accidental": 1
+        },
+        "accidental": {
+          "accidental": 118
+        }
+      },
+      "contact_answer_coverage": 1.0,
+      "contact_accuracy": 0.990234375,
+      "contact_macro_f1": 0.9901984432371174,
+      "contact_positive_f1": 0.990791896869245,
+      "contact_confusion": {
+        "false": {
+          "false": 238,
+          "true": 3
+        },
+        "true": {
+          "true": 269,
+          "false": 2
+        }
+      },
+      "strongest_joint_accuracy": 0.8413284132841329,
+      "affected_joint_set_f1_contact_only": 0.8228409556822841,
+      "onset_coverage": 0.940959409594096,
+      "onset_mae_ms": 70.72549019607843,
+      "onset_median_ae_ms": 21,
+      "onset_within_50ms_all_contacts": 0.5535055350553506
+    },
+    "opentslm": {
+      "label": "OpenTSLM canary-v4 (trained Llama 3.2 1B)",
+      "n": 512,
+      "contact_events": 271,
+      "json_object_rate": 0.779296875,
+      "usable_summary_rate": 0.779296875,
+      "semantics_macro_f1": 0.8845458766982948,
+      "semantics_accuracy": 0.767578125,
+      "semantics_per_class_f1": {
+        "free": 0.6793478260869565,
+        "intentional": 0.9868421052631579,
+        "accidental": 0.9874476987447699
+      },
+      "semantics_confusion": {
+        "free": {
+          "abstain": 112,
+          "free": 125,
+          "accidental": 3,
+          "intentional": 1
+        },
+        "intentional": {
+          "intentional": 150,
+          "abstain": 1,
+          "free": 2
+        },
+        "accidental": {
+          "accidental": 118
+        }
+      },
+      "contact_answer_coverage": 0.779296875,
+      "contact_accuracy": 0.767578125,
+      "contact_macro_f1": 0.8332282408519498,
+      "contact_positive_f1": 0.9871086556169429,
+      "contact_confusion": {
+        "false": {
+          "abstain": 112,
+          "false": 125,
+          "true": 4
+        },
+        "true": {
+          "true": 268,
+          "abstain": 1,
+          "false": 2
+        }
+      },
+      "strongest_joint_accuracy": 0.7527675276752768,
+      "affected_joint_set_f1_contact_only": 0.8156043423571099,
+      "onset_coverage": 0.988929889298893,
+      "onset_mae_ms": 68.51119402985074,
+      "onset_median_ae_ms": 54.0,
+      "onset_within_50ms_all_contacts": 0.46494464944649444
+    },
+    "qwen": {
+      "label": "Qwen3-VL 4B, zero-shot plots",
+      "n": 512,
+      "contact_events": 271,
+      "json_object_rate": 1.0,
+      "usable_summary_rate": 0.0078125,
+      "semantics_macro_f1": 0.6951194088619401,
+      "semantics_accuracy": 0.74609375,
+      "semantics_per_class_f1": {
+        "free": 0.8719851576994434,
+        "intentional": 0.6007604562737643,
+        "accidental": 0.6126126126126126
+      },
+      "semantics_confusion": {
+        "free": {
+          "free": 235,
+          "accidental": 6
+        },
+        "intentional": {
+          "free": 44,
+          "intentional": 79,
+          "accidental": 30
+        },
+        "accidental": {
+          "accidental": 68,
+          "free": 19,
+          "intentional": 31
+        }
+      },
+      "contact_answer_coverage": 0.0078125,
+      "contact_accuracy": 0.0078125,
+      "contact_macro_f1": 0.014545454545454545,
+      "contact_positive_f1": 0.02909090909090909,
+      "contact_confusion": {
+        "false": {
+          "abstain": 241
+        },
+        "true": {
+          "abstain": 267,
+          "true": 4
+        }
+      },
+      "strongest_joint_accuracy": 0.42435424354243545,
+      "affected_joint_set_f1_contact_only": 0.43959867520753126,
+      "onset_coverage": 0.7859778597785978,
+      "onset_mae_ms": 118.33802816901408,
+      "onset_median_ae_ms": 42,
+      "onset_within_50ms_all_contacts": 0.4132841328413284
+    },
+    "zero-signal": {
+      "label": "OpenTSLM zero-signal ablation",
+      "n": 512,
+      "contact_events": 271,
+      "json_object_rate": 0.533203125,
+      "usable_summary_rate": 0.533203125,
+      "semantics_macro_f1": 0.1621271076523995,
+      "semantics_accuracy": 0.244140625,
+      "semantics_per_class_f1": {
+        "free": 0.48638132295719844,
+        "intentional": 0.0,
+        "accidental": 0.0
+      },
+      "semantics_confusion": {
+        "free": {
+          "abstain": 116,
+          "free": 125
+        },
+        "intentional": {
+          "free": 86,
+          "abstain": 67
+        },
+        "accidental": {
+          "free": 62,
+          "abstain": 56
+        }
+      },
+      "contact_answer_coverage": 0.533203125,
+      "contact_accuracy": 0.244140625,
+      "contact_macro_f1": 0.24319066147859922,
+      "contact_positive_f1": 0.0,
+      "contact_confusion": {
+        "false": {
+          "abstain": 116,
+          "false": 125
+        },
+        "true": {
+          "false": 148,
+          "abstain": 123
+        }
+      },
+      "strongest_joint_accuracy": 0.0,
+      "affected_joint_set_f1_contact_only": 0.0,
+      "onset_coverage": 0.0,
+      "onset_mae_ms": null,
+      "onset_median_ae_ms": null,
+      "onset_within_50ms_all_contacts": 0.0
+    }
+  },
+  "paired_uncertainty": {
+    "method": "paired recording-cluster percentile bootstrap",
+    "repeats": 1000,
+    "seed": 20260912,
+    "difference": "OpenTSLM minus signal features",
+    "interval_95": {
+      "semantics_accuracy": [
+        -0.2538167938931297,
+        -0.18961625282167038
+      ],
+      "contact_accuracy": [
+        -0.2554890219560878,
+        -0.191358024691358
+      ],
+      "usable_summary_rate": [
+        -0.23119266055045873,
+        -0.1558441558441559
+      ],
+      "onset_within_50ms_all_contacts": [
+        -0.20077220077220082,
+        0.016000000000000014
+      ]
+    }
+  }
+}

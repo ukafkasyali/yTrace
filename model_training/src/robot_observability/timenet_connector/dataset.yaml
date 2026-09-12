@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://docs.timenet.ai/schemas/dataset-card-v1.schema.json
+yaml_schema_version: 1
+dataset_id: ysamet/robot-collision-observability
+dataset_version: 1.0.0
+name: KUKA Robot Collision Observability
+description: Session-grouped KUKA LWR4+ external-torque windows with event semantics, manual onsets, and derived evidence labels.
+license: CC-BY-4.0
+source_url: https://github.com/zhang-zengjie/robot-raw-collision-signals
+domains:
+  - observability
+  - motion
+tags:
+  - collision-detection
+  - contact
+  - torque
+  - question-answering
+  - temporal-localization

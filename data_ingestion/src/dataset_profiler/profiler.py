@@ -40,6 +40,15 @@ def _find_time_axis(run_dir: Path) -> tuple[np.ndarray | None, str | None]:
             array = np.asarray(value)
             if preferred and name != preferred:
                 continue
+            # Monotonic values alone are not evidence of timestamps: KUKA's
+            # JK_moments is a sorted vector of one-based event sample indices.
+            # Without an identified clock, retain unknown timing in the profile.
+            if not preferred and name.casefold() not in {
+                "rt_tout", "time", "timestamp", "timestamps", "time_seconds",
+            }:
+                continue
+            if array.ndim > 2 or (array.ndim == 2 and min(array.shape) != 1):
+                continue
             flat = array.reshape(-1)
             if flat.size >= 2 and np.issubdtype(flat.dtype, np.number):
                 differences = np.diff(flat)

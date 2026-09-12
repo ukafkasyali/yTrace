@@ -58,3 +58,24 @@ timestamps, numerical Jacobian agreement and joint limits before writing output.
 `position-validation.json` is its machine-readable report. The original torque
 fixture is untouched. Source: [Zenodo 21927431](https://zenodo.org/records/21927431),
 with the same attribution and source-license considerations as the torque data.
+
+## Additional example recordings (13 September 2026)
+
+`positions-03-15-12-53.json` and `positions-03-22-11-18.json` are exported from the
+already downloaded original `JK_PosMsr.mat` files for each recording. They are not
+copies of the reference recording and are not generated from torque. Every original
+timestamp matches its corresponding torque recording exactly; finite values,
+uniform 1-kHz source timing and joint limits are checked before subsampling to 100 Hz.
+Export starts at 0.010 s to exclude startup samples, with no angle rounding.
+
+These examples reuse the radians/channel-order/axis convention checked on the
+reference recording above. The local copies do not contain their `Jcb` files, so
+**no independent per-recording Jacobian check is claimed**. Their metadata has
+`mappingVerified: false`, names the reference convention, records the timing/limit
+checks and hashes of both source files. The UI labels this as recorded angles in a
+schematic frame with reference mapping. It is not an externally calibrated pose.
+Unknown recording IDs still show a clearly labeled fixed-pose fallback.
+
+```sh
+python frontend/scripts/prepare_example_positions.py --raw-root /path/to/original/raw
+```
