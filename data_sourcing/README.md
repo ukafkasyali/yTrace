@@ -30,14 +30,25 @@ curl -i http://127.0.0.1:8000/api/sourcing-runs \
   -d '{"brief":"Find 1 kHz robot collision and intentional contact time-series torque data from https://github.com/zhang-zengjie/robot-raw-collision-signals"}'
 ```
 
-Poll the returned `statusUrl`. An evidence-complete run pauses at `AWAITING_APPROVAL`; approve only
-the returned recommendation:
+Poll the returned `statusUrl`. An evidence-complete run pauses at `AWAITING_APPROVAL`; approve the
+recommendation or another assessed candidate that passes every mandatory gate:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/sourcing-runs/RUN_ID/approvals \
   -H 'Content-Type: application/json' \
   -d '{"decision":"APPROVE","candidateId":"CANDIDATE_ID"}'
 ```
+
+Reject with specific feedback to run another bounded search in the same durable thread:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/sourcing-runs/RUN_ID/approvals \
+  -H 'Content-Type: application/json' \
+  -d '{"decision":"REJECT","note":"Prioritize free-motion baseline recordings"}'
+```
+
+The reviewer can request at most two refinements, and all cycles share the original Tavily-credit
+and active-research-time budgets.
 
 Runtime artifacts are written under `var/runs/<run-id>/`. SQLite checkpoints and idempotency keys
 remain under `var/`. Set `SOURCING_DATA_DIR` to relocate all runtime state.

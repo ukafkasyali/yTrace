@@ -50,6 +50,7 @@ function runFixture(): SourcingRun {
       recommendationConfidence: 'HIGH', missingRequirementIds: [], conflicts: [],
     }],
     recommendedCandidateId: 'ds_9be731e6fb6b', gapQueriesUsed: 0, tavilyCreditsUsed: 6,
+    approvedCandidateId: null, reviewFeedback: [], reviewIterationsUsed: 0,
     executionMode: 'LIVE', errors: [],
     reportMarkdown: '# Dataset sourcing report — raw markdown', manifest: null,
     createdAt: '2026-09-12T12:00:00Z', updatedAt: '2026-09-12T12:01:00Z',
@@ -83,5 +84,31 @@ describe('decision evidence', () => {
     expect(markup).toContain('Source coverage notes');
     expect(markup).toContain('Rerun to follow its validated canonical URL.');
     expect(markup).not.toContain('developer.mozilla.org');
+  });
+
+  it('offers eligible datasets and requires feedback for another research cycle', () => {
+    const run = runFixture();
+    run.candidates.push({
+      ...run.candidates[0],
+      id: 'ds_aaaaaaaaaaaa',
+      name: 'Alternate collision dataset',
+      canonicalUrl: 'https://zenodo.org/records/1234',
+    });
+    run.assessments.push({
+      ...run.assessments[0],
+      candidateId: 'ds_aaaaaaaaaaaa',
+      totalScore: 95,
+      score: { ...run.assessments[0].score, evidenceConsistency: 0 },
+    });
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('Dataset to approve');
+    expect(markup).toContain('Alternate collision dataset');
+    expect(markup).toContain('value="ds_aaaaaaaaaaaa"');
+    expect(markup).toContain('What should the scout improve?');
+    expect(markup).toContain('Reject and refine');
   });
 });

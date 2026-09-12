@@ -1,4 +1,4 @@
-import { isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun } from './sourcing';
+import { isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun, type SourcingReview } from './sourcing';
 export * from './sourcing';
 
 export type WindowRef = {
@@ -228,9 +228,9 @@ export function createServices(baseUrl?: string) {
       if (!isSourcingRun(run)) throw new ProtocolError('The sourcing response does not match the run contract.');
       return run;
     },
-    reviewSourcingRun: async (runId: string, decision: 'APPROVE' | 'REJECT', candidateId?: string, note?: string) => {
+    reviewSourcingRun: async (runId: string, review: SourcingReview) => {
       const run = await request<unknown>(`/sourcing-runs/${encodeURIComponent(runId)}/approvals`, {
-        method: 'POST', body: JSON.stringify({ decision, ...(candidateId ? { candidateId } : {}), ...(note ? { note } : {}) }),
+        method: 'POST', body: JSON.stringify(review),
       });
       if (!isSourcingRun(run)) throw new ProtocolError('The sourcing response does not match the run contract.');
       return run;

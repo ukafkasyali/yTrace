@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SearchCheck } from 'lucide-react';
-import { sourcingIsActive, type Services, type SourcingRun } from '../services';
+import { sourcingIsActive, type Services, type SourcingReview, type SourcingRun } from '../services';
 import ScoutReview from './ScoutReview';
 
 const demoBrief = 'Find 1 kHz robot collision and intentional contact time-series torque data from https://github.com/zhang-zengjie/robot-raw-collision-signals';
@@ -47,12 +47,12 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
     finally { setBusy(''); }
   }
 
-  async function review(decision: 'APPROVE' | 'REJECT') {
+  async function review(reviewRequest: SourcingReview) {
     if (!run) return;
-    setBusy(decision); setError('');
+    setBusy(reviewRequest.decision); setError('');
     try {
-      const next = await services.reviewSourcingRun(run.runId, decision, decision === 'APPROVE' ? run.recommendedCandidateId ?? undefined : undefined);
-      if (decision === 'APPROVE') next.manifest = await services.getSourcingManifest(run.runId);
+      const next = await services.reviewSourcingRun(run.runId, reviewRequest);
+      if (reviewRequest.decision === 'APPROVE') next.manifest = await services.getSourcingManifest(run.runId);
       setRun(next);
     } catch (reason) { setError(errorText(reason)); }
     finally { setBusy(''); }
@@ -65,7 +65,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
     <textarea id="sourcing-brief" rows={3} value={brief} onChange={event => { setBrief(event.target.value); intent.current = null; }} disabled={!services.connected || Boolean(busy)} />
     <div className="scout-actions"><button className="btn btn-primary" type="button" disabled={!services.connected || Boolean(busy)} onClick={() => void start()}><SearchCheck size={15} aria-hidden="true" />{busy === 'start' ? 'Starting…' : 'Start evidence review'}</button><form onSubmit={event => { event.preventDefault(); setError(''); setRun(null); setSourceReady(false); setRunId(resumeId.trim()); setPollRevision(value => value + 1); }}><label htmlFor="sourcing-run-id">Resume run</label><input id="sourcing-run-id" value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Run ID" disabled={!services.connected || Boolean(busy)} /><button className="btn" disabled={!services.connected || !resumeId.trim() || Boolean(busy)}>Load</button></form></div>
     {error && <p className="error-message" role="alert">{error}</p>}
-    {run ? <ScoutReview run={run} busy={busy} onReview={decision => void review(decision)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
+    {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
     {sourceReady && <p className="status-note" role="status">Source URL added to the ingestion form below. Review it before starting ingestion.</p>}
   </section>;
 }

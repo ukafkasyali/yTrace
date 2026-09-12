@@ -5,11 +5,11 @@ function label(value: string) {
   return value.replaceAll('_', ' ').toLowerCase();
 }
 
-function evidenceRecords(run: SourcingRun, ids: string[]) {
+function evidenceRecords(run: SourcingRun, ids: string[], candidateId?: string) {
   const expected = new Set(ids);
   return run.evidence.filter(item =>
     expected.has(item.id)
-    && (!run.recommendedCandidateId || item.candidateId === run.recommendedCandidateId),
+    && (!candidateId || item.candidateId === candidateId),
   );
 }
 
@@ -38,7 +38,13 @@ function decisionReason(run: SourcingRun, candidateId: string) {
   return 'All mandatory gates passed';
 }
 
-export default function DecisionEvidence({ run }: { run: SourcingRun }) {
+export default function DecisionEvidence({
+  run,
+  candidateId = run.recommendedCandidateId ?? undefined,
+}: {
+  run: SourcingRun;
+  candidateId?: string;
+}) {
   const mandatory = run.requirements.filter(item => item.priority === 'MUST');
   const verifiedRequirements = mandatory.filter(item => item.status === 'VERIFIED').length;
   const recommended = run.candidates.find(item => item.id === run.recommendedCandidateId);
@@ -73,7 +79,7 @@ export default function DecisionEvidence({ run }: { run: SourcingRun }) {
         <tbody>{mandatory.map(requirement => <tr key={requirement.id}>
           <td><strong>{requirement.label}</strong>{requirement.expectedValues.length > 0 && <small>Expected: {requirement.expectedValues.join(', ')}</small>}</td>
           <td><span className={`evidence-status evidence-${requirement.status.toLowerCase()}`}>{requirement.status === 'VERIFIED' ? <Check size={12} aria-hidden="true" /> : <CircleX size={12} aria-hidden="true" />}{requirement.status.toLowerCase()}</span></td>
-          <td><EvidenceLinks records={evidenceRecords(run, requirement.evidenceIds)} /></td>
+          <td><EvidenceLinks records={evidenceRecords(run, requirement.evidenceIds, candidateId)} /></td>
         </tr>)}</tbody>
       </table>
     </div>

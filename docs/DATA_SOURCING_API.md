@@ -8,8 +8,8 @@ download dataset contents or start ingestion.
 
 `QUEUED → PLANNING → DISCOVERING → VERIFYING → ASSESSING` ends in one of:
 
-- `AWAITING_APPROVAL → APPROVED`, which writes `manifest.json`;
-- `AWAITING_APPROVAL → REJECTED`;
+- `AWAITING_APPROVAL → APPROVED`, which writes `manifest.json` for the selected eligible candidate;
+- `AWAITING_APPROVAL → DISCOVERING → … → AWAITING_APPROVAL` after reviewer feedback;
 - `NEEDS_INPUT` when any mandatory evidence requirement is unsupported;
 - `FAILED` for an unrecoverable workflow failure.
 
@@ -54,14 +54,20 @@ current status. The frontend should treat IDs as opaque.
 
 ### `POST /api/sourcing-runs/{runId}/approvals`
 
-Only valid in `AWAITING_APPROVAL`. The approved candidate must equal `recommendedCandidateId`.
+Only valid in `AWAITING_APPROVAL`. The reviewer may approve the recommendation or another
+assessed candidate whose score is at least 65 and which passes every mandatory hard gate. The
+response retains `recommendedCandidateId` for auditability and records the reviewer override in
+`approvedCandidateId`.
 
 ```json
 {"decision": "APPROVE", "candidateId": "ds_0123456789ab", "note": "Team review"}
 ```
 
-Reject with `{"decision":"REJECT","note":"Reason"}`. Repeating the same successful approval is
-safe; other terminal-state approvals return `409 RUN_CONFLICT`.
+Reject with `{"decision":"REJECT","note":"Prioritize free-motion baseline recordings"}`. A
+non-empty note is required. Rejection adds a review-directed query and resumes discovery in the
+same LangGraph thread, preserving prior candidates and evidence. Up to two reviewer refinements
+are allowed, subject to the original time and Tavily-credit budgets. Repeating the same successful
+approval is safe; other terminal-state approvals return `409 RUN_CONFLICT`.
 
 ### `GET /api/sourcing-runs/{runId}/report`
 
@@ -80,11 +86,13 @@ Errors use the shared envelope:
 {"error":{"code":"INVALID_REQUEST","message":"Request validation failed","retryable":false}}
 ```
 
-One run has three initial hypotheses, at most two evidence-gap hypotheses, eight deeply verified
-candidates, twelve Tavily credits and ninety seconds of active research time. Tavily advanced
-search costs two credits per query, so the normal five-query maximum consumes ten. Mandatory gates
-are canonical provenance, explicit allowed licence, usable time-series files, requested task
-labels, schema documentation and bounded acquisition size.
+One run has three initial hypotheses, at most two evidence-gap hypotheses, at most two
+review-directed refinements, eight deeply verified candidates, twelve Tavily credits and ninety
+seconds of active research time. Time spent waiting for human review does not consume the active
+research clock. Tavily advanced search costs two credits per query, so reviewer refinements use
+only the credits remaining after initial and gap searches. Mandatory gates are canonical
+provenance, explicit allowed licence, usable time-series files, requested task labels, schema
+documentation and bounded acquisition size.
 
 Server-side fetches accept only HTTPS native URLs on the exact GitHub, Zenodo and Hugging Face
 allowlist, reject embedded credentials and non-default ports, resolve only to public addresses,

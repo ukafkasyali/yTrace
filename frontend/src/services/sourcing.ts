@@ -103,6 +103,10 @@ export type SourcingManifest = {
   approvedAt: string;
 };
 
+export type SourcingReview =
+  | { decision: 'APPROVE'; candidateId: string; note?: string }
+  | { decision: 'REJECT'; note: string };
+
 export type SourcingRun = {
   runId: string;
   status: SourcingStatus;
@@ -115,6 +119,9 @@ export type SourcingRun = {
   evidence: EvidenceRecord[];
   assessments: CandidateAssessment[];
   recommendedCandidateId: string | null;
+  approvedCandidateId: string | null;
+  reviewFeedback: string[];
+  reviewIterationsUsed: number;
   gapQueriesUsed: number;
   tavilyCreditsUsed: number;
   executionMode: 'LIVE' | 'CACHED' | 'PARTIAL';
@@ -183,6 +190,11 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.evidenceConfidence as string)
       && ['HIGH', 'MEDIUM', 'LOW'].includes(item.recommendationConfidence as string)
       && Array.isArray(item.conflicts) && Array.isArray(item.missingRequirementIds))
+    && (run.approvedCandidateId === null || typeof run.approvedCandidateId === 'string')
+    && Array.isArray(run.reviewFeedback) && run.reviewFeedback.length <= 2
+    && run.reviewFeedback.every(item => typeof item === 'string')
+    && Number.isInteger(run.reviewIterationsUsed) && (run.reviewIterationsUsed as number) >= 0
+    && (run.reviewIterationsUsed as number) <= 2
     && Array.isArray(run.errors) && typeof run.reportMarkdown === 'string'
     && (run.manifest === null || isSourcingManifest(run.manifest));
 }

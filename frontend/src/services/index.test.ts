@@ -117,7 +117,8 @@ describe('service contracts', () => {
     const run = {
       runId: 'run-1', status: 'AWAITING_APPROVAL', brief: 'Find robot collision time-series data.',
       requirements: [], candidates: [], profiles: [], evidence: [], assessments: [], errors: [], reportMarkdown: '# Report',
-      executionMode: 'CACHED', manifest: null,
+      executionMode: 'CACHED', manifest: null, approvedCandidateId: null,
+      reviewFeedback: [], reviewIterationsUsed: 0,
     };
     const fetch = vi.fn()
       .mockResolvedValueOnce(Response.json(run))
@@ -131,7 +132,9 @@ describe('service contracts', () => {
     vi.stubGlobal('fetch', fetch);
     const service = createServices('/api');
     expect((await service.getSourcingRun('run/1')).status).toBe('AWAITING_APPROVAL');
-    await service.reviewSourcingRun('run/1', 'APPROVE', 'candidate-1', 'Reviewed');
+    await service.reviewSourcingRun('run/1', {
+      decision: 'APPROVE', candidateId: 'candidate-1', note: 'Reviewed',
+    });
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/sourcing-runs/run%2F1/approvals', expect.objectContaining({
       method: 'POST', body: JSON.stringify({ decision: 'APPROVE', candidateId: 'candidate-1', note: 'Reviewed' }),
     }));
