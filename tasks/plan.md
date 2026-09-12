@@ -45,9 +45,9 @@ accessible Must/Preferred/Disabled editor in the existing dataset scout.
 
 ### Checkpoint: Complete
 
-- [ ] Frontend tests and production build pass.
-- [ ] Full backend tests and lint pass.
-- [ ] Documentation, security review, and compatibility review are complete.
+- [x] Frontend tests and production build pass.
+- [x] Full backend tests and lint pass.
+- [x] Documentation, security review, and compatibility review are complete.
 
 ## Risks and Mitigations
 

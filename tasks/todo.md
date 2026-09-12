@@ -26,11 +26,11 @@
 ## Task 4: Document and review
 
 - [x] Update API and module documentation.
-- [ ] Run full backend/frontend verification and five-axis review.
-- [ ] Commit tested slices and update the existing PR.
+- [x] Run full backend/frontend verification and five-axis review.
+- [x] Commit tested slices and update the existing PR.
 
 ## Checkpoint: Complete
 
-- [ ] Research contract is previewed before search credits are spent.
-- [ ] All backend and frontend checks pass.
-- [ ] Worktree is clean and remote PR branch is updated.
+- [x] Research contract is previewed before search credits are spent.
+- [x] All backend and frontend checks pass.
+- [x] Worktree is clean and remote PR branch is updated.
