@@ -1,3 +1,4 @@
+// Repository-owned baseline explanation; the live Cursor canvas is kept byte-for-byte in sync.
 import {
   BarChart,
   Button,
