@@ -14,6 +14,7 @@ from data_sourcing.graph import DatasetScoutGraph, initial_state
 from data_sourcing.models import (
     ApprovalDecision,
     ApprovalRequest,
+    CandidateAssessment,
     CreateSourcingRun,
     RequirementDefinition,
     RequirementPreviewRequest,
@@ -154,26 +155,16 @@ class SourcingService:
             self.artifacts.persist(failed_state)
             return
 
-    def approve(self, run_id: str, approval: ApprovalRequest) -> SourcingRun:
+    def get_run(self, run_id: str) -> SourcingRun:
         run = self.artifacts.read_run(run_id)
-        can_resume_for_feedback = (
-            run.status is RunStatus.NEEDS_INPUT
-            and approval.decision is ApprovalDecision.REJECT
-            and run.feedback_allowed
-        )
-        if run.status is not RunStatus.AWAITING_APPROVAL and not can_resume_for_feedback:
-            approved_candidate_id = run.approved_candidate_id or (
-                run.manifest.candidate_id if run.manifest else None
-            )
-            if (
-                run.status is RunStatus.APPROVED
-                and approval.decision is ApprovalDecision.APPROVE
-                and approval.candidate_id == approved_candidate_id
-            ):
-                if run.manifest:
-                    self.approved_sources.record_approval(run.manifest)
-                return run
-            raise RunConflict("Run is not awaiting approval or reviewer feedback")
+        approved_candidate_ids = self.approved_sources.candidate_ids_for_run(run_id)
+        return run.model_copy(update={"approved_candidate_ids": approved_candidate_ids})
+
+    @staticmethod
+    def _selected_approvable_candidate(
+        run: SourcingRun,
+        approval: ApprovalRequest,
+    ) -> CandidateAssessment | None:
         selected = next(
             (
                 item
@@ -182,18 +173,43 @@ class SourcingService:
             ),
             None,
         )
-        if (
-            approval.decision is ApprovalDecision.REJECT
-            and approval.candidate_id
-            and selected is None
-        ):
-            raise RunConflict("Rejected candidate must be assessed in this run")
         if approval.decision is ApprovalDecision.APPROVE and (
             selected is None
             or not candidate_is_approvable(selected)
             or selected.candidate_id in run.excluded_candidate_ids
         ):
             raise RunConflict("Approved candidate must pass every mandatory gate")
+        return selected
+
+    def approve(self, run_id: str, approval: ApprovalRequest) -> SourcingRun:
+        run = self.get_run(run_id)
+        can_resume_for_feedback = (
+            run.status is RunStatus.NEEDS_INPUT
+            and approval.decision is ApprovalDecision.REJECT
+            and run.feedback_allowed
+        )
+        if run.status is RunStatus.APPROVED and approval.decision is ApprovalDecision.APPROVE:
+            with self._graph_lock:
+                run = self.get_run(run_id)
+                self._selected_approvable_candidate(run, approval)
+                if approval.candidate_id in run.approved_candidate_ids:
+                    return run
+                manifest = self.scout.build_manifest(
+                    run.model_dump(mode="json"),
+                    approval.candidate_id,
+                )
+                self.artifacts.persist_additional_manifest(manifest)
+                self.approved_sources.record_approval(manifest)
+                return self.get_run(run_id)
+        if run.status is not RunStatus.AWAITING_APPROVAL and not can_resume_for_feedback:
+            raise RunConflict("Run is not awaiting approval or reviewer feedback")
+        selected = self._selected_approvable_candidate(run, approval)
+        if (
+            approval.decision is ApprovalDecision.REJECT
+            and approval.candidate_id
+            and selected is None
+        ):
+            raise RunConflict("Rejected candidate must be assessed in this run")
         try:
             with self._graph_lock:
                 completed = self._stream_graph(
@@ -204,7 +220,7 @@ class SourcingService:
             raise RunConflict(f"Approval could not be applied: {type(exc).__name__}") from exc
         if completed.manifest:
             self.approved_sources.record_approval(completed.manifest)
-        return completed
+        return self.get_run(run_id)
 
 
 __all__ = [
