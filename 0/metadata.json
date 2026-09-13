@@ -1,0 +1,93 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CT9DWDR865CHGT52QRG2B9",
+  "session_id": "01a097a6-3e92-7870-907b-8cdc34a7642a",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:21:50.484926Z",
+  "branch": "baseline-comparison",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "model_training/docs/baseline-methods-explained.tsx",
+    "model_training/docs/baseline_comparison.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "83959c3c0d28",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 567315,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 39516129,
+    "output_tokens": 120938,
+    "api_call_count": 323
+  },
+  "session_metrics": {
+    "turn_count": 10
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T07:21:49.430565Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 635,
+    "human_modified": 24,
+    "human_removed": 0,
+    "total_committed": 635,
+    "total_lines_changed": 659,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 5641,
+      "user_lines_removed": 0,
+      "agent_lines_added": 170,
+      "agent_lines_removed": 2,
+      "user_added_per_file": {
+        ".chart-data-3oOsxY/chart-data-snapshot.json": 41,
+        ".chart-data-5eyu4f/chart-data-snapshot.json": 41,
+        ".chart-data-alhBGT/chart-data-snapshot.json": 41,
+        ".chart-data-dQeVnS/chart-data-snapshot.json": 41,
+        ".chart-data-fxyDf1/chart-data-snapshot.json": 41,
+        ".codex-finalizer/Trace_Pitch_Deck.validation.json": 267,
+        ".codex-finalizer/Trace_Pitch_Deck_2026-09-13.validation.json": 267,
+        ".codex-finalizer/Trace_Pitch_Deck_FINAL.validation.json": 267,
+        ".codex-finalizer/trace-pitch-candidate.pptx.inspect.ndjson": 203,
+        ".gitignore": 9,
+        ".presentation-build/build_trace_pitch.mjs": 570,
+        "configs/training.yaml": 52,
+        "docs/OPENTSLM.md": 26,
+        "docs/TRAINING_RUN_MONITOR.md": 29,
+        "inference/trained.config.example.json": 8,
+        "model_training/src/robot_observability/run_monitor.py": 153,
+        "model_training/tests/test_run_monitor.py": 32,
+        "pyproject.toml": 34,
+        "src/robot_tslm/__init__.py": 6,
+        "src/robot_tslm/baseline.py": 314,
+        "src/robot_tslm/classical_baseline.py": 152,
+        "src/robot_tslm/cli.py": 183,
+        "src/robot_tslm/config.py": 81,
+        "src/robot_tslm/contracts.py": 152,
+        "src/robot_tslm/data.py": 451,
+        "src/robot_tslm/download.py": 118,
+        "src/robot_tslm/evidence.py": 135,
+        "src/robot_tslm/inference.py": 44,
+        "src/robot_tslm/metrics.py": 180,
+        "src/robot_tslm/opentslm_runner.py": 124,
+        "src/robot_tslm/opentslm_training.py": 537,
+        "src/robot_tslm/preprocessing.py": 130,
+        "src/robot_tslm/prompts.py": 111,
+        "src/robot_tslm/release.py": 43,
+        "src/robot_tslm/run_monitor.py": 171,
+        "src/robot_tslm/sanity.py": 115,
+        "src/robot_tslm/splitting.py": 72,
+        "src/robot_tslm/synthetic.py": 42,
+        "src/robot_tslm/timenet_connector/__init__.py": 136,
+        "src/robot_tslm/timenet_connector/dataset.yaml": 13,
+        "src/robot_tslm/timenet_connector/requirements.txt": 1,
+        "tests/test_pipeline.py": 208
+      }
+    }
+  ]
+}
