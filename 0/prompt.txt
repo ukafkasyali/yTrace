@@ -1,0 +1,43 @@
+Can you have a look ath the orchastrator and see if it is complete
+
+---
+
+Do we have the stalled tests, or is it working alright now
+
+---
+
+Can you summarize the current state of the code
+
+---
+
+Run the Bosch dataset through the **new onboarding orchestrator end to end** and produce the final runtime proof.
+
+Goal:
+```text
+SourceDescriptor
+→ profiling
+→ semantic analysis
+→ validation
+→ NEEDS_HUMAN_RESOLUTION
+→ apply the existing approved milligravity override
+→ connector-ready
+→ native TimeNet connector stage
+→ connector tests
+→ timenet-build
+→ TimeNet.load()
+→ raw ↔ TimeF verification
+→ COMPLETED
+```
+
+Requirements:
+
+- Use the existing Bosch preset and existing verified Bosch connector; do not redesign either.
+- Exercise the real persisted job/resume flow, including the human-resolution transition.
+- Run the full real 912 MB Bosch build and verification, not fixtures only.
+- Confirm the job reaches `COMPLETED`.
+- Verify all expected structured artifacts, hashes, states, and final result are persisted correctly.
+- Reconfirm source/TimeF record count, metadata, labels, channels, timing, units, dtypes, and numeric fidelity.
+- Preserve diagnostics if any stage fails.
+- Do not add HTTP APIs, frontend work, dataset-search integration, or unrelated refactors.
+
+When finished, report the exact state transitions, test/build/load/verification results, final job artifacts, and whether the orchestrator is now fully validated end to end.
