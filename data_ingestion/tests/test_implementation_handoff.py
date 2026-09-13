@@ -12,6 +12,7 @@ from dataset_profiler.semantic_spec import (
     ImplementationOverrideArtifact,
     build_connector_handoff,
     detect_blocking_unresolved_fields,
+    load_kuka_collision_part1_spec,
     semantic_spec_sha256,
     validate_dataset_spec,
 )
@@ -19,9 +20,6 @@ from dataset_profiler.semantic_spec.models import Confidence, EvidenceClaim, Evi
 
 
 _ROOT = Path(__file__).parents[1]
-_BOSCH_SPEC_PATH = _ROOT / "outputs/bosch_cnc_v02_final/final_spec.json"
-_BOSCH_PROFILE_PATH = _ROOT / "outputs/bosch_cnc_profile.json"
-_KUKA_SPEC_PATH = _ROOT / "outputs/kuka_part1_agent_validator_repair/final_spec.json"
 _KUKA_PROFILE_PATH = _ROOT / "outputs/dataset_profile.json"
 _CISS_ID = "ev_documentation_ciss_58517c77b913"
 _MG_ID = "ev_documentation_mg_bd382bd44290"
@@ -31,7 +29,74 @@ _EVIDENCE_IDS = {_CISS_ID, _MG_ID, _LOADER_ID, _TRANSFORMATION_ID}
 
 
 def _bosch_spec() -> DatasetSpec:
-    return DatasetSpec.read_json(_BOSCH_SPEC_PATH)
+    """Build the unresolved Bosch contract without depending on ignored run outputs."""
+    return DatasetSpec.from_dict(
+        {
+            "schema_version": "0.2",
+            "identity": {
+                "dataset_id": "boschresearch/cnc-machining",
+                "source_subsets": ["CNC_Machining"],
+                "compatible_profile_ids": [],
+            },
+            "record_discovery": {
+                "record_unit": "record",
+                "boundary": "HDF5 file",
+                "included_run_ids": [],
+            },
+            "source_variables": [{"name": "vibration", "role": "signal"}],
+            "signals": [
+                {
+                    "source_variable": "vibration",
+                    "semantic_type": "vibration",
+                    "channels": {
+                        "count": 1,
+                        "source_indices": [0],
+                        "target_names": ["vibration"],
+                    },
+                    "dtype": None,
+                    "observed_dtypes": ["float64"],
+                    "unit": {
+                        "name": None,
+                        "symbol": None,
+                        "resolution": {
+                            "status": "unresolved",
+                            "confidence": None,
+                            "evidence": [],
+                        },
+                    },
+                    "sampling": {"rate_hz": None, "time_axis": "sample_clock"},
+                    "semantics": {
+                        "status": "documented",
+                        "confidence": "high",
+                        "evidence": [_CISS_ID],
+                    },
+                }
+            ],
+            "time_axes": [
+                {
+                    "name": "sample_clock",
+                    "source_variable": None,
+                    "kind": "implicit_regular",
+                    "unit": "second",
+                    "monotonic": True,
+                    "sample_index_origin": 0,
+                    "sampling_rate": {
+                        "value": 2000.0,
+                        "unit": "Hz",
+                        "resolution": {
+                            "status": "documented",
+                            "confidence": "high",
+                            "evidence": [_CISS_ID],
+                        },
+                    },
+                }
+            ],
+            "events": [],
+            "provenance": [],
+            "tasks": [],
+            "record_defaults": {"subject_ids": [], "start_time": None},
+        }
+    )
 
 
 def _requirement(field_path: str = "signals[0].unit") -> DownstreamRequirement:
@@ -190,16 +255,15 @@ def test_bosch_timef_unit_uses_unambiguous_pint_name():
     assert str(ureg.Unit("mg")) == "milligram"
 
 
-def test_original_bosch_spec_remains_valid_and_unresolved():
+def test_bosch_handoff_fixture_remains_unresolved():
     spec = _bosch_spec()
-    profile = read_dataset_profile(_BOSCH_PROFILE_PATH)
 
-    assert validate_dataset_spec(profile, spec).valid
     assert spec.signals[0].unit.resolution.status is EvidenceStatus.UNRESOLVED
+    assert detect_blocking_unresolved_fields(spec, (_requirement(),))
 
 
 def test_kuka_regression_validation_is_unchanged():
-    spec = DatasetSpec.read_json(_KUKA_SPEC_PATH)
+    spec = load_kuka_collision_part1_spec()
     profile = read_dataset_profile(_KUKA_PROFILE_PATH)
 
     assert validate_dataset_spec(profile, spec).valid

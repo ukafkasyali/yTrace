@@ -13,6 +13,7 @@ try:
 except ImportError:  # pragma: no cover - exercised by the hdf5 extra
     h5py = None
 
+from dataset_profiler.datasets import KukaCollisionHints
 from dataset_profiler.inspection import inspect_mat_file
 from dataset_profiler.io.hdf5 import inspect_hdf5_file, inspect_hdf5_structure
 from dataset_profiler.profiler import profile_dataset
@@ -94,6 +95,32 @@ class ProfilerTests(unittest.TestCase):
             structure = inspect_hdf5_structure(path)
             self.assertEqual(structure.root_attributes, {"creator": "fixture"})
             self.assertEqual(structure.groups[0]["path"], "sensors")
+
+    @unittest.skipIf(h5py is None, "hdf5 extra is not installed")
+    def test_hdf5_inspector_streams_large_channel_first_arrays(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "channel-first.h5"
+            values = np.repeat(
+                np.array([[1.0], [2.0], [3.0]], dtype=np.float32),
+                600_000,
+                axis=1,
+            )
+            with h5py.File(path, "w") as handle:
+                handle.create_dataset("measurements", data=values)
+
+            variable = inspect_hdf5_file(path).variables[0]
+
+            self.assertEqual(variable.shape, [3, 600_000])
+            self.assertEqual(
+                variable.nested_structure["structural_axes"]["channel_axis"], 0
+            )
+            self.assertEqual(len(variable.channel_stats), 3)
+            self.assertEqual(
+                [channel.mean for channel in variable.channel_stats], [1.0, 2.0, 3.0]
+            )
+            self.assertTrue(
+                all(channel.count == 600_000 for channel in variable.channel_stats)
+            )
 
     @unittest.skipIf(h5py is None, "hdf5 extra is not installed")
     def test_profiles_recursive_hdf5_files_as_records(self) -> None:
