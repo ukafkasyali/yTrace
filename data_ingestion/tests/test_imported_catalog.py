@@ -15,8 +15,8 @@ class FakeClient:
         self.records = records
         self.requests = []
 
-    def load(self, dataset_id: str, *, auto_build: bool):
-        self.requests.append((dataset_id, auto_build))
+    def load(self, dataset_id: str, version: str | None = None, *, auto_build: bool):
+        self.requests.append((dataset_id, version, auto_build))
         return SimpleNamespace(records=self.records)
 
 
@@ -43,7 +43,7 @@ class ImportedDatasetCatalogTests(unittest.TestCase):
             "kuka/collision-part1", "1.0.0", page=2, page_size=2
         )
 
-        self.assertEqual(client.requests, [("kuka/collision-part1", False)])
+        self.assertEqual(client.requests, [("kuka/collision-part1", "1.0.0", False)])
         self.assertEqual(result.pagination.total_items, 3)
         self.assertEqual(result.pagination.total_pages, 2)
         self.assertEqual([item.record_id for item in result.data], ["batch-01/run-03"])

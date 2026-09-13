@@ -48,7 +48,7 @@ class ImportedDatasetUnavailable(RuntimeError):
 
 
 class TimeNetClient(Protocol):
-    def load(self, dataset_id: str, *, auto_build: bool): ...
+    def load(self, dataset_id: str, version: str | None = None, *, auto_build: bool): ...
 
 
 class ImportedDatasetCatalog:
@@ -68,7 +68,9 @@ class ImportedDatasetCatalog:
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._/-]{0,127}", dataset_id):
             raise ImportedDatasetUnavailable("Imported dataset identity is invalid")
         try:
-            dataset = self.client.load(dataset_id, auto_build=False)
+            dataset = self.client.load(
+                dataset_id, version=dataset_version, auto_build=False
+            )
         except Exception as exc:
             raise ImportedDatasetUnavailable(
                 "Validated imported dataset is unavailable from the local registry"
