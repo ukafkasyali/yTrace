@@ -6,6 +6,7 @@ from typing import Any
 
 
 DATASET_ID = "boschresearch/cnc-machining"
+SEMANTIC_DATASET_ID = "bosch-cnc"
 REQUIRED_TIMEF_UNIT = "milligravity"
 
 
@@ -20,7 +21,11 @@ def validate_implementation_handoff(
     )
     checks = {
         "connector_ready": handoff.get("connector_ready") is True,
-        "handoff_dataset_id": handoff.get("dataset_id") == DATASET_ID,
+        "semantic_dataset_id": handoff.get("dataset_id") == SEMANTIC_DATASET_ID,
+        "handoff_connector_dataset_id": handoff.get("downstream_context", {}).get(
+            "dataset_id"
+        )
+        == DATASET_ID,
         "connector_dataset_id": connector_dataset_id == DATASET_ID,
         "timef_unit": handoff_unit == REQUIRED_TIMEF_UNIT,
     }
