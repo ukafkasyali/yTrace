@@ -278,6 +278,14 @@ def build_report(source: Path, repeats: int = 1000) -> dict:
 
 
 def markdown(report: dict) -> str:
+    opentslm = report["models"]["opentslm"]
+    semantics_confusion = opentslm["semantics_confusion"]
+    abstentions = sum(row.get("abstain", 0) for row in semantics_confusion.values())
+    free_windows = sum(semantics_confusion.get("free", {}).values())
+    free_abstentions = semantics_confusion.get("free", {}).get("abstain", 0)
+    answered = opentslm["n"] - abstentions
+    correct_answered = sum(row.get(label, 0) for label, row in semantics_confusion.items())
+    answered_accuracy = correct_answered / answered if answered else 0.0
     lines = [
         "# Trace: audited held-out comparison",
         "",
@@ -331,6 +339,15 @@ def markdown(report: dict) -> str:
             "The signal-feature baseline outperforms this OpenTSLM checkpoint on semantics, joint ranking, "
             "and successful localization within 50 ms. OpenTSLM has higher onset coverage and slightly lower "
             "conditional mean onset error, but a worse median. These results do not establish OpenTSLM superiority."
+        ),
+        "",
+        (
+            f"OpenTSLM returned no usable structured answer for {abstentions} of {opentslm['n']} windows. "
+            f"That includes {free_abstentions} of {free_windows} free-motion windows "
+            f"({free_abstentions / free_windows:.1%}). On the {answered} answered windows, semantics accuracy "
+            f"is {answered_accuracy:.2%} ({correct_answered}/{answered}). This conditional figure is descriptive, "
+            "not a paired comparison: the model selects which windows receive an answer, while the baseline "
+            "answers every window. Any reliability fix must be selected on validation."
         ),
         "",
         (
