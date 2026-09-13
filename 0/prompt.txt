@@ -1,5 +1,1 @@
-After that continue with the implementation as tracked.
-
----
-
 Great! Continue and finish the implementation.
