@@ -18,18 +18,20 @@ channel's actual requirements before sending any private artifact.
 |---|---|---|
 | Artifact role | Promoted OpenTSLM SoftPrompt checkpoint (canary-v4) | Private on Nebius; destination not approved here |
 | SHA-256 | `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23` | Record after receiver verifies the transferred bytes |
-| Artifact format | Expected tensor-only PyTorch `best_model.pt`: encoder/projector state plus declared LoRA state when enabled | Confirm keys and `weights_only=True` release validation against the exact transfer file |
+| Artifact format | Tensor-only PyTorch dictionary with exactly `encoder_state`, `projector_state`, `lora_enabled`, and `lora_state` | Verified locally with `torch.load(..., weights_only=True)` and the release validator against a byte-identical temporary copy on 13 Sep 2026 |
 | Architecture | OpenTSLM-SP / soft prompt | Confirm from the released artifact/config |
-| Base model | `meta-llama/Llama-3.2-1B` | Confirm resolved model revision |
-| Backbone revision | `unknown` in the live service receipt | **Missing: obtain immutable revision/commit or state why unavailable** |
-| Warm start | `OpenTSLM/llama-3.2-1b-har-sp` | Record immutable upstream revision from training config |
+| Base model | `meta-llama/Llama-3.2-1B` | Resolved by the weight-file identity below |
+| Backbone revision | Local VM directory `models/llama-3.2-1b`; its `model.safetensors` SHA-256 `68a2e4be76fa709455a60272fba8e512c02d81c46e6c671cc9449e374fd6809a` (2,471,645,608 bytes) is byte-identical to the official `meta-llama/Llama-3.2-1B` blob served at Hub revision `4e20de362430cd3b72f300e6b0f18e50e7166e08` (verified 13 Sep 2026 via Hub API) | Resolved by weight-file hash. The live receipt still prints `backbone:unknown` because the service loads a local path; include this hash-based identity in the handoff |
+| Warm start | `OpenTSLM/llama-3.2-1b-har-sp` at cached snapshot `1dbeb1c1013deaca6a36bc3c92016a93a7c588a9`; `model_checkpoint.pt` blob SHA-256 `cdb3dd7800b5048498d1d8eda2795b6bcff2ee6e84de5aba8b66192d022b73c9` | Resolved read-only from the VM Hugging Face cache on 13 Sep 2026 |
 | Upstream commit | `2968f4b891baab4307f7e9d0043e87677b593a30` | Included in training config |
-| Training configuration | [`opentslm_sp.yaml`](../../model_training/configs/opentslm_sp.yaml) | Attach exact run-resolved copy and its SHA-256 |
+| Training configuration | [`opentslm_sp.yaml`](../../model_training/configs/opentslm_sp.yaml) is the current candidate default, not proven to be the canary-v4 run-resolved file | **Missing: recover the exact canary-v4 run configuration and its SHA-256; it was not present in the deployed VM bundle** |
+| Deployed runtime configuration | `kuka-sp-canary-v4.config.json`; file SHA-256 `3566c2f01b343b4658653b24126b2ec377848dcfcacc82bdd568d7fd63505c19`; canonical JSON configuration digest starts `4dbdd82f5ff7` in the live receipt | Verified read-only on the VM 13 Sep 2026; transfer this exact file with the checkpoint |
 | Input contract | seven canonical joints, 1,024 contiguous 1 kHz samples, `[start,end)` = 1.024 s | Include channel order, units and rejection behavior |
-| Normalization | training-only robust normalization for canary-v4 | Attach the exact normalization artifact and SHA-256; do not use query statistics |
+| Normalization | training-only robust normalization for canary-v4; deployed file SHA-256 `f29e5dea6846d14ef7dc4da6ee55addca264b33439d0de4f8c57201a578f334b`, byte-identical to [`normalization.json`](evaluation/source/normalization.json) | Resolved; transfer the archived file and do not use query statistics |
+| Release receipt | `opentslm-8ff63b84ae5b.release.json`; SHA-256 `ab9be19fcb768f0e923fd281ea00c3fa2ef56a68a37704920788ce8ca60dd83a` | Verified read-only on the VM 13 Sep 2026; transfer beside the artifact |
 | Archived canary-v4 output contract | `answer_then_evidence`: `Answer: {JSON}` followed by `Evidence:` | Verified from archived canary-v4 predictions; attach the exact prompt/template revision and schema |
 | Current candidate training config | `rationale_then_answer`, deterministic signal pseudolabel source | Candidate configuration only; do not represent it as the released canary-v4 contract without matching artifact evidence |
-| Adapter/LoRA | Training configuration declares LoRA rank 16, alpha 32 and dropout 0.0; the live artifact's enabled state and target modules are not established by the public release record | **Missing: state enabled/disabled; if enabled provide target modules and adapter digest** |
+| Adapter/LoRA | **Enabled.** The live service config declares `lora_r: 16, lora_alpha: 32, lora_dropout: 0.0`; the byte-identical checkpoint has `lora_enabled: true` and 224 LoRA tensors. The runtime refuses a flag mismatch and loads LoRA with `allow_missing=False`. `target_modules` is not overridden, so upstream OpenTSLM `enable_lora()` defaults apply (commit `2968f4b`) | Resolved from live config, weights-only checkpoint inspection, and the runtime contract; note that target modules follow the upstream default |
 | Rollback owner | Not recorded | **Missing: name the release owner responsible for retaining the prior config and performing a failed-release rollback** |
 | License/access terms | Base-model access may be gated | Confirm redistribution and recipient access before transfer |
 

@@ -58,6 +58,7 @@ describe('investigation export', () => {
     const report = buildInvestigationReport(data, 'dataset', { ...answer, inputTrace: receipt, modelOutput: 'Answer: {}' });
     expect(report.limitations.join(' ')).not.toContain('input receipt does not');
     expect(report.limitations.join(' ')).toContain('Raw model output is preserved');
+    expect(report.interpretation.rawModelOutputTrust).toBe('unverified_generated_text_not_annotation_or_measurement');
   });
   it('flags a receipt from a different investigation interval', () => {
     const report = buildInvestigationReport(data, 'dataset', {
@@ -70,15 +71,56 @@ describe('investigation export', () => {
     expect(report.limitations.join(' ')).toContain('does not match this recording and selected interval');
   });
   it('renders a readable Markdown handoff without collapsing evidence sources', () => {
-    const report = buildInvestigationReport(data, 'dataset', answer);
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      modelOutput: 'Answer: {"contact":true,"event_type":"accidental","onset_ms":42,"strongest_joint":"J2","affected_joints":["J2"],"evidence_start_ms":42,"evidence_end_ms":200}',
+    });
     const markdown = renderInvestigationMarkdown(report);
     expect(markdown).toContain('# Trace incident investigation');
     expect(markdown).toContain('## Interpretation');
+    expect(markdown).toContain('## Deterministic cross-check before handoff');
+    expect(markdown).toContain('- **Event type:** accidental');
+    expect(markdown).toContain('- **Strongest joint:** J2');
     expect(markdown).toContain('## Measured torque');
     expect(markdown).toContain('| Joint 1 | 5.000 Nm | -3.000 Nm | 1.001 s |');
     expect(markdown).toContain('## Publisher annotations');
     expect(markdown).toContain('Marker');
     expect(markdown).toContain('## Evidence and provenance');
     expect(markdown).toContain('## Limitations');
+  });
+  it('keeps unverified raw model prose out of the readable handoff', () => {
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      text: 'Safe structured interpretation.',
+      modelOutput: 'Unverified explanation about a manual event marker.\nAnswer: {"contact":true}',
+    });
+    const markdown = renderInvestigationMarkdown(report);
+    expect(markdown).toContain('No valid structured prediction was returned.');
+    expect(markdown).not.toContain('manual event marker');
+  });
+  it('states when an unusable model output cannot be cross-checked', () => {
+    const report = buildInvestigationReport(data, 'dataset', { ...answer, modelOutput: 'Answer: {"contact":true}' });
+    expect(report.reviewNotes).toEqual(['No model/measurement cross-check was run because no usable structured prediction was returned.']);
+    expect(renderInvestigationMarkdown(report)).toContain('no usable structured prediction was returned');
+  });
+  it('marks a joint-ranking cross-check as inapplicable for free motion', () => {
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      modelOutput: 'Answer: {"contact":false,"event_type":"free","onset_ms":null,"strongest_joint":null,"affected_joints":[],"evidence_start_ms":null,"evidence_end_ms":null}',
+    });
+    expect(report.reviewNotes).toEqual(['A joint-ranking cross-check is not applicable to a free-motion prediction.']);
+  });
+  it('keeps the server measurement summary out of the generated interpretation section', () => {
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      text: 'Measured in this selected window\nLargest observed torque ranges: Joint 2.\n\nOpenTSLM interpretation\nOpenTSLM predicts external contact.',
+      modelOutput: 'Answer: {"contact":true,"event_type":"intentional","onset_ms":42,"strongest_joint":"J2","affected_joints":["J2"],"evidence_start_ms":42,"evidence_end_ms":200}',
+    });
+    const markdown = renderInvestigationMarkdown(report);
+    expect(report.interpretation.answer).toBe('OpenTSLM predicts external contact.');
+    expect(markdown).toContain('- **Event type:** intentional');
+    expect(markdown).not.toContain('OpenTSLM predicts external contact.');
+    expect(markdown).not.toContain('Largest observed torque ranges: Joint 2.');
+    expect(markdown).toContain('| Joint 2 | 5.000 Nm | -3.000 Nm | 1.001 s |');
   });
 });

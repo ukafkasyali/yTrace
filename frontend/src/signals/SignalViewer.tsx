@@ -31,6 +31,19 @@ export default function SignalViewer({ visibleChannelIds, data, playhead, interv
     const rect = event.currentTarget.getBoundingClientRect();
     return Math.max(viewport.start, Math.min(playhead, viewport.start + (event.clientX - rect.left) / rect.width * (viewport.end - viewport.start)));
   }
+  function beginSelection(event: React.PointerEvent<SVGSVGElement>) {
+    if (!event.isPrimary || event.button !== 0) return;
+    drag.current = pointerTime(event);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function finishSelection(event: React.PointerEvent<SVGSVGElement>) {
+    if (drag.current === null) return;
+    const time = pointerTime(event);
+    const start = Math.min(time, drag.current), finish = Math.max(time, drag.current);
+    drag.current = null;
+    if (finish - start >= .01) onSelect({ start, end: finish });
+  }
+  function cancelSelection() { drag.current = null; }
   function showCursor(time: number | null) {
     hover.current = time;
     if (!panel.current) return;
@@ -57,7 +70,7 @@ export default function SignalViewer({ visibleChannelIds, data, playhead, interv
       <div className="strip-heading"><span className="channel-name"><i style={{ background: COLORS[p.colorIndex] }}/>{p.channel.name}<span className="unit">Nm</span></span><span className="mono sample-value" data-sample-value>{p.last?.toFixed(3) ?? '—'}</span></div>
       <div className="plot-frame"><div className="y-labels"><span>{p.high.toFixed(p.high-p.low < 1 ? 2 : 1)}</span><span>{p.low.toFixed(p.high-p.low < 1 ? 2 : 1)}</span></div><div className="plot-area">
         {right > left && <div className="selection-band" style={{ left: `${left}%`, width: `${right - left}%` }}/>}<div className="hover-guide"/>
-        <svg viewBox="0 0 1000 76" preserveAspectRatio="none" role="img" aria-label={`${p.channel.name}, signed external torque in Nm, ${viewport.start.toFixed(3)} to ${end.toFixed(3)} seconds`} onPointerMove={e => showCursor(pointerTime(e))} onPointerLeave={() => showCursor(null)} onPointerDown={e => { if (e.pointerType === 'mouse') { drag.current = pointerTime(e); e.currentTarget.setPointerCapture(e.pointerId); } }} onPointerUp={e => { if (drag.current !== null) { const t = pointerTime(e); const start = Math.min(t, drag.current), finish = Math.max(t, drag.current); if (finish - start >= .01) onSelect({ start, end: finish }); drag.current = null; } }}>
+        <svg viewBox="0 0 1000 76" preserveAspectRatio="none" role="img" aria-label={`${p.channel.name}, signed external torque in Nm, ${viewport.start.toFixed(3)} to ${end.toFixed(3)} seconds`} onPointerMove={e => showCursor(pointerTime(e))} onPointerLeave={() => showCursor(null)} onPointerDown={beginSelection} onPointerUp={finishSelection} onPointerCancel={cancelSelection} onLostPointerCapture={cancelSelection}>
           {[0, 250, 500, 750, 1000].map(x => <line key={x} x1={x} x2={x} y1="0" y2="76" className="chart-grid"/>)}
           {[18, 38, 58].map(y => <line key={y} x1="0" x2="1000" y1={y} y2={y} className="chart-grid"/>)}
           {p.zero > 0 && p.zero < 76 && <line x1="0" x2="1000" y1={p.zero} y2={p.zero} className="chart-zero"/>}

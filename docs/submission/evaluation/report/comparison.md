@@ -13,12 +13,15 @@
 | Affected-joint set F1 | 0.8228 | 0.8156 | 0.4396 | 271 contacts only; invalid lists score zero |
 | Onset MAE (ms) | 70.73 | 68.51 | 118.34 | Only finite in-window predictions; read with coverage |
 | Onset median error (ms) | 21.00 | 54.00 | 42.00 | Same conditional denominator as MAE |
+| Onset P90 error (ms) | 188.60 | 140.00 | 313.80 | Same conditional denominator as MAE |
 | Onset coverage | 0.9410 | 0.9889 | 0.7860 | 271 contact windows |
 | Onset within 50 ms / all contacts | 0.5535 | 0.4649 | 0.4133 | 271; missing/invalid onsets fail |
 
 ## Interpretation
 
 The signal-feature baseline outperforms this OpenTSLM checkpoint on semantics, joint ranking, and successful localization within 50 ms. OpenTSLM has higher onset coverage and slightly lower conditional mean onset error, but a worse median. These results do not establish OpenTSLM superiority.
+
+OpenTSLM returned no usable structured answer for 113 of 512 windows. That includes 112 of 241 free-motion windows (46.5%). On the 399 answered windows, semantics accuracy is 98.50% (393/399). This conditional figure is descriptive, not a paired comparison: the model selects which windows receive an answer, while the baseline answers every window. Any reliability fix must be selected on validation.
 
 OpenTSLM was fine-tuned; Qwen3-VL 4B was zero-shot on plots. This comparison changes training and representation together. Qwen frequently emitted null contact fields: JSON parsing and matching keys did not mean usable answers. No plain-Llama baseline was run in these artifacts.
 

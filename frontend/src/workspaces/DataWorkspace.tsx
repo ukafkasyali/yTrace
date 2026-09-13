@@ -25,7 +25,7 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
       setDatasetId(current => items.some(item => item.id === current) ? current : items[0]?.id ?? '');
     }).catch(reason => { if (alive) setError(`Could not load backend catalog: ${errorText(reason)}`); });
     return () => { alive = false; };
-  }, [services, catalogRevision]);
+  }, [services]);
 
   useEffect(() => {
     let alive = true; setRecordings([]);

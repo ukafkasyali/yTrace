@@ -8,16 +8,16 @@ web
 React, TypeScript and Vite implement an isolated frontend module. No hosting target is committed. Python ingestion and inference remain independently owned services.
 
 ## Users
-Robot operators inspecting recorded telemetry; Samet builds the hackathon dashboard. Uğur and Atakan own ingestion; Atakan, Uğur and Ece own model training.
+Controls and test engineers preparing a handoff after a recorded contact event; Samet builds the hackathon dashboard. Uğur and Atakan own ingestion; Atakan, Uğur and Ece own model training.
 
 ## Product Purpose
-Select a recording, examine events across synchronized channels, and ask an assistant for answers linked to visible evidence. The assistant will orchestrate TSLM, CNN, statistics and retrieval tools when services are available.
+Turn a recorded contact interval into a reviewable handoff: a trained OpenTSLM prediction, deterministic measurements, linked raw signals, provenance, and an export for the controls lead or vendor.
 
 ## Operating Context
 EHL Zurich Temporal AI hackathon. The first source is Zenodo 21927431: KUKA LWR4+ torque recordings. No live robot control or validated maintenance recommendations.
 
 ## Capabilities and Constraints
-The local version uses real measured telemetry and deterministic numerical analysis. Optional API clients and service-backed workspaces are implemented, but no real model or ingestion endpoint has been verified. Publisher markers are not certified physical onset times. The fixture contains a 100 Hz overview and 1 kHz detail only for [4,9) seconds. Replay is recorded playback, not a live robot feed. Queries retain their original interval and playback cursor.
+The local version uses real measured telemetry and deterministic numerical analysis. The private canary-v4 OpenTSLM endpoint is verified; no CNN inference endpoint or checkpoint is connected. Publisher markers are not certified physical onset times. The fixture contains a 100 Hz overview and 1 kHz detail only for [4,9) seconds. Replay is recorded playback, not a live robot feed. Queries retain their original interval and playback cursor.
 
 ## Brand Commitments
 Foxglove is the user's layout inspiration, with compact synchronized signal strips and an assistant. The upper-left area switches between the recording overview and an optional 3D reference. Its independently rendered schematic uses numerical KUKA joint geometry and recorded joint articulation at 100 Hz, with measured torque and shared channel selection. Joint mapping is numerically validated against the recorded Jacobian; body shape and global base orientation remain schematic. Missing position data uses a clearly labeled fixed pose. Trace is a provisional frontend title, not an approved team name.

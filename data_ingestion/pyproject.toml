@@ -28,6 +28,7 @@ dev = ["pytest>=7"]
 dataset-profiler = "dataset_profiler.cli:main"
 dataset-ingestion-api = "dataset_profiler.ingestion.__main__:main"
 dataset-ingestion-worker = "dataset_profiler.ingestion.worker_main:main"
+onboard = "dataset_profiler.onboarding.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -41,6 +41,23 @@
           "accidental": 118
         }
       },
+      "usable_semantics_confusion": {
+        "free": {
+          "free": 238,
+          "abstain": 1,
+          "accidental": 1,
+          "intentional": 1
+        },
+        "intentional": {
+          "intentional": 149,
+          "free": 2,
+          "abstain": 2
+        },
+        "accidental": {
+          "accidental": 106,
+          "abstain": 12
+        }
+      },
       "contact_answer_coverage": 1.0,
       "contact_accuracy": 0.990234375,
       "contact_macro_f1": 0.9901984432371174,
@@ -77,6 +94,22 @@
         "accidental": 0.9874476987447699
       },
       "semantics_confusion": {
+        "free": {
+          "abstain": 112,
+          "free": 125,
+          "accidental": 3,
+          "intentional": 1
+        },
+        "intentional": {
+          "intentional": 150,
+          "abstain": 1,
+          "free": 2
+        },
+        "accidental": {
+          "accidental": 118
+        }
+      },
+      "usable_semantics_confusion": {
         "free": {
           "abstain": 112,
           "free": 125,
@@ -145,6 +178,20 @@
           "intentional": 31
         }
       },
+      "usable_semantics_confusion": {
+        "free": {
+          "abstain": 241
+        },
+        "intentional": {
+          "abstain": 150,
+          "intentional": 2,
+          "accidental": 1
+        },
+        "accidental": {
+          "abstain": 117,
+          "intentional": 1
+        }
+      },
       "contact_answer_coverage": 0.0078125,
       "contact_accuracy": 0.0078125,
       "contact_macro_f1": 0.014545454545454545,
@@ -180,6 +227,20 @@
         "accidental": 0.0
       },
       "semantics_confusion": {
+        "free": {
+          "abstain": 116,
+          "free": 125
+        },
+        "intentional": {
+          "free": 86,
+          "abstain": 67
+        },
+        "accidental": {
+          "free": 62,
+          "abstain": 56
+        }
+      },
+      "usable_semantics_confusion": {
         "free": {
           "abstain": 116,
           "free": 125

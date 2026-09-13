@@ -11,5 +11,5 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .coverage
-.venv/
+.venv*/
 data_sourcing/var/
