@@ -367,6 +367,7 @@ input,textarea{caret-color:var(--accent)}
 .dataset-scout .section-heading h2,.ingestion-handoff .section-heading h2{font-size:18px;margin-bottom:0}
 .dataset-scout>label,.ingestion-handoff>form>label{display:block;margin-top:18px;color:#cbd4d6;font-size:12px}
 .source-ready{display:flex;align-items:center;gap:7px;margin:14px 0 0;color:var(--accent);font-size:12px}
+.scout-presets{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 16px}.scout-presets button{border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--quiet);padding:6px 10px;font:inherit;font-size:11px;cursor:pointer}.scout-presets button:hover,.scout-presets button.active{border-color:#5d7c6d;color:var(--accent);background:#1e2c27}.scout-presets button:disabled{cursor:default;opacity:.5}.scout-advanced{margin-top:12px;color:var(--quiet);font-size:11px}.scout-advanced>summary{cursor:pointer;padding:5px 0}.scout-advanced[open]>summary{color:var(--text)}.resume-scout{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.resume-scout>label{display:block;margin-bottom:6px}.resume-scout>div{display:flex;gap:8px}.resume-scout input{flex:1;min-width:0;background:#20282c;border:1px solid #45535a;border-radius:4px;color:var(--text);padding:7px 10px;min-height:34px}
 .ingestion-handoff{scroll-margin-top:18px}
 .ingestion-handoff>form .field-row{margin-top:7px}
 .ingestion-handoff>form input{min-width:320px}
@@ -611,6 +612,12 @@ input,textarea{caret-color:var(--accent)}
   .graph-scale { font-size: 18px; }
 }
 
+.model-onset-cue { position:absolute; inset-block:0; border-left:1px solid var(--accent); pointer-events:none; z-index:3; }
+.model-onset-cue::after { content:''; position:absolute; top:0; left:-4px; width:7px; height:7px; border:1px solid var(--accent); border-radius:50%; background:var(--panel); }
+.model-onset-cue span { position:absolute; top:3px; left:7px; color:var(--accent); font-size:9px; line-height:1; white-space:nowrap; letter-spacing:.02em; }
+.model-onset-cue.at-right-edge { transform:translateX(-1px); }
+.model-onset-cue.at-right-edge span { left:auto; right:7px; }
+.hover-guide { z-index:4; }
 .incident-cohort { margin: 14px 0 18px; padding-block: 14px; border-block: 1px solid var(--line); }
 .incident-cohort-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .incident-cohort-heading h3 { margin: 0; font-size: 13px; }

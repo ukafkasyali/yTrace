@@ -1,4 +1,4 @@
-# Trace · robot observability frontend
+# y/trace · robot observability frontend
 
 Samet's React/TypeScript dashboard: a recording explorer and assistant on the
 left, seven synchronized torque strips on the right, and shared replay controls
@@ -128,7 +128,7 @@ keeps generated interpretation, deterministic torque measurements, publisher
 annotations, provenance and limitations in separate sections. The model-details
 disclosure retains a secondary JSON export for machine-readable audit workflows.
 
-When the inference bridge starts with `--raw-root`, Trace lists the validated full
+When the inference bridge starts with `--raw-root`, y/trace lists the validated full
 recordings as well as the bundled cases. Selecting a 1.024-second interval outside
 the initial detail automatically fetches seven ordered 1 kHz channels, checks the
 recording/window identity and cadence, and only then enables model analysis. Bundled
@@ -143,7 +143,7 @@ the interface decisions. The upper-left panel switches between the recording
 explorer and measured 3D articulation. See
 [position validation](public/robot/kuka/POSITION_VALIDATION.md) for the numerical
 check and its calibration limits.
-“Trace” is a provisional interface name. Samet owns this frontend; ingestion and
+“y/trace” is the interface name. Samet owns this frontend; ingestion and
 model-training implementations stay in the team's separately owned modules.
 
 ## Investigation reports
@@ -203,7 +203,7 @@ The active additional motion catalogue and deployment details are documented in
 ## Retrieve related incidents and compare a reference
 
 Choose **Find similar incidents across runs** after analysis, or open the **Compare**
-tab. Trace ranks eligible fixed raw windows using each joint's torque range,
+tab. y/trace ranks eligible fixed raw windows using each joint's torque range,
 variability and largest sample-to-sample change. Publisher labels and model outputs
 are excluded from the score. Export the ranked cohort for engineering review or
 labeling; similarity is not evidence of the same physical cause.

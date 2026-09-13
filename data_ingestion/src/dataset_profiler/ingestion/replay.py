@@ -96,7 +96,7 @@ class ImportedSignalEvent(ReplayModel):
 
 
 class ImportedReplayService:
-    """Adapt compatible validated TimeF records to Trace's replay contracts."""
+    """Adapt compatible validated TimeF records to y/trace's replay contracts."""
 
     def __init__(self, catalog: ImportedDatasetCatalog):
         self.catalog = catalog

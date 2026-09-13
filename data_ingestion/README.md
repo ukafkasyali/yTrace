@@ -133,7 +133,7 @@ paginated record summaries from that ingestion's TimeF registry. It exposes reco
 and value counts, regular-axis duration, signal names, and annotation keys without loading or
 returning raw arrays. Each record receives an opaque key and an explicit replay-compatibility flag.
 Compatible records expose `/records/{recordKey}/replay`, `/signals`, and `/events` subresources for
-the existing Trace workbench. Replay requires exactly seven canonical external-torque channels at
+the existing y/trace workbench. Replay requires exactly seven canonical external-torque channels at
 1 kHz; other imported layouts remain metadata-browsable and are never coerced. The replay response
 uses a bounded overview plus a five-second raw excerpt, while signal requests load explicit bounded
 windows. An ingestion without a final validation receipt cannot browse or replay records.

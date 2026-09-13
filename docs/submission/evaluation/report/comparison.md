@@ -1,4 +1,4 @@
-# Trace: audited held-out comparison
+# y/trace: audited held-out comparison
 
 512 identical windows from 67 held-out recordings. Class counts: {'accidental': 118, 'free': 241, 'intentional': 153}. All windows are 1,024 samples at 1 kHz.
 

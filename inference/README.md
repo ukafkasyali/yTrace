@@ -1,4 +1,4 @@
-# Trace → OpenTSLM on Nebius
+# y/trace → OpenTSLM on Nebius
 
 Status (13 September 2026): deployed privately on the team's Nebius H100 VM in
 `/home/samet/trace-inference`, using Python 3.12 and an isolated virtual environment.
@@ -9,7 +9,7 @@ CPU because a teammate's training run owns the GPU; do not restart it on CUDA un
 the training owner confirms that GPU memory is available.
 
 A training endpoint does not serve predictions automatically: this separate process
-loads an exported checkpoint once, then handles on-demand requests from Trace.
+loads an exported checkpoint once, then handles on-demand requests from y/trace.
 
 ### CNN comparison endpoint
 
@@ -18,7 +18,7 @@ JSON config based on `cnn.config.example.json`. The config must name the CNN
 checkpoint and the exact train-split `normalization.json` used for training. The
 CNN accepts all seven canonical channels and exactly 1,024 synchronized samples;
 other windows are rejected rather than resampled. Once loaded, `GET /api/models`
-advertises `cnn-1d`, and Trace's comparison workspace runs it alongside OpenTSLM.
+advertises `cnn-1d`, and y/trace's comparison workspace runs it alongside OpenTSLM.
 
 ```bash
 export TRACE_CNN_CONFIG=/home/samet/trace-inference/inference/cnn.config.json
@@ -162,7 +162,7 @@ it private; this development bridge is not an authenticated public API. It expos
 readiness at `/api/health` and actual availability at `/api/models` while weights
 load. No successful placeholder response is substituted on failure.
 
-## 4. Connect Trace and run the real smoke test
+## 4. Connect y/trace and run the real smoke test
 
 On your Mac, keep this tunnel running:
 
@@ -195,7 +195,7 @@ set `VITE_API_BASE_URL=/api` in `frontend/.env.local`, then restart Vite. For a
 deployed frontend, configure a same-origin reverse proxy; Vite's dev proxy is not
 included in a production build.
 
-Open Trace and keep the initial interval **[5.787, 6.811) seconds**. The header must
+Open y/trace and keep the initial interval **[5.787, 6.811) seconds**. The header must
 show **OpenTSLM connected**. Click **Analyze interval** and wait for the structured
 prediction, measurements, input receipt and handoff actions. Only OpenTSLM is exposed
 by this service; there is no live CNN selector or endpoint. The measurements-only
@@ -273,7 +273,7 @@ previous config until the smoke test passes so rollback is one restart.
   step; the slot stays occupied until the model call returns. A GPU operation already
   running cannot be forcibly interrupted by HTTP cancellation. The 120-second
   stopping criterion also acts between decoding steps, not as a process watchdog.
-  Trace keeps the control in **Stopping…** until the stream closes, preventing an
+  y/trace keeps the control in **Stopping…** until the stream closes, preventing an
   immediate retry from colliding with the occupied slot.
 - Evidence links identify **input telemetry**, not verified causal explanations.
   Checkpoint SHA256, configuration hash and resolved backbone revision accompany

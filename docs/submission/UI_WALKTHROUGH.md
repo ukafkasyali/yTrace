@@ -4,7 +4,7 @@ Verified on 12 September 2026 through Vite at `http://127.0.0.1:5174/`, the loca
 SSH tunnel, and the private Nebius inference bridge. This is a replay walkthrough,
 not an additional accuracy benchmark.
 
-1. Open Trace and choose **Recording → Collision**. On mobile use **Replay** for
+1. Open y/trace and choose **Recording → Collision**. On mobile use **Replay** for
    the robot and plots, or **Investigation** for the answer.
 2. **Robot** is shown immediately, with two torque traces below. **All 7 signals**
    opens the full signal view; **Publisher markers** opens annotations and ranges.
@@ -94,7 +94,7 @@ context (normally 0.4 seconds before the annotation), not at the window end.
 recording example also starts before its incident. Marker navigation beyond raw
 coverage still produces an explicitly reduced-resolution numerical summary.
 
-Trace inspects a completed recording. Model/numerical analysis may therefore read
+y/trace inspects a completed recording. Model/numerical analysis may therefore read
 its entire selected window while the visual cursor remains at the beginning.
 The existing API `playheadSec` remains the request's historical analysis cutoff,
 at least the selected window end; it does not force the visual cursor to move.
