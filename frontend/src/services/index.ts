@@ -108,6 +108,17 @@ function validateWindow(data: SignalWindow) {
   return data;
 }
 
+const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+const IMPORTED_RECORDING_ID = new RegExp(`^imported:(${UUID_PATTERN}):([a-f0-9]{24})$`);
+const INGESTION_ID = new RegExp(`^${UUID_PATTERN}$`);
+
+function importedRecordingPath(recordingId: string, resource: 'replay' | 'signals' | 'events') {
+  const match = IMPORTED_RECORDING_ID.exec(recordingId);
+  return match
+    ? `/ingestions/${encodeURIComponent(match[1])}/records/${encodeURIComponent(match[2])}/${resource}`
+    : null;
+}
+
 /** baseUrl is the API prefix, e.g. /api. Omission deliberately means disconnected. */
 export function createServices(baseUrl?: string) {
   const base = baseUrl?.trim().replace(/\/+$/, '');
@@ -209,16 +220,30 @@ export function createServices(baseUrl?: string) {
   return {
     connected,
     listDemoCases: () => request<DemoCase[]>('/demo-cases'),
-    getReplay: async (recordingId: string) => validateDemoData(await request(`/recordings/${encodeURIComponent(recordingId)}/replay`)),
+    getReplay: async (recordingId: string) => {
+      const importedPath = importedRecordingPath(recordingId, 'replay');
+      return validateDemoData(await request(importedPath ?? `/recordings/${encodeURIComponent(recordingId)}/replay`));
+    },
+    getImportedReplay: async (ingestionId: string, recordKey: string) => {
+      if (!INGESTION_ID.test(ingestionId) || !/^[a-f0-9]{24}$/.test(recordKey)) {
+        throw new ApiError('The imported record reference is invalid.', 0, 'INVALID_RECORD');
+      }
+      return validateDemoData(await request(
+        `/ingestions/${encodeURIComponent(ingestionId)}/records/${encodeURIComponent(recordKey)}/replay`,
+      ));
+    },
     listDatasets: () => request<Dataset[]>('/datasets'),
     listRecordings: (datasetId: string) => request<Recording[]>(`/datasets/${encodeURIComponent(datasetId)}/recordings`),
     getWindow: async (recordingId: string, startSec: number, endSec: number, channelIds: string[], maxPoints: number) => {
       validateInterval(startSec, endSec); validateChannels(channelIds);
       if (!Number.isInteger(maxPoints) || maxPoints < 1) throw new ApiError('Invalid display point budget.', 0, 'INVALID_WINDOW');
       const query = new URLSearchParams({ startSec: String(startSec), endSec: String(endSec), channelIds: channelIds.join(','), maxPoints: String(maxPoints) });
-      return validateWindow(await request<SignalWindow>(`/recordings/${encodeURIComponent(recordingId)}/signals?${query}`));
+      const importedPath = importedRecordingPath(recordingId, 'signals');
+      return validateWindow(await request<SignalWindow>(`${importedPath ?? `/recordings/${encodeURIComponent(recordingId)}/signals`}?${query}`));
     },
-    getEvents: (recordingId: string) => request<SignalEvent[]>(`/recordings/${encodeURIComponent(recordingId)}/events`),
+    getEvents: (recordingId: string) => request<SignalEvent[]>(
+      importedRecordingPath(recordingId, 'events') ?? `/recordings/${encodeURIComponent(recordingId)}/events`,
+    ),
     listModels: () => connected ? request<ModelProfile[]>('/models') : Promise.resolve(DECLARED_MODELS.map(model => ({ ...model, capabilities: [...model.capabilities] }))),
     searchDatasets: (query: string) => request<DatasetSearchResult[]>(`/datasets/search?${new URLSearchParams({ query })}`),
     listApprovedSources: async (page = 1, pageSize = 10) => {

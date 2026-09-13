@@ -240,7 +240,8 @@ describe('service contracts', () => {
     const page = {
       datasetId: 'kuka/collision-part1', datasetVersion: '1.0.0',
       data: [{
-        recordId: 'batch-01/run-01', seriesCount: 14, valueCount: 140,
+        recordId: 'batch-01/run-01', recordKey: '1'.repeat(24), isReplayCompatible: true,
+        seriesCount: 14, valueCount: 140,
         durationSeconds: 0.009, signals: ['joint_1'], annotationKeys: ['collision'],
       }],
       pagination: { page: 2, pageSize: 20, totalItems: 206, totalPages: 11 },
@@ -255,6 +256,42 @@ describe('service contracts', () => {
       '/api/ingestions/job%2F1/records?page=2&pageSize=20',
       expect.objectContaining({ credentials: 'same-origin' }),
     );
+  });
+
+  it('routes imported replay, raw windows, and events through the receipt-bound ingestion API', async () => {
+    const ingestionId = '11111111-1111-4111-8111-111111111111';
+    const recordKey = '2'.repeat(24);
+    const recordingId = `imported:${ingestionId}:${recordKey}`;
+    const channels = Array.from({ length: 7 }, (_, index) => ({
+      id: `joint_${index + 1}`, name: `Joint ${index + 1}`, unit: 'Nm', values: [index, index + 0.5],
+    }));
+    const replay = {
+      recording: { id: recordingId, name: 'batch-01/run-01', durationSeconds: 1, sampleRateHz: 1000, displaySampleRateHz: 2, sourceUrl: '', archive: 'Imported TimeF record', channelCount: 7, eventCount: 1 },
+      times: [0, 0.5], channels,
+      events: [{ id: 'event-1', timeSeconds: 0.5, kind: 'publisher_annotation', label: 'collision', source: 'source.mat' }],
+      detail: { startSeconds: 0, endSeconds: 1, times: [0, 0.5], channels },
+    };
+    const window = {
+      window: { datasetId: 'kuka/collision-part1', recordingId, startSec: 0, endSec: 1, channelIds: ['joint_1'] },
+      resolution: 'raw', series: [{ channelId: 'joint_1', timeSec: [0, 0.5], values: [0, 0.5] }],
+    };
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json(replay))
+      .mockResolvedValueOnce(Response.json(window))
+      .mockResolvedValueOnce(Response.json(replay.events));
+    vi.stubGlobal('fetch', fetch);
+    const service = createServices('/api');
+
+    expect((await service.getImportedReplay(ingestionId, recordKey)).recording.id).toBe(recordingId);
+    await service.getWindow(recordingId, 0, 1, ['joint_1'], 100);
+    await service.getEvents(recordingId);
+
+    const prefix = `/api/ingestions/${ingestionId}/records/${recordKey}`;
+    expect(fetch).toHaveBeenNthCalledWith(1, `${prefix}/replay`, expect.any(Object));
+    expect(fetch).toHaveBeenNthCalledWith(2, `${prefix}/signals?startSec=0&endSec=1&channelIds=joint_1&maxPoints=100`, expect.any(Object));
+    expect(fetch).toHaveBeenNthCalledWith(3, `${prefix}/events`, expect.any(Object));
+    await expect(service.getImportedReplay('not-an-ingestion', recordKey)).rejects.toMatchObject({ code: 'INVALID_RECORD' });
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('confirms a version-bound mapping through the existing ingestion', async () => {

@@ -107,6 +107,8 @@ export type FinalReceipt = {
 
 export type ImportedRecord = {
   recordId: string;
+  recordKey: string;
+  isReplayCompatible: boolean;
   seriesCount: number;
   valueCount: number;
   durationSeconds: number | null;
@@ -276,6 +278,8 @@ export function isImportedRecordPage(value: unknown): value is ImportedRecordPag
   ) && Number(pagination.page) >= 1 && Number(pagination.pageSize) >= 1;
   return validPagination && value.data.every(item => isRecord(item)
     && typeof item.recordId === 'string'
+    && /^[a-f0-9]{24}$/.test(String(item.recordKey))
+    && typeof item.isReplayCompatible === 'boolean'
     && Number.isInteger(item.seriesCount) && Number(item.seriesCount) >= 0
     && Number.isInteger(item.valueCount) && Number(item.valueCount) >= 0
     && (item.durationSeconds === null

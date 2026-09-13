@@ -11,6 +11,8 @@ const result: ImportedRecordPage = {
   datasetVersion: '1.0.0',
   data: [{
     recordId: 'batch-01/run-01',
+    recordKey: '1'.repeat(24),
+    isReplayCompatible: true,
     seriesCount: 14,
     valueCount: 3_248_014,
     durationSeconds: 232,
@@ -22,11 +24,19 @@ const result: ImportedRecordPage = {
 
 describe('imported dataset browser', () => {
   it('renders validated record provenance without raw arrays', () => {
-    const markup = renderToStaticMarkup(<ImportedRecordTable result={result} />);
+    const markup = renderToStaticMarkup(<ImportedRecordTable result={result} opening="" onOpen={vi.fn()} />);
     expect(markup).toContain('206 validated TimeF records');
     expect(markup).toContain('batch-01/run-01');
     expect(markup).toContain('3,248,014');
     expect(markup).toContain('collision, source_run_id');
+    expect(markup).toContain('Open in replay');
+  });
+
+  it('labels incompatible records as metadata only', () => {
+    const incompatible = { ...result, data: [{ ...result.data[0], isReplayCompatible: false }] };
+    const markup = renderToStaticMarkup(<ImportedRecordTable result={incompatible} opening="" onOpen={vi.fn()} />);
+    expect(markup).toContain('Metadata only');
+    expect(markup).not.toContain('Open in replay');
   });
 
   it('renders bounded accessible pagination', () => {

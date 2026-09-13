@@ -6,10 +6,15 @@ import ApprovedSourceLibrary from '../sourcing/ApprovedSourceLibrary';
 import DatasetScout from '../sourcing/DatasetScout';
 import ImportedDatasetBrowser from '../sourcing/ImportedDatasetBrowser';
 
-type Props = { services: Services; data: DemoData; onOpenRecording: (record: Recording) => Promise<void> };
+type Props = {
+  services: Services;
+  data: DemoData;
+  onOpenRecording: (record: Recording) => Promise<void>;
+  onOpenImportedRecord: (selection: ImportedDatasetSelection, recordKey: string) => Promise<void>;
+};
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'The request failed.';
 
-export default function DataWorkspace({ services, data, onOpenRecording }: Props) {
+export default function DataWorkspace({ services, data, onOpenRecording, onOpenImportedRecord }: Props) {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetId, setDatasetId] = useState('');
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -64,7 +69,7 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
 
     <DatasetScout services={services} onUseSource={refreshApprovedSources} />
     <div id="approved-source-library"><ApprovedSourceLibrary services={services} refreshKey={approvedRevision} onDatasetReady={setImportedDataset} /></div>
-    <ImportedDatasetBrowser selection={importedDataset} services={services} onClose={() => setImportedDataset(null)} />
+    <ImportedDatasetBrowser selection={importedDataset} services={services} onClose={() => setImportedDataset(null)} onOpenRecord={onOpenImportedRecord} />
 
     {services.connected && <details className="catalog-summary"><summary><span><strong>Available recordings</strong>Open a recording already loaded by the backend.</span><small>{recordings.length} recording{recordings.length === 1 ? '' : 's'}</small></summary><div className="catalog-details"><label htmlFor="catalog-dataset">Dataset</label><select id="catalog-dataset" value={datasetId} onChange={event => setDatasetId(event.target.value)}><option value="">Select dataset</option>{datasets.map(dataset => <option key={dataset.id} value={dataset.id}>{dataset.name}</option>)}</select>{recordings.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Recording</th><th>Duration</th><th>Channels</th><th>Action</th></tr></thead><tbody>{recordings.map(record => <tr key={record.id}><td>{record.name}</td><td>{record.durationSec.toFixed(1)} s</td><td>{record.channels.length}</td><td><button className="btn" disabled={Boolean(busy)} onClick={() => void open(record)}>{busy === record.id ? 'Opening…' : 'Open recording'}</button></td></tr>)}</tbody></table></div> : <p className="empty-state">No recordings loaded for this dataset.</p>}</div></details>}
   </section>;
