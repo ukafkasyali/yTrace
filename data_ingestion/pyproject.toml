@@ -20,6 +20,7 @@ dev = ["pytest>=7"]
 
 [project.scripts]
 dataset-profiler = "dataset_profiler.cli:main"
+onboard = "dataset_profiler.onboarding.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
