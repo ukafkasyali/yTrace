@@ -8,7 +8,7 @@ export type PredictionReview = {
   note: string;
 };
 
-/** Surface a model/measurement disagreement without treating either quantity as physical truth. */
+/** Surface a cross-check between different model and measurement quantities. */
 export function reviewPrediction(data: DemoData, interval: Interval, output?: string): PredictionReview | undefined {
   const prediction = structuredPrediction(output);
   if (!prediction?.strongest_joint) return;
@@ -22,6 +22,6 @@ export function reviewPrediction(data: DemoData, interval: Interval, output?: st
   return {
     predictedJoint: prediction.strongest_joint,
     largestRangeJoint,
-    note: `OpenTSLM highlights ${prediction.strongest_joint}, while ${largestRangeJoint} has the largest measured torque range. Review both signals before sharing this handoff.`,
+    note: `OpenTSLM predicts ${prediction.strongest_joint} as the strongest disturbance. ${largestRangeJoint} has the largest measured torque range. These are different quantities; inspect both before handoff.`,
   };
 }

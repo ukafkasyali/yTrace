@@ -12,10 +12,10 @@ const data: DemoData = {
 const prediction = (joint: string) => `Answer: {"contact":true,"event_type":"accidental","onset_ms":1,"strongest_joint":"${joint}","affected_joints":["${joint}"],"evidence_start_ms":1,"evidence_end_ms":2}`;
 
 describe('prediction review', () => {
-  it('flags a visible model and measurement disagreement', () => {
+  it('surfaces a cross-check between model and measurement rankings', () => {
     expect(reviewPrediction(data, { start: 0, end: .002 }, prediction('J4'))).toEqual({
       predictedJoint: 'J4', largestRangeJoint: 'J2',
-      note: 'OpenTSLM highlights J4, while J2 has the largest measured torque range. Review both signals before sharing this handoff.',
+      note: 'OpenTSLM predicts J4 as the strongest disturbance. J2 has the largest measured torque range. These are different quantities; inspect both before handoff.',
     });
   });
 

@@ -133,7 +133,7 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
     '',
     answer || 'No interpretation was returned.',
     '',
-    '## Review before handoff',
+    '## Cross-check before handoff',
     '',
     ...reviewNotes,
     '',
