@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
+  "h5py>=3.8",
   "pydantic>=2.10,<3",
   "pyarrow>=14,<26",
   "numpy>=1.24",
@@ -20,7 +21,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-hdf5 = ["h5py>=3.8"]
 plot = ["matplotlib>=3.7"]
 dev = ["pytest>=7"]
 
