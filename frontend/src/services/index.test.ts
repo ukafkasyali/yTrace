@@ -174,4 +174,75 @@ describe('service contracts', () => {
     })));
     await expect(createServices('/api').getSourcingManifest('run-1')).rejects.toBeInstanceOf(ProtocolError);
   });
+
+  it('validates approved sources and starts ingestion from opaque IDs only', async () => {
+    const source = {
+      approvedSourceId: `src_${'1'.repeat(24)}`, name: 'Robot telemetry',
+      canonicalUrl: 'https://zenodo.org/records/1', sourceKind: 'ZENODO',
+      sourceRevision: '1.r1', licenseId: 'cc-by-4.0', datasetLicenseId: 'cc-by-4.0',
+      codeLicenseId: null, labels: ['robot'], fileExtensions: ['.csv'], totalSizeBytes: 42,
+      isAcquisitionReady: true, approvalCount: 1, latestManifestSha256: 'a'.repeat(64),
+      createdAt: '2026-09-13T10:00:00Z', latestApprovedAt: '2026-09-13T10:00:00Z',
+    };
+    const job = {
+      ingestionId: '11111111-1111-4111-8111-111111111111',
+      approvedSourceId: source.approvedSourceId, manifestSha256: 'a'.repeat(64),
+      sourceUrl: source.canonicalUrl, sourceKind: 'ZENODO', sourceRevision: '1.r1',
+      datasetLicenseId: 'cc-by-4.0', assetIds: [`asset_${'2'.repeat(16)}`],
+      jobRevision: 1, state: 'queued', message: 'Queued',
+      createdAt: '2026-09-13T10:00:00Z', updatedAt: '2026-09-13T10:00:00Z',
+    };
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json({ data: [source], pagination: { page: 1, pageSize: 6, totalItems: 1, totalPages: 1 } }))
+      .mockResolvedValueOnce(Response.json({ ...source, approvals: [{ sourcingRunId: 'run-1', candidateId: 'candidate-1', manifestSha256: 'a'.repeat(64), approvedAt: '2026-09-13T10:00:00Z' }] }))
+      .mockResolvedValueOnce(Response.json({ schemaVersion: '1.1', assets: [{ assetId: `asset_${'2'.repeat(16)}`, name: 'signals.csv', role: 'DATA', sizeBytes: 42 }], limitations: [] }))
+      .mockResolvedValueOnce(Response.json(job, { status: 202 }))
+      .mockResolvedValueOnce(Response.json(job));
+    vi.stubGlobal('fetch', fetch);
+    const service = createServices('/api');
+
+    expect((await service.listApprovedSources(1, 6)).data[0].approvedSourceId).toBe(source.approvedSourceId);
+    expect((await service.getApprovedSource(source.approvedSourceId)).approvals).toHaveLength(1);
+    expect((await service.getApprovedSourceManifest(source.approvedSourceId)).assets[0].role).toBe('DATA');
+    await service.startImport(source.approvedSourceId, job.assetIds);
+    expect(fetch).toHaveBeenNthCalledWith(4, '/api/ingestions', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ approvedSourceId: source.approvedSourceId, assetIds: job.assetIds }),
+      headers: expect.objectContaining({
+        'Idempotency-Key': `approved-source:${source.approvedSourceId}:${job.assetIds.join(',')}`,
+      }),
+    }));
+    expect((await service.getImport(job.ingestionId)).state).toBe('queued');
+  });
+
+  it('rejects malformed approved-source and ingestion responses', async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json({ data: [{ canonicalUrl: 'https://example.com' }], pagination: {} }))
+      .mockResolvedValueOnce(Response.json({ ingestionId: 'job', state: 'complete' }));
+    vi.stubGlobal('fetch', fetch);
+    const service = createServices('/api');
+    await expect(service.listApprovedSources()).rejects.toBeInstanceOf(ProtocolError);
+    await expect(service.getImport('job')).rejects.toBeInstanceOf(ProtocolError);
+  });
+
+  it('confirms a version-bound mapping through the existing ingestion', async () => {
+    const mapping = {
+      schemaVersion: '1.0' as const, jobRevision: 3,
+      resourceId: `res_${'1'.repeat(24)}`, resourceSha256: 'a'.repeat(64),
+      layout: 'WIDE_TABLE' as const, recordSelector: null, timeSelector: 'time',
+      channelSelector: null, valueSelector: null, signalSelector: null,
+      sampleAxis: null, channelAxis: null,
+      channels: [{ selector: 'joint', name: 'Joint', unit: 'newton * meter' }],
+      annotations: [],
+    };
+    const fetch = vi.fn().mockResolvedValue(Response.json({
+      mappingSha256: 'b'.repeat(64), mapping, created: true,
+    }));
+    vi.stubGlobal('fetch', fetch);
+
+    await createServices('/api').confirmMapping('job/1', mapping);
+
+    expect(fetch).toHaveBeenCalledWith('/api/ingestions/job%2F1/mapping', expect.objectContaining({
+      method: 'PUT', body: JSON.stringify(mapping),
+    }));
+  });
 });

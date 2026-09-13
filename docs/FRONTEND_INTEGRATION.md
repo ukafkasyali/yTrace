@@ -10,7 +10,8 @@ Vite and SSH returns the exact initial historical window. Model loading awaits
 Hugging Face access to the Llama backbone; no generated answer has passed yet.
 This first service exposes direct OpenTSLM-SP, the bundled dataset,
 and query streaming/cancellation. It does not provide assistant orchestration or
-ingestion. Vite proxies `/api` to `127.0.0.1:8000` when connected mode is enabled.
+ingestion. In local development, Vite proxies inference routes to `127.0.0.1:8000`, sourcing and
+approved-source routes to `127.0.0.1:8001`, and ingestion routes to `127.0.0.1:8002`.
 
 The completion payload adds an optional `inputTrace`: `window`, `playheadSec`,
 `samplesPerChannel`, `inputSha256`, `model`, `revision`, `normalization`, `padding`
@@ -108,6 +109,13 @@ The routes below are requested by the implemented service client with `/api` as 
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
 | `startImport(approvedSourceId, assetIds?)` | `POST /api/ingestions` | persisted ingestion job |
 | `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion progress and validation report |
+| `listApprovedSources(page, pageSize)` | `GET /api/approved-sources` | durable reviewed source revisions |
+| `getApprovedSource(approvedSourceId)` | `GET /api/approved-sources/:id` | source detail and approval history |
+| `getApprovedSourceManifest(approvedSourceId)` | `GET /api/approved-sources/:id/manifest` | exact assets and limitations |
+| `getImportForSource(approvedSourceId)` | `GET /api/ingestions/by-source/:id` | existing job after reload |
+| `getMappingProposals(ingestionId)` | `GET /api/ingestions/:id/mapping-proposals` | bounded mapping candidates |
+| `confirmMapping(ingestionId, mapping)` | `PUT /api/ingestions/:id/mapping` | version-checked mapping resume |
+| `getImportReceipt(ingestionId)` | `GET /api/ingestions/:id/receipt` | validated TimeF receipt |
 | `startSourcingRun(input, idempotencyKey)` | `POST /api/sourcing-runs` | durable run ID and initial status |
 | `getSourcingRun(runId)` | `GET /api/sourcing-runs/:id` | requirements, evidence, gates and ranking |
 | `reviewSourcingRun(runId, decision)` | `POST /api/sourcing-runs/:id/approvals` | resumed run after human review |
@@ -154,7 +162,7 @@ Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP err
 
 ## Ingestion visibility and security
 
-Ingestion states: `queued → inspecting → mapping → validating → importing → ready`, with `needs_input`, `failed` and `cancelled` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. Poll responses include `{ ingestionId, approvedSourceId, state, sourceUrl, sourceRevision, assetIds, manifestSha256 }` plus optional `datasetId`, `datasetIds`, `progress`, `steps: { label, completed }[]`, `mappings: { source, channelId?, unit? }[]`, `warnings` and `message`. Only provide percentage progress when the backend can measure it. The UI polls jobs and displays reported states; it does not implement ingestion-job cancellation or interactive mapping edits yet.
+Ingestion states: `queued → acquiring → inspecting → mapping → validating → importing → ready`, with `needs_input`, `unsupported_format`, and `failed` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. The UI polls active jobs, presents explicit channel-unit confirmation when mapping is required, and displays the immutable validation receipt when ready. It does not implement ingestion-job cancellation.
 
 An ingestion agent proposes mappings; deterministic validators check them. Unknown units or ambiguous channels produce `needs_input`, not invented metadata. Retrieval results identify their source documents separately from signal evidence. Server-side URL fetching must reject private/local network targets and enforce size/type limits.
 

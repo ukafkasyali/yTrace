@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from dataset_profiler.ingestion import (
     AssetReceipt,
+    CreateIngestion,
     IngestionJobConflict,
     IngestionService,
     IngestionState,
@@ -147,6 +148,22 @@ class MappingServiceTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(IngestionJobConflict, "another confirmed mapping"):
             self.mappings.confirm(self.job.ingestion_id, changed)
+
+    def test_failed_mapped_job_retries_the_import_without_reacquisition(self) -> None:
+        self.mappings.confirm(self.job.ingestion_id, self.confirmed_candidate())
+        self.service.jobs.set_state(self.job.ingestion_id, IngestionState.FAILED, "failed")
+
+        retried, created = self.service.create(
+            CreateIngestion(
+                approved_source_id=self.job.approved_source_id,
+                asset_ids=self.job.asset_ids,
+            )
+        )
+
+        self.assertFalse(created)
+        self.assertEqual(retried.ingestion_id, self.job.ingestion_id)
+        self.assertEqual(retried.state, IngestionState.VALIDATING)
+        self.assertEqual(retried.message, "Queued for deterministic import retry")
 
     def test_ambiguous_time_and_array_axes_do_not_auto_resolve(self) -> None:
         no_time = self.profile.model_copy(

@@ -75,10 +75,11 @@ before starting or building Vite, for example:
 VITE_API_BASE_URL=/api npm run dev
 ```
 
-Vite's local development proxies route `/api/sourcing-runs` and
+Vite's local development proxies route `/api/sourcing-runs`, `/api/approved-sources`, and
 `/api/sourcing-requirement-previews` to the dataset scout on `127.0.0.1:8001`,
-while the remaining `/api` routes go to the inference bridge on `127.0.0.1:8000`
-(the local SSH tunnel). A separate backend origin must provide appropriate CORS. The
+`/api/ingestions` to the ingestion API on `127.0.0.1:8002`, and the remaining `/api` routes to
+the inference bridge on `127.0.0.1:8000` (the local SSH tunnel). A separate backend origin must
+provide appropriate CORS. The
 client uses `credentials: 'same-origin'`; cross-origin cookie authentication is
 not configured. Never place model keys or other secrets in `VITE_*` variables.
 Setting the URL enables requests; it does not prove a service is healthy.
@@ -88,12 +89,18 @@ For an integrated local run, start the scout from the repository root:
 ```sh
 cd data_sourcing
 uv run uvicorn data_sourcing.api:create_app --factory --reload --port 8001
+
+cd ../data_ingestion
+dataset-ingestion-api
+dataset-ingestion-worker
 ```
 
-Then run the frontend with `VITE_API_BASE_URL=/api npm run dev`. The **Data source**
-workspace can start or resume an evidence review, inspect hard gates and
-contradictions, approve its recommendation, and pass the approved canonical URL
-to the existing ingestion form. Approval never starts ingestion automatically.
+Then run the frontend with `VITE_API_BASE_URL=/api npm run dev`. The **Data source** workspace can
+start or resume an evidence review, inspect hard gates and contradictions, and approve its
+recommendation. Approved revisions remain in a paginated source library after reload. The user
+chooses manifest-listed data assets and explicitly starts or resumes the source's single ingestion
+job; approval never starts ingestion automatically. A ready source shows its validation receipt and
+cannot start another ingestion.
 
 - **Ingestion team:** provide datasets, recording signals/events, dataset search
   and ingestion-job endpoints. The current viewer accepts seven synchronized,

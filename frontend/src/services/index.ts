@@ -1,7 +1,18 @@
 import type { DemoCase } from '../types';
 import { validateDemoData } from '../lib/data';
 import { isRequirementsPreview, isRunAccepted, isSourcingManifest, isSourcingRun, type CreateSourcingRun, type RequirementPreviewRequest, type SourcingReview } from './sourcing';
+import {
+  isApprovedSourceDetail,
+  isApprovedManifest,
+  isApprovedSourcePage,
+  isFinalReceipt,
+  isImportJob,
+  isMappingProposals,
+  isMappingSpec,
+  type MappingSpec,
+} from './ingestion';
 export * from './sourcing';
+export * from './ingestion';
 
 export type WindowRef = {
   datasetId: string; recordingId: string; startSec: number; endSec: number; channelIds: string[];
@@ -50,15 +61,6 @@ export type QueryEvent = {
 export type DatasetSearchResult = {
   id: string; name: string; sourceUrl: string; description?: string; revision?: string;
 };
-export type ImportJob = {
-  ingestionId: string;
-  state: 'queued' | 'inspecting' | 'mapping' | 'validating' | 'importing' | 'ready' | 'needs_input' | 'failed' | 'cancelled';
-  sourceUrl: string; sourceRevision?: string; datasetId?: string; datasetIds?: string[];
-  progress?: number; steps?: { label: string; completed: boolean }[];
-  mappings?: { source: string; channelId?: string; unit?: string }[];
-  warnings?: string[]; message?: string;
-};
-
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -217,8 +219,58 @@ export function createServices(baseUrl?: string) {
     getEvents: (recordingId: string) => request<SignalEvent[]>(`/recordings/${encodeURIComponent(recordingId)}/events`),
     listModels: () => connected ? request<ModelProfile[]>('/models') : Promise.resolve(DECLARED_MODELS.map(model => ({ ...model, capabilities: [...model.capabilities] }))),
     searchDatasets: (query: string) => request<DatasetSearchResult[]>(`/datasets/search?${new URLSearchParams({ query })}`),
-    startImport: (sourceUrl: string) => request<{ ingestionId: string }>('/ingestions', { method: 'POST', body: JSON.stringify({ sourceUrl }) }),
-    getImport: (id: string) => request<ImportJob>(`/ingestions/${encodeURIComponent(id)}`),
+    listApprovedSources: async (page = 1, pageSize = 10) => {
+      const result = await request<unknown>(`/approved-sources?${new URLSearchParams({ page: String(page), pageSize: String(pageSize) })}`);
+      if (!isApprovedSourcePage(result)) throw new ProtocolError('The approved-source list does not match the contract.');
+      return result;
+    },
+    getApprovedSource: async (approvedSourceId: string) => {
+      const result = await request<unknown>(`/approved-sources/${encodeURIComponent(approvedSourceId)}`);
+      if (!isApprovedSourceDetail(result)) throw new ProtocolError('The approved-source detail does not match the contract.');
+      return result;
+    },
+    getApprovedSourceManifest: async (approvedSourceId: string) => {
+      const result = await request<unknown>(`/approved-sources/${encodeURIComponent(approvedSourceId)}/manifest`);
+      if (!isApprovedManifest(result)) throw new ProtocolError('The approved manifest does not match the acquisition contract.');
+      return result;
+    },
+    startImport: async (approvedSourceId: string, assetIds?: string[]) => {
+      const selected = assetIds ? [...assetIds].sort() : undefined;
+      const idempotencyKey = `approved-source:${approvedSourceId}:${selected?.join(',') ?? 'all-data-assets'}`;
+      const result = await request<unknown>('/ingestions', {
+        method: 'POST', headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ approvedSourceId, ...(selected ? { assetIds: selected } : {}) }),
+      });
+      if (!isImportJob(result)) throw new ProtocolError('The ingestion response does not match the job contract.');
+      return result;
+    },
+    getImport: async (id: string) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}`);
+      if (!isImportJob(result)) throw new ProtocolError('The ingestion response does not match the job contract.');
+      return result;
+    },
+    getImportForSource: async (approvedSourceId: string) => {
+      const result = await request<unknown>(`/ingestions/by-source/${encodeURIComponent(approvedSourceId)}`);
+      if (result !== null && !isImportJob(result)) throw new ProtocolError('The source ingestion response does not match the job contract.');
+      return result;
+    },
+    getMappingProposals: async (id: string) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/mapping-proposals`);
+      if (!isMappingProposals(result)) throw new ProtocolError('The mapping proposals do not match the contract.');
+      return result;
+    },
+    confirmMapping: async (id: string, mapping: MappingSpec) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/mapping`, {
+        method: 'PUT', body: JSON.stringify(mapping),
+      });
+      if (!isObject(result) || !isMappingSpec(result.mapping)) throw new ProtocolError('The confirmed mapping does not match the contract.');
+      return result;
+    },
+    getImportReceipt: async (id: string) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/receipt`);
+      if (!isFinalReceipt(result)) throw new ProtocolError('The ingestion receipt does not match the contract.');
+      return result;
+    },
     previewSourcingRequirements: async (input: RequirementPreviewRequest) => {
       const preview = await request<unknown>('/sourcing-requirement-previews', {
         method: 'POST', body: JSON.stringify(input),

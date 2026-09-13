@@ -110,6 +110,15 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
         job, _ = ingestion.create(body)
         return job
 
+    @app.get(
+        "/api/ingestions/by-source/{approved_source_id}",
+        response_model=IngestionJob | None,
+    )
+    def get_ingestion_by_source(
+        approved_source_id: Annotated[str, ApiPath(pattern=r"^src_[a-f0-9]{24}$")],
+    ) -> IngestionJob | None:
+        return ingestion.jobs.find_by_source(approved_source_id)
+
     @app.get("/api/ingestions/{ingestion_id}", response_model=IngestionJob)
     def get_ingestion(
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],

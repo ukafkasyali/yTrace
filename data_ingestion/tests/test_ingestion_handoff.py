@@ -607,21 +607,30 @@ class IngestionApiTests(unittest.TestCase):
                     json={"approvedSourceId": "src_0123456789abcdef01234567"},
                 )
                 fetched = client.get(f"/api/ingestions/{created.json()['ingestionId']}")
+                by_source = client.get(
+                    "/api/ingestions/by-source/src_0123456789abcdef01234567"
+                )
                 assets = client.get(
                     f"/api/ingestions/{created.json()['ingestionId']}/assets"
                 )
                 resources = client.get(
                     f"/api/ingestions/{created.json()['ingestionId']}/resources"
                 )
+                receipt = client.get(
+                    f"/api/ingestions/{created.json()['ingestionId']}/receipt"
+                )
 
                 self.assertEqual(created.status_code, 202)
                 self.assertEqual(repeated.json()["ingestionId"], created.json()["ingestionId"])
                 self.assertEqual(fetched.json(), created.json())
+                self.assertEqual(by_source.json(), created.json())
                 self.assertEqual(created.json()["state"], "queued")
                 self.assertEqual(assets.status_code, 200)
                 self.assertEqual(assets.json(), [])
                 self.assertEqual(resources.status_code, 200)
                 self.assertEqual(resources.json(), [])
+                self.assertEqual(receipt.status_code, 200)
+                self.assertIsNone(receipt.json())
             service.close()
 
     def test_conflicting_asset_selection_returns_409(self) -> None:

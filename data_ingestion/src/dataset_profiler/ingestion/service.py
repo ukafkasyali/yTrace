@@ -157,10 +157,21 @@ class IngestionService:
                     "Approved source already has an ingestion with another asset selection"
                 )
             if existing.state is IngestionState.FAILED:
+                has_confirmed_mapping = (
+                    self.jobs.get_mapping_payload(existing.ingestion_id) is not None
+                )
                 existing = self.jobs.set_state(
                     existing.ingestion_id,
-                    IngestionState.QUEUED,
-                    "Queued for verified acquisition retry",
+                    (
+                        IngestionState.VALIDATING
+                        if has_confirmed_mapping
+                        else IngestionState.QUEUED
+                    ),
+                    (
+                        "Queued for deterministic import retry"
+                        if has_confirmed_mapping
+                        else "Queued for verified acquisition retry"
+                    ),
                 )
             return existing, False
 

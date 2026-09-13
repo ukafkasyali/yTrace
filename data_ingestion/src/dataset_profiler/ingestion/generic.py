@@ -338,6 +338,12 @@ class GenericTimeFBuilder:
             if actual is None or len(actual.time_series) != len(wanted.series):
                 raise GenericImportError("TimeF read-back series structure differs")
             for actual_series, wanted_series in zip(actual.time_series, wanted.series, strict=True):
+                if (
+                    actual_series.signal != wanted_series.name
+                    or actual_series.spec.name != wanted_series.name
+                    or actual_series.spec.unit_value != ureg.Unit(wanted_series.unit)
+                ):
+                    raise GenericImportError("TimeF read-back channel name or unit differs")
                 observed = actual_series.to_numpy().reshape(-1)
                 if not np.array_equal(observed, wanted_series.values, equal_nan=True):
                     raise GenericImportError("TimeF read-back values differ")

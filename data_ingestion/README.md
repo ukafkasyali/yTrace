@@ -48,8 +48,8 @@ fail before acquisition.
 
 One `approvedSourceId` has at most one logical ingestion job. Matching retries return the existing
 job, including after restart; another asset selection returns a conflict rather than creating a
-second ready dataset. The acquisition worker downloads only manifest-selected assets and never
-executes source code or marks a dataset ready.
+second ready dataset. A ready job is terminal and subsequent requests return that result instead of
+re-ingesting it. The worker downloads only manifest-selected assets and never executes source code.
 
 Run the local ingestion API separately from the scout:
 
@@ -64,6 +64,8 @@ dataset-ingestion-worker
 `assetIds` list. The service resolves and hashes the approved manifest itself; it never accepts a
 browser-supplied source or download URL. `GET /api/ingestions/{ingestionId}` returns the persisted
 job, and `GET /api/ingestions/{ingestionId}/assets` returns immutable public acquisition receipts.
+A saved source can recover its job after reload through
+`GET /api/ingestions/by-source/{approvedSourceId}`.
 A missing dataset-file license creates the one job in `needs_input` rather than substituting a
 repository code license.
 
@@ -113,6 +115,20 @@ resource SHA-256. Time, record, channel, value, array-axis, and annotation selec
 against the persisted schema. Competing selectors, unknown units, stale revisions, changed sources,
 and placeholder long-table channels fail without advancing the job. Repeating the identical
 confirmed mapping is idempotent; replacing it is a conflict.
+
+Confirmed wide-table, long-table, and named-array mappings are converted into TimeF with explicit
+record boundaries, integer-microsecond irregular time axes, channel names, units, missing values,
+and bounded source-row provenance. The worker reloads the committed TimeF version and compares its
+records, channels, units, timestamps, and values before setting `ready`. The public receipt at
+`GET /api/ingestions/{ingestionId}/receipt` separates approved provider claims from observed content
+hashes and records the mapping, output version, and read-back validation hash without absolute paths
+or raw arrays. Interrupted imports revalidate the same content-addressed output.
+
+The exact Zenodo identities `21927431.r4` and `21941203.r4`, with their verified CC-BY-4.0 dataset
+licence, dispatch to the existing KUKA Part I and Part II connectors before generic mapping. A
+provider, revision, or licence mismatch fails closed. These connectors retain seven torque and
+seven position series at 1 kHz and keep accidental-collision and intentional-contact publisher
+annotations distinct.
 
 ## Declarative semantic specs
 

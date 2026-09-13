@@ -262,13 +262,15 @@ the mapping validates against the inspected source and current job revision.
     PUT /api/ingestions/{ingestionId}/mapping
     {
       "jobRevision": 3,
-      "mapping": { ... }
+      "schemaVersion": "1.0",
+      "resourceId": "...",
+      "layout": "WIDE_TABLE",
+      "...": "..."
     }
       -> resumed job or 409 on stale/conflicting state
 
-The existing states remain queued, inspecting, mapping, validating, importing, ready, needs_input,
-failed, and cancelled. Acquisition and extraction appear as explicit steps without invented
-percentage progress. POST is a get-or-create operation backed by a unique approvedSourceId
+The states are queued, acquiring, inspecting, mapping, validating, importing, ready, needs_input,
+unsupported_format, and failed. POST is a get-or-create operation backed by a unique approvedSourceId
 constraint: an existing source returns its existing ingestion resource. Asset selection is fixed
 when that job is created; a conflicting later selection returns 409. Retries and mapping completion
 advance the same job. Once ready, its source, assets, mapping, receipt, and output are immutable.
@@ -291,57 +293,57 @@ contains no raw arrays, credentials, or machine-specific absolute path in its pu
 ### Phase 1: Approved source library
 
 - [ ] Task 1: Freeze manifest, catalog, mapping, and licence contracts.
-- [ ] Task 2: Emit acquisition-ready assets for all three providers.
-- [ ] Task 3: Persist and reconcile approved-source catalog entries.
-- [ ] Task 4: Expose paginated approved-source list/detail/manifest APIs.
+- [x] Task 2: Emit acquisition-ready assets for all three providers.
+- [x] Task 3: Persist and reconcile approved-source catalog entries.
+- [x] Task 4: Expose paginated approved-source list/detail/manifest APIs.
 
 ### Checkpoint: Persistent approvals
 
-- [ ] Approving a source makes it visible without starting ingestion.
-- [ ] Reapproving the same revision adds history but not a duplicate source.
-- [ ] A new revision is a distinct source and legacy manifests remain displayable.
+- [x] Approving a source makes it visible without starting ingestion.
+- [x] Reapproving the same revision adds history but not a duplicate source.
+- [x] A new revision is a distinct source and legacy manifests remain displayable.
 
 ### Phase 2: Generic intake
 
-- [ ] Task 5: Create one idempotent ingestion job per approved source.
-- [ ] Task 6: Implement secure acquisition core and Zenodo adapter.
-- [ ] Task 7: Add pinned GitHub and Hugging Face acquisition adapters.
-- [ ] Task 8: Add content-addressed storage and safe archive extraction.
-- [ ] Task 9: Add the format-adapter registry and bounded resource inventory.
+- [x] Task 5: Create one idempotent ingestion job per approved source.
+- [x] Task 6: Implement secure acquisition core and Zenodo adapter.
+- [x] Task 7: Add pinned GitHub and Hugging Face acquisition adapters.
+- [x] Task 8: Add content-addressed storage and safe archive extraction.
+- [x] Task 9: Add the format-adapter registry and bounded resource inventory.
 
 ### Checkpoint: Universal provider intake
 
-- [ ] Approved fixtures from GitHub, Zenodo, and Hugging Face can be acquired and inventoried.
-- [ ] Unsupported formats return UNSUPPORTED_FORMAT; unsafe content fails closed.
-- [ ] No downloaded code is executed.
+- [x] Approved fixtures from GitHub, Zenodo, and Hugging Face can be acquired and inventoried.
+- [x] Unsupported formats return UNSUPPORTED_FORMAT; unsafe content fails closed.
+- [x] No downloaded code is executed.
 
 ### Phase 3: Common time-series formats
 
-- [ ] Task 10: Add CSV/TSV and Parquet adapters.
-- [ ] Task 11: Add NPY/NPZ, MAT, and HDF5 adapters.
-- [ ] Task 12: Add validated MappingSpec proposals and user-confirmed resume.
-- [ ] Task 13: Build generic TimeF datasets and deterministic receipts.
-- [ ] Task 14: Preserve and verify specialized KUKA dispatch.
+- [x] Task 10: Add CSV/TSV and Parquet adapters.
+- [x] Task 11: Add NPY/NPZ, MAT, and HDF5 adapters.
+- [x] Task 12: Add validated MappingSpec proposals and user-confirmed resume.
+- [x] Task 13: Build generic TimeF datasets and deterministic receipts.
+- [x] Task 14: Preserve and verify specialized KUKA dispatch.
 
 ### Checkpoint: Generic conversion
 
-- [ ] One fixture per format family reaches READY with exact value/time/channel checks.
-- [ ] Ambiguous layouts reach NEEDS_INPUT and resume from a valid user mapping.
-- [ ] KUKA Part I/II still use specialized connectors and pass full-array validation.
+- [x] One fixture per format family reaches READY with exact value/time/channel checks.
+- [x] Ambiguous layouts reach NEEDS_INPUT and resume from a valid user mapping.
+- [x] KUKA Part I/II still use specialized connectors and pass full-array validation.
 
 ### Phase 4: User-facing on-demand ingestion
 
-- [ ] Task 15: Display the approved-source library in the frontend.
-- [ ] Task 16: Start and resume ingestion from an approved source.
+- [x] Task 15: Display the approved-source library in the frontend.
+- [x] Task 16: Start and resume ingestion from an approved source.
 - [ ] Task 17: Run and document provider/format/end-to-end acceptance.
 
 ### Checkpoint: Complete
 
-- [ ] Users can return to approved sources and start ingestion without rerunning sourcing.
-- [ ] A source with an ingestion already created shows that job/result instead of another ingest
+- [x] Users can return to approved sources and start ingestion without rerunning sourcing.
+- [x] A source with an ingestion already created shows that job/result instead of another ingest
   action.
-- [ ] The UI displays source revision, licence, formats, approval history, and ingestion status.
-- [ ] Ready datasets have reproducible manifests, mappings, TimeF output, and receipts.
+- [x] The UI displays source revision, licence, formats, approval history, and ingestion status.
+- [x] Ready datasets have reproducible manifests, mappings, TimeF output, and receipts.
 
 ## Ownership and Coordination
 

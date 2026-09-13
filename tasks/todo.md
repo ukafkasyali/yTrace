@@ -88,7 +88,7 @@ kind and a bounded text query. Ordering is stable and newest approval appears fi
 **Verification:**
 
 - [x] API tests cover pagination, filters, missing IDs, duplicate approvals, and legacy manifests.
-- [ ] API docs and typed frontend contracts are updated additively.
+- [x] API docs and typed frontend contracts are updated additively.
 
 **Dependencies:** Task 3
 
@@ -227,9 +227,9 @@ datasets into memory.
 
 ## Checkpoint: Universal provider intake
 
-- [ ] GitHub, Zenodo, and Hugging Face fixtures acquire and inventory safely.
-- [ ] Unsupported formats have precise visible outcomes.
-- [ ] No downloaded code executes.
+- [x] GitHub, Zenodo, and Hugging Face fixtures acquire and inventory safely.
+- [x] Unsupported formats have precise visible outcomes.
+- [x] No downloaded code executes.
 
 ## Task 10: Support CSV/TSV and Parquet
 
@@ -238,14 +238,14 @@ wide time-plus-channel layouts and long record/time/channel/value layouts.
 
 **Acceptance criteria:**
 
-- [ ] CSV/TSV dialect, header, types, and malformed-row limits are deterministic.
-- [ ] Parquet uses schema/row groups and projected reads.
-- [ ] Values, missingness, record keys, and source row provenance survive mapping.
+- [x] CSV/TSV dialect, header, types, and malformed-row limits are deterministic.
+- [x] Parquet uses schema/row groups and projected reads.
+- [x] Values, missingness, record keys, and source row provenance survive mapping.
 
 **Verification:**
 
-- [ ] Wide, long, multi-record, gapped, malformed, and oversized fixtures are tested.
-- [ ] Adapter conformance and exact round-trip value tests pass.
+- [x] Wide, long, multi-record, gapped, malformed, and oversized fixtures are tested.
+- [x] Adapter conformance and exact round-trip value tests pass.
 
 **Dependencies:** Task 9
 
@@ -307,14 +307,14 @@ receipt linking source approval, assets, resource profiles, mapping, output vers
 
 **Acceptance criteria:**
 
-- [ ] Wide, long, and named-array fixtures preserve exact values, axes, units, channels, and records.
-- [ ] Sourced claims and ingestion observations remain separate in receipts.
-- [ ] READY requires deterministic TimeF read-back validation.
+- [x] Wide, long, and named-array fixtures preserve exact values, axes, units, channels, and records.
+- [x] Sourced claims and ingestion observations remain separate in receipts.
+- [x] READY requires deterministic TimeF read-back validation.
 
 **Verification:**
 
-- [ ] One fixture per supported format family builds, reloads, and matches its source.
-- [ ] Receipt hashes reproduce; attempts to replace a ready job's input or mapping fail.
+- [x] One fixture per supported format family builds, reloads, and matches its source.
+- [x] Receipt hashes reproduce; attempts to replace a ready job's input or mapping fail.
 
 **Dependencies:** Task 12
 
@@ -330,14 +330,14 @@ existing annotation and mapping decision.
 
 **Acceptance criteria:**
 
-- [ ] Part I and Part II select the correct connector and never merge event semantics.
-- [ ] Seven torque plus seven position series, 1 kHz time, and publisher annotations persist.
-- [ ] Generic adapters cannot silently replace specialized output.
+- [x] Part I and Part II select the correct connector and never merge event semantics.
+- [x] Seven torque plus seven position series, 1 kHz time, and publisher annotations persist.
+- [x] Generic adapters cannot silently replace specialized output.
 
 **Verification:**
 
-- [ ] Existing full-array TimeF validation passes for both parts.
-- [ ] Manifest/profile/licence/revision mismatch prevents READY.
+- [x] Existing full-array TimeF validation passes for both parts.
+- [x] Manifest/profile/licence/revision mismatch prevents READY.
 
 **Dependencies:** Tasks 1, 5, and 13
 
@@ -347,9 +347,9 @@ existing annotation and mapping decision.
 
 ## Checkpoint: Generic conversion
 
-- [ ] All supported format families have exact read-back tests.
-- [ ] Ambiguous fixtures stop and resume through confirmed mappings.
-- [ ] KUKA specialized validation remains green.
+- [x] All supported format families have exact read-back tests.
+- [x] Ambiguous fixtures stop and resume through confirmed mappings.
+- [x] KUKA specialized validation remains green.
 
 ## Task 15: Display approved sources
 
@@ -359,14 +359,14 @@ limitations, and an ingest action.
 
 **Acceptance criteria:**
 
-- [ ] Sources remain visible after reload without rerunning sourcing.
-- [ ] Repeated approvals are not duplicate cards; new revisions are distinct.
-- [ ] Empty, loading, pagination, protocol-error, and unavailable-service states are accessible.
+- [x] Sources remain visible after reload without rerunning sourcing.
+- [x] Repeated approvals are not duplicate cards; new revisions are distinct.
+- [x] Empty, loading, pagination, protocol-error, and unavailable-service states are accessible.
 
 **Verification:**
 
-- [ ] Frontend service validators and component tests cover all states.
-- [ ] No manifest field is reduced to a bare URL before ingestion.
+- [x] Frontend service validators and component tests cover all states.
+- [x] No manifest field is reduced to a bare URL before ingestion.
 
 **Dependencies:** Task 4 and frontend-owner availability
 
@@ -382,16 +382,16 @@ the ingestion action.
 
 **Acceptance criteria:**
 
-- [ ] Ingest sends approved-source/asset IDs and preserves one idempotency key across retries.
-- [ ] NEEDS_INPUT, unsupported format, failure, and ready receipt are displayed distinctly.
-- [ ] After a job exists, the source shows Resume or View result; status/operational retries reuse
+- [x] Ingest sends approved-source/asset IDs and preserves one idempotency key across retries.
+- [x] NEEDS_INPUT, unsupported format, failure, and ready receipt are displayed distinctly.
+- [x] After a job exists, the source shows Resume or View result; status/operational retries reuse
   its ingestion ID, and ready data is not exposed before validation.
 
 **Verification:**
 
-- [ ] Frontend tests cover start, duplicate retry, mapping resume, unsupported format, and failure.
-- [ ] Frontend tests prove a ready source cannot start another ingestion.
-- [ ] Full frontend tests and production build pass.
+- [x] Frontend tests cover start, duplicate retry, mapping resume, unsupported format, and failure.
+- [x] Frontend tests prove a ready source cannot start another ingestion.
+- [x] Full frontend tests and production build pass.
 
 **Dependencies:** Tasks 5, 12-15
 
@@ -426,7 +426,7 @@ validation reports, but no large raw archives.
 
 ## Checkpoint: Complete
 
-- [ ] Approved sources are durable, browsable, revisioned, and retained for provenance.
-- [ ] All three providers enter generic intake without executing downloaded code.
-- [ ] Supported formats reach validated TimeF or pause for explicit user mapping.
-- [ ] Approval never automatically starts ingestion.
+- [x] Approved sources are durable, browsable, revisioned, and retained for provenance.
+- [x] All three providers enter generic intake without executing downloaded code.
+- [x] Supported formats reach validated TimeF or pause for explicit user mapping.
+- [x] Approval never automatically starts ingestion.
