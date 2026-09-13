@@ -1,0 +1,1 @@
+Please change the logo name and like everywhere where it says "trace" as the name of this platform to "y/trace". Then please commit and push
