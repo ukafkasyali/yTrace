@@ -37,6 +37,7 @@ class IngestionJob(BaseModel):
     source_kind: str
     source_revision: str
     asset_ids: list[str]
+    job_revision: int = Field(ge=1)
     state: IngestionState
     message: str
     created_at: datetime
@@ -108,6 +109,7 @@ class IngestionJobStore:
                 source_kind TEXT NOT NULL,
                 source_revision TEXT NOT NULL,
                 asset_ids_json TEXT NOT NULL,
+                job_revision INTEGER NOT NULL DEFAULT 1,
                 state TEXT NOT NULL,
                 message TEXT NOT NULL,
                 created_at TEXT NOT NULL,
@@ -115,6 +117,13 @@ class IngestionJobStore:
             )
             """
         )
+        columns = {
+            row["name"] for row in self.connection.execute("PRAGMA table_info(ingestion_jobs)")
+        }
+        if "job_revision" not in columns:
+            self.connection.execute(
+                "ALTER TABLE ingestion_jobs ADD COLUMN job_revision INTEGER NOT NULL DEFAULT 1"
+            )
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS resource_profiles (
@@ -166,6 +175,7 @@ class IngestionJobStore:
             source_kind=row["source_kind"],
             source_revision=row["source_revision"],
             asset_ids=json.loads(row["asset_ids_json"]),
+            job_revision=row["job_revision"],
             state=row["state"],
             message=row["message"],
             created_at=row["created_at"],
@@ -313,7 +323,8 @@ class IngestionJobStore:
         now = datetime.now(UTC).isoformat()
         with self._lock:
             cursor = self.connection.execute(
-                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ? WHERE state = ?",
+                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                    "job_revision = job_revision + 1 WHERE state = ?",
                 (
                     IngestionState.QUEUED.value,
                     "Queued after interrupted acquisition",
@@ -341,7 +352,8 @@ class IngestionJobStore:
                     self.connection.execute("COMMIT")
                     return None
                 self.connection.execute(
-                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ? "
+                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                    "job_revision = job_revision + 1 "
                     "WHERE ingestion_id = ?",
                     (
                         IngestionState.ACQUIRING.value,
@@ -365,7 +377,8 @@ class IngestionJobStore:
         now = datetime.now(UTC).isoformat()
         with self._lock:
             cursor = self.connection.execute(
-                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ? "
+                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                "job_revision = job_revision + 1 "
                 "WHERE ingestion_id = ?",
                 (state.value, message, now, ingestion_id),
             )
@@ -404,7 +417,13 @@ class IngestionJobStore:
                     return job, False
                 ingestion_id = str(uuid4())
                 self.connection.execute(
-                    "INSERT INTO ingestion_jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    """
+                    INSERT INTO ingestion_jobs (
+                        ingestion_id, approved_source_id, manifest_sha256, source_url,
+                        source_kind, source_revision, asset_ids_json, job_revision,
+                        state, message, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
                     (
                         ingestion_id,
                         approved_source_id,
@@ -413,6 +432,7 @@ class IngestionJobStore:
                         source_kind,
                         source_revision,
                         json.dumps(normalized_asset_ids, separators=(",", ":")),
+                        1,
                         state.value,
                         message,
                         now,
