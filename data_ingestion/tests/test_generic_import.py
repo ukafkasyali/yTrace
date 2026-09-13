@@ -171,6 +171,45 @@ class GenericImportWorkerTests(unittest.TestCase):
         repeated = self._direct_build(path, profile, mapping, 2)
         self.assertEqual(repeated.validation_sha256, result.validation_sha256)
 
+    def test_wide_table_accepts_iso_timestamps_as_relative_microseconds(self) -> None:
+        path = self.root / "iso.csv"
+        path.write_text(
+            "timestamp,value\n"
+            "2014-02-14 14:27:00,51.846\n"
+            "2014-02-14 14:32:00,44.508\n"
+            "2014-02-14 14:37:00,41.244\n",
+            encoding="utf-8",
+        )
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        profile = ResourceProfile(
+            resource_id="res_0123456789abcdef01234567",
+            ingestion_id="01234567-89ab-cdef-0123-456789abcdef",
+            asset_id="asset_0123456789abcdef",
+            logical_path="iso.csv",
+            size_bytes=path.stat().st_size,
+            content_sha256=digest,
+            format=ResourceFormat.CSV,
+            details={},
+            inspected_at=datetime.now(UTC),
+        )
+        mapping = MappingSpec(
+            job_revision=1,
+            resource_id=profile.resource_id,
+            resource_sha256=digest,
+            layout=MappingLayout.WIDE_TABLE,
+            time_selector="timestamp",
+            channels=[ChannelSpec(selector="value", name="value", unit="percent")],
+        )
+
+        records = GenericTimeFBuilder(
+            cache_dir=self.root / "cache", registry_root=self.root / "timef"
+        ).normalize(path, profile, mapping)
+
+        self.assertEqual(
+            records[0].series[0].time_offsets_us.tolist(),
+            [0, 300_000_000, 600_000_000],
+        )
+
     def test_named_arrays_honor_explicit_sample_and_channel_axes(self) -> None:
         path = self.root / "signals.npz"
         np.savez(
