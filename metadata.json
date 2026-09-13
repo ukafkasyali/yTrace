@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C755XHST4C2C3Z8GWYD14X",
+  "strategy": "manual-commit",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "docs/submission/VERIFICATION.md",
+    "frontend/src/sourcing/DatasetScout.tsx",
+    "frontend/src/sourcing/ScoutReview.tsx",
+    "frontend/src/workspaces/DataWorkspace.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 118430,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 11353375,
+    "output_tokens": 17673,
+    "api_call_count": 69
+  }
+}
