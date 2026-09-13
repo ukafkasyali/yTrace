@@ -175,4 +175,8 @@ def create_app(
     def get_approved_source_manifest(approved_source_id: str) -> SourcingManifest:
         return sourcing.approved_sources.read_manifest(approved_source_id)
 
+    @app.delete("/api/approved-sources/{approved_source_id}", status_code=204)
+    def delete_approved_source(approved_source_id: str) -> None:
+        sourcing.approved_sources.delete(approved_source_id)
+
     return app

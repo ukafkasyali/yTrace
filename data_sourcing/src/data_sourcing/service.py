@@ -64,7 +64,7 @@ class SourcingService:
     def _reconcile_approved_sources(self) -> None:
         for manifest in self.artifacts.manifests():
             try:
-                self.approved_sources.record_approval(manifest)
+                self.approved_sources.record_approval(manifest, restore_deleted=False)
             except ValueError as exc:
                 LOGGER.warning(
                     "Approved manifest %s could not be catalogued: %s",

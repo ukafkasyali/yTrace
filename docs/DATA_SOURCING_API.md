@@ -249,6 +249,15 @@ candidate, manifest SHA-256, and approval timestamp.
 Returns the exact latest approved manifest snapshot. Unknown IDs return the shared
 `404 APPROVED_SOURCE_NOT_FOUND` envelope.
 
+### `DELETE /api/approved-sources/{approvedSourceId}`
+
+Removes the source revision from the approved-source library and returns `204`. The originating
+sourcing run, manifest artifact, and immutable approval history remain available for audit, but
+catalog detail and manifest lookups return `404 APPROVED_SOURCE_NOT_FOUND`. Repeating deletion is
+idempotent. Startup reconciliation does not restore a deleted catalog entry; a new approval event
+for the same provider revision does. The frontend enables this operation only after verifying that
+the ingestion service has no job referencing the source.
+
 ## Errors and operational bounds
 
 Errors use the shared envelope:

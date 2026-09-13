@@ -92,6 +92,15 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         assert missing.status_code == 404
         assert missing.json()["error"]["code"] == "APPROVED_SOURCE_NOT_FOUND"
 
+        deleted = client.delete(f"/api/approved-sources/{source['approvedSourceId']}")
+        assert deleted.status_code == 204
+        assert client.get("/api/approved-sources").json()["pagination"]["totalItems"] == 0
+        assert client.get(f"/api/approved-sources/{source['approvedSourceId']}").status_code == 404
+        repeated_delete = client.delete(
+            f"/api/approved-sources/{source['approvedSourceId']}"
+        )
+        assert repeated_delete.status_code == 204
+
     run_dir = settings.runs_dir / run_id
     assert {path.name for path in run_dir.iterdir()} >= {
         "run.json",

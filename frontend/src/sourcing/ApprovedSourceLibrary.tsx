@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Database, History } from 'lucide-react';
+import { ArrowUpRight, Database, History, Trash2 } from 'lucide-react';
 import type {
   ApprovedSource,
   ApprovedSourceDetail,
@@ -48,6 +48,24 @@ export function ApprovedSourceStatusWarning({ error, onRetry }: {
 }) {
   if (!error) return null;
   return <div><p className="error-message" role="alert">{error}</p><button className="btn" onClick={onRetry}>Retry ingestion status</button></div>;
+}
+
+export function DeleteSourceButton({ disabled, reason, onDelete }: {
+  disabled: boolean; reason: string; onDelete: () => void;
+}) {
+  return <button className="btn btn-danger" disabled={disabled} title={reason || 'Delete approved source'} onClick={onDelete}><Trash2 size={13} aria-hidden="true" />Delete</button>;
+}
+
+export function DeleteSourceConfirmation({ busy, onConfirm, onCancel }: {
+  busy: boolean; onConfirm: () => void; onCancel: () => void;
+}) {
+  return <div className="delete-confirmation" role="alert"><p>Delete this source from the approved library? Its sourcing-run audit remains available.</p><div><button className="btn btn-danger" disabled={busy} onClick={onConfirm}>{busy ? 'Deleting…' : 'Delete source'}</button><button className="btn" disabled={busy} onClick={onCancel}>Cancel</button></div></div>;
+}
+
+export function AssetSelectionActions({ busy, canStart, onStart, onCancel }: {
+  busy: boolean; canStart: boolean; onStart: () => void; onCancel: () => void;
+}) {
+  return <div className="asset-selection-actions"><button className="btn btn-primary" disabled={!canStart || busy} onClick={onStart}>{busy ? 'Starting…' : 'Start ingestion once'}</button><button className="btn" disabled={busy} onClick={onCancel}>Cancel</button></div>;
 }
 
 function sizeLabel(bytes: number | null) {
@@ -118,6 +136,7 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [ingestionError, setIngestionError] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
@@ -195,6 +214,23 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
     finally { setBusy(''); }
   }
 
+  function closeDetail() {
+    setDetail(null); setManifest(null); setSelectedAssets([]); setReceipt(null);
+  }
+
+  async function deleteSource(source: ApprovedSource) {
+    if (jobs[source.approvedSourceId] || ingestionError) return;
+    setBusy(`delete-${source.approvedSourceId}`); setError('');
+    try {
+      await services.deleteApprovedSource(source.approvedSourceId);
+      if (detail?.approvedSourceId === source.approvedSourceId) closeDetail();
+      setDeleteConfirmation('');
+      if (sources.length === 1 && page > 1) setPage(page - 1);
+      else setRevision(value => value + 1);
+    } catch (reason) { setError(errorText(reason)); }
+    finally { setBusy(''); }
+  }
+
   return <section className="workspace-section approved-library" aria-labelledby="approved-sources-title">
     <div className="section-heading"><div><p className="eyebrow">Saved after review</p><h2 id="approved-sources-title">Approved sources</h2><p>Return to a reviewed source and ingest it once, on demand.</p></div><Database size={20} aria-hidden="true" /></div>
     <ApprovedSourceFeedback connected={services.connected} loading={loading} error={error} empty={sources.length === 0} onRetry={() => setRevision(value => value + 1)} />
@@ -205,11 +241,12 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
       return <li key={source.approvedSourceId}>
         <div className="approved-source-main"><div><span className="source-provider">{source.sourceKind.replace('_', ' ')}</span><h3>{source.name}</h3><p>{source.sourceRevision} · {source.datasetLicenseId ?? 'Dataset licence unresolved'} · {sizeLabel(source.totalSizeBytes)}</p></div><span className={`ingestion-state state-${job?.state ?? 'not-started'}`}>{job?.state.replace('_', ' ') ?? 'not ingested'}</span></div>
         <p className="source-formats">{source.fileExtensions.length ? source.fileExtensions.join(' · ') : 'Formats unavailable'} · approved {source.approvalCount} {source.approvalCount === 1 ? 'time' : 'times'} · latest {new Date(source.latestApprovedAt).toLocaleString()}</p>
-        <div className="source-actions"><a href={source.canonicalUrl} target="_blank" rel="noopener noreferrer">Source <ArrowUpRight size={13} aria-hidden="true" /></a><button className="btn" disabled={busy === `detail-${source.approvedSourceId}`} onClick={() => void show(source)}><History size={13} aria-hidden="true" />History</button><button className="btn btn-primary" disabled={Boolean(busy) || !source.isAcquisitionReady} onClick={() => void ingest(source)}>{busy === `ingest-${source.approvedSourceId}` ? 'Opening…' : action}</button></div>
+        <div className="source-actions"><a href={source.canonicalUrl} target="_blank" rel="noopener noreferrer">Source <ArrowUpRight size={13} aria-hidden="true" /></a><button className="btn" disabled={busy === `detail-${source.approvedSourceId}`} onClick={() => void show(source)}><History size={13} aria-hidden="true" />History</button><button className="btn btn-primary" disabled={Boolean(busy) || !source.isAcquisitionReady} onClick={() => void ingest(source)}>{busy === `ingest-${source.approvedSourceId}` ? 'Opening…' : action}</button><DeleteSourceButton disabled={Boolean(busy) || Boolean(job) || Boolean(ingestionError)} reason={job ? 'This source is retained because an ingestion references it.' : ingestionError ? 'Retry ingestion status before deleting this source.' : ''} onDelete={() => setDeleteConfirmation(source.approvedSourceId)} /></div>
+        {deleteConfirmation === source.approvedSourceId && <DeleteSourceConfirmation busy={busy === `delete-${source.approvedSourceId}`} onConfirm={() => void deleteSource(source)} onCancel={() => setDeleteConfirmation('')} />}
         {job && <div className="source-job" aria-live="polite"><strong>{job.message}</strong>{job.state === 'mapping' && <MappingForm job={job} services={services} onConfirmed={() => setRevision(value => value + 1)} />}{terminalJobNote(job.state) && <p>{terminalJobNote(job.state)}</p>}</div>}
       </li>;
     })}</ul>}
     <ApprovedSourcePagination page={page} totalPages={totalPages} loading={loading} onPage={setPage} />
-    {detail && <aside className="source-detail" aria-labelledby="source-detail-title"><button className="text-button" onClick={() => { setDetail(null); setManifest(null); setReceipt(null); }}>Close details</button><h3 id="source-detail-title">{detail.name}</h3><dl><div><dt>Revision</dt><dd>{detail.sourceRevision}</dd></div><div><dt>Dataset licence</dt><dd>{detail.datasetLicenseId ?? 'Unresolved'}</dd></div><div><dt>Approval history</dt><dd>{detail.approvals.length} immutable {detail.approvals.length === 1 ? 'event' : 'events'}</dd></div></dl><ol>{detail.approvals.map(event => <li key={`${event.sourcingRunId}-${event.approvedAt}`}>{new Date(event.approvedAt).toLocaleString()} · run <span className="mono">{event.sourcingRunId}</span></li>)}</ol>{!jobs[detail.approvedSourceId] && manifest && <fieldset className="asset-selection"><legend>Data assets to ingest</legend>{manifest.assets.filter(asset => asset.role === 'DATA').map(asset => <label key={asset.assetId}><input type="checkbox" checked={selectedAssets.includes(asset.assetId)} onChange={event => setSelectedAssets(current => event.target.checked ? [...current, asset.assetId] : current.filter(id => id !== asset.assetId))} /> <span>{asset.name} · {sizeLabel(asset.sizeBytes)}</span></label>)}<button className="btn btn-primary" disabled={!selectedAssets.length || Boolean(busy)} onClick={() => void startSelected()}>{busy ? 'Starting…' : 'Start ingestion once'}</button></fieldset>}{manifest?.limitations.map(limitation => <p className="status-note" key={limitation}>{limitation}</p>)}{receipt && <div className="ready-receipt"><strong>Validated TimeF result</strong><p>{receipt.output.datasetId} · {receipt.output.datasetVersion}</p><p>{receipt.validation.recordCount} records · {receipt.validation.seriesCount} series · {receipt.validation.valueCount.toLocaleString()} values</p><code>{receipt.receiptSha256}</code><button className="btn btn-primary" onClick={() => onDatasetReady(receipt.output.datasetId)}>Open imported dataset</button></div>}</aside>}
+    {detail && <aside className="source-detail" aria-labelledby="source-detail-title"><button className="text-button" onClick={closeDetail}>Close details</button><h3 id="source-detail-title">{detail.name}</h3><dl><div><dt>Revision</dt><dd>{detail.sourceRevision}</dd></div><div><dt>Dataset licence</dt><dd>{detail.datasetLicenseId ?? 'Unresolved'}</dd></div><div><dt>Approval history</dt><dd>{detail.approvals.length} immutable {detail.approvals.length === 1 ? 'event' : 'events'}</dd></div></dl><ol>{detail.approvals.map(event => <li key={`${event.sourcingRunId}-${event.approvedAt}`}>{new Date(event.approvedAt).toLocaleString()} · run <span className="mono">{event.sourcingRunId}</span></li>)}</ol>{!jobs[detail.approvedSourceId] && manifest && <fieldset className="asset-selection"><legend>Data assets to ingest</legend>{manifest.assets.filter(asset => asset.role === 'DATA').map(asset => <label key={asset.assetId}><input type="checkbox" checked={selectedAssets.includes(asset.assetId)} onChange={event => setSelectedAssets(current => event.target.checked ? [...current, asset.assetId] : current.filter(id => id !== asset.assetId))} /> <span>{asset.name} · {sizeLabel(asset.sizeBytes)}</span></label>)}<AssetSelectionActions busy={Boolean(busy)} canStart={selectedAssets.length > 0} onStart={() => void startSelected()} onCancel={closeDetail} /></fieldset>}{manifest?.limitations.map(limitation => <p className="status-note" key={limitation}>{limitation}</p>)}{receipt && <div className="ready-receipt"><strong>Validated TimeF result</strong><p>{receipt.output.datasetId} · {receipt.output.datasetVersion}</p><p>{receipt.validation.recordCount} records · {receipt.validation.seriesCount} series · {receipt.validation.valueCount.toLocaleString()} values</p><code>{receipt.receiptSha256}</code><button className="btn btn-primary" onClick={() => onDatasetReady(receipt.output.datasetId)}>Open imported dataset</button></div>}</aside>}
   </section>;
 }

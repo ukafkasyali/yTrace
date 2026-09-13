@@ -209,6 +209,7 @@ class ApprovedSourceStore:
                 latest_manifest_sha256 TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 latest_approved_at TEXT NOT NULL,
+                deleted_at TEXT,
                 UNIQUE(source_kind, canonical_url, source_revision)
             );
             CREATE TABLE IF NOT EXISTS approval_events (
@@ -222,12 +223,23 @@ class ApprovedSourceStore:
             );
             """
         )
+        columns = {
+            row["name"]
+            for row in self.connection.execute("PRAGMA table_info(approved_sources)").fetchall()
+        }
+        if "deleted_at" not in columns:
+            self.connection.execute("ALTER TABLE approved_sources ADD COLUMN deleted_at TEXT")
         self._lock = threading.RLock()
 
     def close(self) -> None:
         self.connection.close()
 
-    def record_approval(self, manifest: SourcingManifest) -> str:
+    def record_approval(
+        self,
+        manifest: SourcingManifest,
+        *,
+        restore_deleted: bool = True,
+    ) -> str:
         kind, canonical_url, revision = _manifest_identity(manifest)
         identity = "|".join((kind.value, canonical_url, revision))
         approved_source_id = f"src_{hashlib.sha256(identity.encode()).hexdigest()[:24]}"
@@ -239,7 +251,11 @@ class ApprovedSourceStore:
             try:
                 self.connection.execute(
                     """
-                    INSERT INTO approved_sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO approved_sources (
+                        approved_source_id, source_kind, canonical_url, source_revision,
+                        name, latest_manifest_json, latest_manifest_sha256, created_at,
+                        latest_approved_at, deleted_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
                     ON CONFLICT(approved_source_id) DO UPDATE SET
                         name = excluded.name,
                         latest_manifest_json = excluded.latest_manifest_json,
@@ -259,7 +275,7 @@ class ApprovedSourceStore:
                         approved_at,
                     ),
                 )
-                self.connection.execute(
+                event_cursor = self.connection.execute(
                     """
                     INSERT OR IGNORE INTO approval_events VALUES (?, ?, ?, ?, ?, ?)
                     """,
@@ -272,6 +288,14 @@ class ApprovedSourceStore:
                         approved_at,
                     ),
                 )
+                if restore_deleted and event_cursor.rowcount:
+                    self.connection.execute(
+                        """
+                        UPDATE approved_sources SET deleted_at = NULL
+                        WHERE approved_source_id = ?
+                        """,
+                        (approved_source_id,),
+                    )
                 self.connection.execute("COMMIT")
             except Exception:
                 self.connection.execute("ROLLBACK")
@@ -311,7 +335,7 @@ class ApprovedSourceStore:
         source_kind: SourceKind | None = None,
         query: str | None = None,
     ) -> ApprovedSourcePage:
-        clauses: list[str] = []
+        clauses: list[str] = ["deleted_at IS NULL"]
         parameters: list[object] = []
         if source_kind is not None:
             clauses.append("source_kind = ?")
@@ -357,6 +381,7 @@ class ApprovedSourceStore:
             FROM approved_sources
             JOIN approval_events USING (approved_source_id)
             WHERE approved_source_id = ?
+              AND deleted_at IS NULL
             GROUP BY approved_source_id
             """,
             (approved_source_id,),
@@ -379,12 +404,34 @@ class ApprovedSourceStore:
 
     def read_manifest(self, approved_source_id: str) -> SourcingManifest:
         row = self.connection.execute(
-            "SELECT latest_manifest_json FROM approved_sources WHERE approved_source_id = ?",
+            """
+            SELECT latest_manifest_json FROM approved_sources
+            WHERE approved_source_id = ? AND deleted_at IS NULL
+            """,
             (approved_source_id,),
         ).fetchone()
         if row is None:
             raise ApprovedSourceNotFound("Approved source not found")
         return SourcingManifest.model_validate_json(row["latest_manifest_json"])
+
+    def delete(self, approved_source_id: str) -> None:
+        with self._lock:
+            cursor = self.connection.execute(
+                """
+                UPDATE approved_sources
+                SET deleted_at = ?
+                WHERE approved_source_id = ? AND deleted_at IS NULL
+                """,
+                (datetime.now(UTC).isoformat(), approved_source_id),
+            )
+            if cursor.rowcount:
+                return
+            exists = self.connection.execute(
+                "SELECT 1 FROM approved_sources WHERE approved_source_id = ?",
+                (approved_source_id,),
+            ).fetchone()
+            if exists is None:
+                raise ApprovedSourceNotFound("Approved source not found")
 
 
 class IdempotencyStore:

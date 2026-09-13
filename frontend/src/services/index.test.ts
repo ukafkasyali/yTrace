@@ -212,6 +212,11 @@ describe('service contracts', () => {
       }),
     }));
     expect((await service.getImport(job.ingestionId)).state).toBe('queued');
+    fetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await service.deleteApprovedSource(source.approvedSourceId);
+    expect(fetch).toHaveBeenLastCalledWith(`/api/approved-sources/${source.approvedSourceId}`, expect.objectContaining({
+      method: 'DELETE',
+    }));
   });
 
   it('rejects malformed approved-source and ingestion responses', async () => {

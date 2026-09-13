@@ -7,7 +7,7 @@ from uuid import uuid4
 from data_sourcing.config import Settings
 from data_sourcing.models import ApprovalRequest, CreateSourcingRun, RunStatus, SourcingManifest
 from data_sourcing.service import SourcingService
-from data_sourcing.storage import ApprovedSourceStore, IdempotencyStore
+from data_sourcing.storage import ApprovedSourceNotFound, ApprovedSourceStore, IdempotencyStore
 
 BRIEF = (
     "Find robot collision and contact time series from "
@@ -99,6 +99,32 @@ def test_approved_source_store_groups_approval_history_by_revision(tmp_path: Pat
         first.run_id,
         second.run_id,
     }
+    store.close()
+
+
+def test_deleted_source_stays_out_of_catalog_until_a_new_approval(tmp_path: Path) -> None:
+    store = ApprovedSourceStore(tmp_path / "approved.sqlite3")
+    first = approved_manifest(revision="123.r1")
+    approved_source_id = store.record_approval(first)
+
+    store.delete(approved_source_id)
+    store.delete(approved_source_id)
+    assert store.list(page=1, page_size=20).pagination.total_items == 0
+    try:
+        store.get(approved_source_id)
+    except ApprovedSourceNotFound:
+        pass
+    else:
+        raise AssertionError("Deleted approved source remained readable")
+
+    store.record_approval(first, restore_deleted=False)
+    assert store.list(page=1, page_size=20).pagination.total_items == 0
+
+    next_approval = first.model_copy(
+        update={"run_id": str(uuid4()), "approved_at": first.approved_at + timedelta(seconds=1)}
+    )
+    store.record_approval(next_approval)
+    assert store.list(page=1, page_size=20).pagination.total_items == 1
     store.close()
 
 

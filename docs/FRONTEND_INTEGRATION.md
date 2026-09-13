@@ -112,6 +112,7 @@ The routes below are requested by the implemented service client with `/api` as 
 | `listApprovedSources(page, pageSize)` | `GET /api/approved-sources` | durable reviewed source revisions |
 | `getApprovedSource(approvedSourceId)` | `GET /api/approved-sources/:id` | source detail and approval history |
 | `getApprovedSourceManifest(approvedSourceId)` | `GET /api/approved-sources/:id/manifest` | exact assets and limitations |
+| `deleteApprovedSource(approvedSourceId)` | `DELETE /api/approved-sources/:id` | remove an unreferenced source from the approved library |
 | `getImportForSource(approvedSourceId)` | `GET /api/ingestions/by-source/:id` | existing job after reload |
 | `getMappingProposals(ingestionId)` | `GET /api/ingestions/:id/mapping-proposals` | bounded mapping candidates |
 | `confirmMapping(ingestionId, mapping)` | `PUT /api/ingestions/:id/mapping` | version-checked mapping resume |

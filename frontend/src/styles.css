@@ -19,6 +19,8 @@
 .range-caption{display:none}
 @media(max-width:850px){.explorer-panel{height:340px;min-height:340px}.event-item{font-size:11px;gap:4px}.event-item small{white-space:nowrap}}
 
+.btn-danger{border-color:#75534d;background:transparent;color:#efb0a4}.btn-danger:hover:not(:disabled){background:#3d2b29;border-color:#98675e}.delete-confirmation{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px;border:1px solid #75534d;background:#2b2322}.delete-confirmation p{margin:0!important}.delete-confirmation>div,.asset-selection-actions{display:flex;align-items:center;gap:8px}.asset-selection-actions{margin-top:8px}.asset-selection-actions .btn{margin-top:0}
+
 /* Investigation hierarchy: keep telemetry legible and the conversation usable. */
 :root{--line:#30373b;--quiet:#acb7bb;--control:#414e53;scrollbar-color:#49555a #1b2023;scrollbar-width:thin}
 input,textarea{caret-color:var(--accent)}

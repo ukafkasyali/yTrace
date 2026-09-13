@@ -4,9 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ImportJob } from '../services';
 import {
   approvedSourceAction,
+  AssetSelectionActions,
   ApprovedSourceFeedback,
   ApprovedSourcePagination,
   ApprovedSourceStatusWarning,
+  DeleteSourceButton,
+  DeleteSourceConfirmation,
   terminalJobNote,
 } from './ApprovedSourceLibrary';
 
@@ -45,5 +48,21 @@ describe('approved source library states', () => {
     expect(terminalJobNote('unsupported_format')).toContain('Nothing was imported');
     expect(terminalJobNote('failed')).toContain('same ingestion');
     expect(terminalJobNote('ready')).toBe('');
+  });
+
+  it('offers cancellation after asset selection', () => {
+    const markup = render(<AssetSelectionActions busy={false} canStart onStart={vi.fn()} onCancel={vi.fn()} />);
+    expect(markup).toContain('Start ingestion once');
+    expect(markup).toContain('Cancel');
+  });
+
+  it('guards source deletion and requires an explicit confirmation', () => {
+    const disabled = render(<DeleteSourceButton disabled reason="This source is retained because an ingestion references it." onDelete={vi.fn()} />);
+    expect(disabled).toContain('disabled');
+    expect(disabled).toContain('ingestion references it');
+    const confirmation = render(<DeleteSourceConfirmation busy={false} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(confirmation).toContain('Delete source');
+    expect(confirmation).toContain('sourcing-run audit remains available');
+    expect(confirmation).toContain('Cancel');
   });
 });

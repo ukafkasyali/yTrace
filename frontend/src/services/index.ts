@@ -234,6 +234,10 @@ export function createServices(baseUrl?: string) {
       if (!isApprovedManifest(result)) throw new ProtocolError('The approved manifest does not match the acquisition contract.');
       return result;
     },
+    deleteApprovedSource: (approvedSourceId: string) => request<void>(
+      `/approved-sources/${encodeURIComponent(approvedSourceId)}`,
+      { method: 'DELETE' },
+    ),
     startImport: async (approvedSourceId: string, assetIds?: string[]) => {
       const selected = assetIds ? [...assetIds].sort() : undefined;
       const idempotencyKey = `approved-source:${approvedSourceId}:${selected?.join(',') ?? 'all-data-assets'}`;
