@@ -114,7 +114,7 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
     ? report.interpretation.inputReceipt as { samplesPerChannel?: unknown; inputSha256?: unknown }
     : undefined;
   const answer = report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
-  const reviewNotes = report.reviewNotes.length ? report.reviewNotes.map(item => `- ${markdownText(item)}`) : ['- No model/measurement disagreement was flagged by the current review checks.'];
+  const reviewNotes = report.reviewNotes.length ? report.reviewNotes.map(item => `- ${markdownText(item)}`) : ['- No model/measurement ranking difference was flagged by the current review checks.'];
   return [
     '# Trace incident investigation',
     '',

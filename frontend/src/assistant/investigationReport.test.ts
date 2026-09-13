@@ -83,4 +83,14 @@ describe('investigation export', () => {
     expect(markdown).toContain('## Evidence and provenance');
     expect(markdown).toContain('## Limitations');
   });
+  it('keeps unverified raw model prose out of the readable handoff', () => {
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      text: 'Safe structured interpretation.',
+      modelOutput: 'Unverified explanation about a manual event marker.\nAnswer: {"contact":true}',
+    });
+    const markdown = renderInvestigationMarkdown(report);
+    expect(markdown).toContain('Safe structured interpretation.');
+    expect(markdown).not.toContain('manual event marker');
+  });
 });

@@ -34,9 +34,10 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const [exportStatus, setExportStatus] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const assistantAvailable = services.connected && !registry.loading && !registry.error && registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
   const modeUnavailable = mode === 'assistant' && (!assistantAvailable || Boolean(windowIssue));
-  const active = useRef<{ id: string; controller: AbortController; queryId?: string } | null>(null);
+  const active = useRef<{ id: string; controller: AbortController; queryId?: string; stopRequested?: boolean } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
@@ -63,8 +64,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       } else {
         const request = { mode: 'assistant' as const, question: prompt, playheadSec: horizon, window: { datasetId, recordingId: data.recording.id, startSec: snapshot.start, endSec: snapshot.end, channelIds: data.channels.map(c => c.id) } };
         const job = await services.startQuery(request, controller.signal);
-        if (active.current?.id !== id) { await services.cancelQuery(job.queryId); return; }
+        if (active.current?.id !== id || controller.signal.aborted) { await services.cancelQuery(job.queryId); return; }
         active.current.queryId = job.queryId;
+        if (active.current.stopRequested) {
+          try { await services.cancelQuery(job.queryId); }
+          catch { completed.current = true; throw new Error('Server cancellation could not be confirmed.'); }
+        }
         await services.streamQuery(job.streamUrl, event => {
           if (active.current?.id !== id || event.queryId !== job.queryId) return;
           const p = event.payload;
@@ -78,7 +83,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       }
     } catch (error) {
       update(id, m => ({ status: controller.signal.aborted ? 'cancelled' : 'error', text: `${m.text}${m.text ? '\n\n' : ''}${controller.signal.aborted ? 'Stopped. This answer is incomplete.' : error instanceof Error ? error.message : 'The request failed.'}` }));
-    } finally { if (active.current?.id === id) { active.current = null; setBusy(false); } }
+    } finally { if (active.current?.id === id) { if (active.current.stopRequested && !completed.current) update(id, { status: 'cancelled', text: 'Stopped. This answer is incomplete.' }); active.current = null; setBusy(false); setStopping(false); } }
   }
   function exportReport(message: Message) {
     try { downloadInvestigationMarkdown(message.telemetry, datasetId, message); setExportStatus('Readable investigation report downloaded as Markdown.'); }
@@ -90,12 +95,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   }
   async function stop() {
     const job = active.current; if (!job) return;
-    job.controller.abort();
-    if (job.queryId) { try { await services.cancelQuery(job.queryId); } catch { update(job.id, { status: 'error', text: 'The browser stopped listening, but server cancellation could not be confirmed.' }); } }
+    job.stopRequested = true; setStopping(true);
+    if (job.queryId) { try { await services.cancelQuery(job.queryId); } catch { completed.current = true; job.controller.abort(); update(job.id, { status: 'error', text: 'Server cancellation could not be confirmed.' }); } }
   }
   return <section className="assistant-panel" aria-label="Telemetry assistant">
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span></header>
-    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={!busy && (!assistantAvailable || Boolean(windowIssue))} onClick={() => { if (busy) { void stop(); return; } setMode('assistant'); void submit('Analyze this robot telemetry window.', 'assistant'); }}>{busy ? 'Stop analysis' : 'Analyze interval'}</button></div>
+    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={stopping || (!busy && (!assistantAvailable || Boolean(windowIssue)))} onClick={() => { if (busy) { void stop(); return; } setMode('assistant'); void submit('Analyze this robot telemetry window.', 'assistant'); }}>{stopping ? 'Stopping…' : busy ? 'Stop analysis' : 'Analyze interval'}</button></div>
     {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{rawError && <button className="text-button" onClick={onRetryRaw}>Retry raw window</button>}{!rawLoading && !rawError && fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Prepare a reviewable incident handoff.</h3><p>Analyze the incident, verify the prediction against exact signals, then export the handoff for a controls engineer.</p><p className="intro-limit">Recorded torque can guide investigation. It cannot verify a physical cause.</p></div>}
@@ -125,6 +130,6 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     </div>
     {exportStatus && <p className="report-status" role="status">{exportStatus}</p>}
     {mode === 'assistant' && !assistantAvailable && <p className="status-note" role="status">Model unavailable. Open custom analysis and choose Measurements only.</p>}
-    <details className="custom-analysis"><summary>Ask a custom question</summary><form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label="Stop analysis" onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form></details>
+    <details className="custom-analysis"><summary>Ask a custom question</summary><form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label={stopping ? 'Stopping analysis' : 'Stop analysis'} disabled={stopping} onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form></details>
   </section>;
 }
