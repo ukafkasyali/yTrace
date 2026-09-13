@@ -27,6 +27,12 @@ OpenTSLM was fine-tuned; Qwen3-VL 4B was zero-shot on plots. This comparison cha
 
 Legacy positive-contact F1 can stay high while free-motion answers are missing. This report adds contact macro-F1, answer coverage, strict usable-summary rate, and abstention columns in the JSON confusion matrices. It does not repair generations or substitute labels.
 
+## Separate V6 validation diagnostic
+
+The conversational-rationale V6 run completed 3823 steps in 3.21 hours. Its best observed decoded behavior was at step 3000, but no decoded checkpoint passed every predeclared gate (0/16 eligible). The final checkpoint reported semantics macro-F1 0.915, strongest-joint accuracy 0.562, first-pass schema validity 0.798, and rationale coverage 0.714.
+
+This 84-row panel was repeatedly inspected during training. It is included as an observability case study, not as another row in the locked 512-window test comparison. The full audit is `../v6-validation/report/failure_analysis.json`.
+
 ## Paired uncertainty
 
 95% percentile intervals for OpenTSLM minus signal features, resampling recording groups (1000 replicates). Negative values favor signal features.

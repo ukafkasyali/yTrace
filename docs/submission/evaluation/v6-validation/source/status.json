@@ -1,0 +1,9 @@
+{
+  "best_grounding_score": null,
+  "best_grounding_step": null,
+  "best_validation_loss": 0.07827791051901319,
+  "elapsed_seconds": 11547.389062618,
+  "global_step": 3823,
+  "state": "complete",
+  "stop_reason": "epochs_complete"
+}

@@ -24,5 +24,6 @@ export function fitModelWindow(data: DemoData, interval: Interval, playhead: num
 
 export function checkpointLabel(revision?: string): string {
   const sha = revision?.match(/checkpoint-sha256:([a-f0-9]{64})/)?.[1];
+  if (sha === '7c69114d54132dd2641d59a54dc97d435ab7c578dfb320831485871012f83f62') return 'rationale-v6 · 7c69114d';
   return sha === '8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23' ? 'canary-v4 · 8ff63b84' : sha ? `Checkpoint ${sha.slice(0, 8)}` : 'Checkpoint unverified';
 }

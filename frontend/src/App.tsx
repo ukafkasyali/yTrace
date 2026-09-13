@@ -17,6 +17,7 @@ import EvaluationWorkspace from './evaluation/EvaluationWorkspace';
 import type { DemoCase, DemoData, EvidenceLink, Interval, Marker } from './types';
 
 const services = createServices(import.meta.env.VITE_API_BASE_URL);
+const rationaleServices = createServices(import.meta.env.VITE_RATIONALE_API_BASE_URL);
 const SAMPLE_DATASET = 'zenodo-21927431';
 
 export function initialReplayInterval(data: DemoData): Interval {
@@ -112,10 +113,15 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, onOpenImporte
   const [draftEnd, setDraftEnd] = useState(interval.end.toFixed(3));
   const [selectionError, setSelectionError] = useState('');
   const registry = useModelRegistry(services);
+  const rationaleRegistry = useModelRegistry(rationaleServices);
   const activeRegistry = useMemo(() => importedRecording ? {
     ...registry,
     models: registry.models.map(model => ({ ...model, available: false, reason: 'Imported records currently support replay and measurements only.' })),
   } : registry, [importedRecording, registry]);
+  const activeRationaleRegistry = useMemo(() => importedRecording ? {
+    ...rationaleRegistry,
+    models: rationaleRegistry.models.map(model => ({ ...model, available: false, reason: 'Imported records currently support replay and measurements only.' })),
+  } : rationaleRegistry, [importedRecording, rationaleRegistry]);
   const availability = importedRecording ? 'Imported replay · measurements only' : !services.connected ? 'Models not connected' : registry.loading ? 'Checking models…' : registry.error ? 'Model service unavailable' : registry.models.some(m => m.id === 'opentslm' && m.available) ? 'OpenTSLM connected' : 'Model unavailable';
   useEffect(() => { setDraftStart(interval.start.toFixed(3)); setDraftEnd(interval.end.toFixed(3)); }, [interval]);
   const previewChannels = useMemo(() => {
@@ -173,7 +179,7 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, onOpenImporte
         {view === 'inspect' && (cases.length > 0 || caseError) && <div className="demo-cases"><label>Recording <select aria-label="Example case" disabled={caseLoading} value={data.demoCase?.id ?? 'current'} onChange={e => { if (e.target.value !== 'current') void onOpenCase(e.target.value); }}><option value="current">{data.recording.name}</option>{cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><details className="case-source"><summary>Source · {data.recording.id}</summary><p>{data.demoCase?.note ?? (importedRecording ? 'Imported, validated TimeF torque record. Publisher markers remain source annotations. Robot geometry is illustrative because this replay does not load recorded joint positions.' : 'Original KUKA recording. Publisher markers are annotations, not verified contact onset. Raw model input is available from 4 to 9 seconds.')}</p></details>{(caseLoading || caseError) && <span role={caseError ? 'alert' : 'status'}>{caseLoading ? 'Loading raw telemetry…' : caseError}</span>}</div>}
         {view === 'inspect' && <div className="mobile-switch"><button className={mobile === 'signals' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('signals'); setVisualMode('signals'); }}>Replay</button><button className={mobile === 'assistant' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('assistant'); }}>Investigation</button></div>}
         <div className={`inspect-grid mobile-${mobile}`} style={{ display: view === 'inspect' ? undefined : 'none' }}>
-          <div className="left-workspace"><AssistantPanel rawLoading={rawWindow.loading} rawError={rawWindow.error} onRetryRaw={rawWindow.retry} registry={activeRegistry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onCompare={openComparison} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
+          <div className="left-workspace"><AssistantPanel rawLoading={rawWindow.loading} rawError={rawWindow.error} onRetryRaw={rawWindow.retry} registry={activeRegistry} experimental={rationaleServices.connected ? { services: rationaleServices, registry: activeRationaleRegistry } : undefined} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onCompare={openComparison} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
           <div className={`visual-workspace visual-${visualMode}`}>
             <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers', 'compare'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : mode === 'markers' ? 'Publisher markers' : 'Compare'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
             {visualMode === 'compare' && <ComparisonPanel key={`${interval.start}:${interval.end}`} data={data} interval={interval} cases={cases} services={services} onEvidence={e => { evidence(e); replay.seek(e.interval.end); }}/> }

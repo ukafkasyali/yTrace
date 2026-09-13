@@ -272,6 +272,14 @@ def bootstrap_difference(left: list[dict], right: list[dict], repeats: int, seed
     }
 
 
+def load_validation_diagnostics(source: Path) -> dict:
+    """Load diagnostics that are explicitly excluded from the locked test leaderboard."""
+    path = source / "opentslm-v6-validation-audit.json"
+    if not path.exists():
+        return {}
+    return {"opentslm_v6_rationale": json.loads(path.read_text())}
+
+
 def build_report(source: Path, repeats: int = 1000) -> dict:
     if repeats < 100:
         raise ValueError("Use at least 100 bootstrap replicates")
@@ -291,8 +299,9 @@ def build_report(source: Path, repeats: int = 1000) -> dict:
         manifest_ids = manifest.get("record_ids") or [r["record_id"] for r in manifest["records"]]
         if len(manifest_ids) != len(ids) or set(manifest_ids) != set(ids):
             raise ValueError(f"Wrong selection manifest: {name}")
+    validation_diagnostics = load_validation_diagnostics(source)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "split": "test",
         "selection_seed": 20260912,
         "window_count": len(ids),
@@ -305,6 +314,7 @@ def build_report(source: Path, repeats: int = 1000) -> dict:
         "paired_uncertainty": bootstrap_difference(
             predictions["opentslm"], predictions["features"], repeats, 20260912
         ),
+        "validation_diagnostics": validation_diagnostics,
     }
 
 
@@ -379,6 +389,34 @@ def markdown(report: dict) -> str:
             "confusion matrices. It does not repair generations or substitute labels."
         ),
         "",
+    ]
+    v6 = report.get("validation_diagnostics", {}).get("opentslm_v6_rationale")
+    if v6:
+        best = v6["checkpoint_selection"]["best_observed_decoded"]
+        final = v6["final_validation"]
+        lines += [
+            "## Separate V6 validation diagnostic",
+            "",
+            (
+                f"The conversational-rationale V6 run completed {v6['final_step']} steps in "
+                f"{v6['elapsed_hours']:.2f} hours. Its best observed decoded behavior was at step "
+                f"{best['step']}, but no decoded checkpoint passed every predeclared gate "
+                f"({v6['checkpoint_selection']['eligible_evaluations']}/"
+                f"{v6['checkpoint_selection']['decoded_evaluations']} eligible). The final checkpoint "
+                f"reported semantics macro-F1 {final['semantics_macro_f1']:.3f}, strongest-joint accuracy "
+                f"{final['strongest_joint_accuracy']:.3f}, first-pass schema validity "
+                f"{final['first_pass_schema_exact_match']:.3f}, and rationale coverage "
+                f"{final['rationale_presence']:.3f}."
+            ),
+            "",
+            (
+                "This 84-row panel was repeatedly inspected during training. It is included as an "
+                "observability case study, not as another row in the locked 512-window test comparison. "
+                f"The full audit is `{v6['artifacts']['failure_analysis']}`."
+            ),
+            "",
+        ]
+    lines += [
         "## Paired uncertainty",
         "",
         (

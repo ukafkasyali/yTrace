@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "split": "test",
   "selection_seed": 20260912,
   "window_count": 512,
@@ -11,7 +11,7 @@
   },
   "record_ids_sha256": "6ade06d04c8ecf739b4c19942659d1823c845dabdc319f2390e16a59fca7157c",
   "checkpoint_sha256": "8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23",
-  "source_inventory_sha256": "3de06e4a51cc0bb87316f072c500cc2a5fb9da00fb3024c7fff001dcdb6c2ef9",
+  "source_inventory_sha256": "1b75cfdbb830b801f8c7b5bc43dec9ec76ea5bd3e55002960cf967380dc73e3b",
   "models": {
     "features": {
       "label": "Signal features + logistic regression",
@@ -299,6 +299,100 @@
         -0.20077220077220082,
         0.016000000000000014
       ]
+    }
+  },
+  "validation_diagnostics": {
+    "opentslm_v6_rationale": {
+      "schema_version": 1,
+      "status": "validation_diagnostic_not_locked_test_benchmark",
+      "run_name": "llama-har-sp-timef-rationale-focused-v6",
+      "split": "validation",
+      "final_step": 3823,
+      "elapsed_hours": 3.2076080729494443,
+      "training": {
+        "gpu": "NVIDIA H100 80GB HBM3",
+        "architecture": "OpenTSLM SoftPrompt with Llama 3.2 1B and HAR warm start",
+        "source_windows": 8192,
+        "intent_views": 57344,
+        "intents": 7,
+        "epochs": 1,
+        "effective_batch_size": 15
+      },
+      "panel": {
+        "windows": 84,
+        "windows_per_intent": 12,
+        "decoded_evaluations": 16,
+        "selection": "event-by-intent stratified with natural joint prevalence",
+        "warning": "The panel was repeatedly inspected during training and is not an untouched confirmation set."
+      },
+      "checkpoint_selection": {
+        "eligible_evaluations": 0,
+        "decoded_evaluations": 16,
+        "best_observed_decoded": {
+          "step": 3000,
+          "score": 0.8708333333333333,
+          "contact_positive_f1": 0.9696969696969697,
+          "semantics_macro_f1": 1.0,
+          "strongest_joint_accuracy": 0.875,
+          "affected_joint_set_f1": 0.8758417508417508,
+          "onset_within_50ms": 0.8666666666666667,
+          "evidence_interval_iou": 0.292261345836944
+        },
+        "best_validation_loss": {
+          "step": 3600,
+          "loss": 0.07827791051901319,
+          "checkpoint_sha256": "7c69114d54132dd2641d59a54dc97d435ab7c578dfb320831485871012f83f62"
+        },
+        "blocking_gate": {
+          "metric": "first_pass/schema_exact_match",
+          "threshold": 0.95,
+          "maximum_observed": 0.8928571428571429
+        },
+        "finding": "No task-selected grounding checkpoint was retained; the preserved checkpoint was selected by teacher-forced validation loss."
+      },
+      "final_validation": {
+        "contact_positive_f1": 0.8666666666666667,
+        "semantics_macro_f1": 0.9153439153439153,
+        "strongest_joint_accuracy": 0.5625,
+        "affected_joint_set_f1": 0.7218253968253968,
+        "onset_mae_ms": 48.733333333333334,
+        "onset_within_50ms": 0.7333333333333333,
+        "evidence_interval_iou": 0.4363092435600618,
+        "json_parse_validity": 0.9761904761904762,
+        "schema_exact_match_after_retry": 0.9047619047619048,
+        "first_pass_schema_exact_match": 0.7976190476190477,
+        "retry_rate": 0.14285714285714285,
+        "rationale_presence": 0.7142857142857143,
+        "rationale_normalized_unique_rate": 0.43333333333333335
+      },
+      "training_probe": {
+        "final_exact_match": 0.5833333333333334,
+        "matched_validation_loss_gap_fraction": 0.0716413642680166,
+        "interpretation": "The output contract remained underfit on fixed training prompts; this is not ordinary validation-loss overfitting."
+      },
+      "provenance_warning": "The immutable manifest hypothesis says focused_three_intent although curriculum_intents and materialized counts prove that all seven intents were trained. The detailed count fields are authoritative.",
+      "signal_dependence": {
+        "zero_signal_panel_windows": 12,
+        "prediction_change_rate": 0.75,
+        "separate_step_3600_perturbation_panel_windows": 12,
+        "shifted_onset_prediction_change_rate": 1.0,
+        "channel_permutation_prediction_change_rate": 0.8333333333333334,
+        "channel_permutation_accuracy": 0.5833333333333334,
+        "interpretation": "The model is signal-sensitive, but these small diagnostics do not prove faithful temporal or channel-grounded reasoning."
+      },
+      "disposition": "Do not promote V6 from this audit. Retain the locked canary-v4 test comparison and present V6 as a training-observability case study.",
+      "artifacts": {
+        "failure_analysis": "../v6-validation/report/failure_analysis.json",
+        "presentation": "../v6-validation/README.md",
+        "slide": "../v6-validation/training-observability.svg",
+        "wandb": "https://wandb.ai/atakan_topaloglu-eth-z-rich/robot-observability/runs/x4212yyj"
+      },
+      "source_receipt_sha256": {
+        "status.json": "5bd146fbae1dd5ac0d618f1cd65918709bf3156360165a13a427f8258e6b67ca",
+        "run_manifest.json": "cf2e1588bc5167d92db007186ae3c3eb971030872f9381f5681b8e3a35664ed8",
+        "metrics.jsonl": "a7461328fe94a5ddc7d0c2335aa47e1e9d759d675c31190749d29b14bea90d7a",
+        "generation_epoch_step_003823.jsonl": "d5bddb1d04b3ceac47f490641e42903b20fccfeed3c9ee61639684a7649a3f36"
+      }
     }
   }
 }

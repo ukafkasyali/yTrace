@@ -90,3 +90,16 @@ python scripts/report_fit_probe.py --run-dir runs/llama-har-sp-fit-probe
 
 Use `--strict` on the reporter only when it should block the next launch. Its thresholds are diagnostic
 defaults, not benchmark acceptance criteria.
+
+After a full run, audit checkpoint-selection drift, first-pass generation reliability, intent slices,
+rationale coverage, signal ablations, and validation-methodology limitations from the immutable JSON
+receipts:
+
+```bash
+python scripts/analyze_failure_modes.py \
+  --run-dir runs/llama-har-sp-timef-rationale-focused-v6 \
+  --output-dir artifacts/failure-analysis/v6
+```
+
+The JSON report is machine-readable and the Markdown report is presentation-ready. This is a
+validation audit, not a replacement for one-time evaluation on unused recording groups.

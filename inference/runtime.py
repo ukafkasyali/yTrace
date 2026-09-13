@@ -57,7 +57,13 @@ def load_robust_normalization(path: str | Path) -> tuple[list[float], list[float
     return [float(x) for x in center], [float(x) for x in scale], float(clip)
 
 
-def prepare_sample(request: dict, series: list[dict], normalization: str, normalization_path: str | None = None) -> dict:
+def prepare_sample(
+    request: dict,
+    series: list[dict],
+    normalization: str,
+    normalization_path: str | None = None,
+    output_format: str = "answer_then_evidence",
+) -> dict:
     """Preserve selected samples and apply the declared training-compatible encoding.
 
     ``train_robust`` uses immutable train-split median/MAD statistics rather
@@ -66,6 +72,8 @@ def prepare_sample(request: dict, series: list[dict], normalization: str, normal
     """
     if normalization not in ("zscore_sample", "train_robust", "none"):
         raise ValueError("Unknown normalization")
+    if output_format not in ("answer_only", "answer_then_evidence", "rationale_then_answer"):
+        raise ValueError("Unknown output format")
     robust = load_robust_normalization(normalization_path) if normalization == "train_robust" and normalization_path else None
     if normalization == "train_robust" and robust is None:
         raise ValueError("train_robust requires normalization_path")
@@ -112,6 +120,20 @@ def prepare_sample(request: dict, series: list[dict], normalization: str, normal
             f"{joint_name} external joint torque in Nm, sampled at 1000 Hz over 1.024 seconds. "
             "The numeric values are normalized with train-only robust statistics."
         )
+    schema = json.dumps(schema_keys, separators=(",", ":"))
+    if output_format == "rationale_then_answer":
+        response_contract = (
+            "First write `Rationale:` as one natural paragraph grounded in temporal and joint "
+            "patterns. Do not use headings inside it or name the interaction class before the "
+            f"final line. End with `Answer:` and one closed compact JSON object containing only {schema}. "
+            "Use JSON types exactly: booleans are true/false, numbers are unquoted, arrays are "
+            "arrays, and missing values are null. Never quote a boolean, number, or null."
+        )
+    else:
+        response_contract = (
+            f"Respond with `Answer:` and valid compact JSON containing only {schema}."
+            + (" Then write one short `Evidence:` sentence." if output_format == "answer_then_evidence" else "")
+        )
     return {
         "pre_prompt": (
             "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
@@ -121,8 +143,7 @@ def prepare_sample(request: dict, series: list[dict], normalization: str, normal
         "time_series": values,
         "post_prompt": (
             f"\nQuestion: {canonical_question}\n"
-            f"Respond with `Answer:` and valid compact JSON containing only {schema_keys}, "
-            "then one short `Evidence:` sentence."
+            f"{response_contract}"
         ),
         # Flamingo's training collator expects this field; never put targets here.
         "answer": "",
@@ -224,7 +245,13 @@ class Runtime:
 
         if cancelled.is_set():
             raise InterruptedError("Query cancelled")
-        sample = prepare_sample(request, series, self.config["normalization"], self.config.get("normalization_path"))
+        sample = prepare_sample(
+            request,
+            series,
+            self.config["normalization"],
+            self.config.get("normalization_path"),
+            self.config.get("output_format", "answer_then_evidence"),
+        )
         trace = {
             "model": self.model_id, "revision": self.revision,
             "window": request["window"], "playheadSec": request["playheadSec"],

@@ -81,6 +81,20 @@ export function predictionBrief(output?: string) {
   };
 }
 
+/** Extract generated rationale text while keeping it separate from measured evidence. */
+export function generatedRationale(output?: string): string | undefined {
+  if (!output) return;
+  const answerMatches = [...output.matchAll(/Answer:\s*/gi)];
+  const answerAt = answerMatches.at(-1)?.index;
+  if (answerAt === undefined) return;
+  const prefix = output.slice(0, answerAt);
+  const rationaleMatches = [...prefix.matchAll(/Rationale:\s*/gi)];
+  const match = rationaleMatches.at(-1);
+  if (match?.index === undefined) return;
+  const rationale = prefix.slice(match.index + match[0].length).replace(/\s+/g, ' ').trim();
+  return rationale && rationale.length <= 1200 ? rationale : undefined;
+}
+
 /** Convert relative generated onset to recording time, without inventing contact location. */
 export function predictionCue(output: string | undefined, interval: { start: number; end: number }) {
   const brief = predictionBrief(output);

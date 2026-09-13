@@ -64,6 +64,19 @@ describe('service contracts', () => {
     expect(events[1].payload.text).toBe('2.');
   });
 
+  it('routes backend stream paths through a configured proxy prefix', async () => {
+    const fetch = vi.fn().mockResolvedValue(stream([event('1', 'answer.completed', { answer: 'done' })]));
+    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('location', { origin: 'http://localhost' });
+
+    await createServices('/api-v6').streamQuery('/api/queries/q-1/events', () => undefined);
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost/api-v6/queries/q-1/events',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+  });
+
   it('reports early disconnect and malformed stream data', async () => {
     const fetch = vi.fn().mockResolvedValueOnce(stream([event('1', 'answer.delta', { text: 'Partial' })]))
       .mockResolvedValueOnce(stream(['data: broken\n\n']));

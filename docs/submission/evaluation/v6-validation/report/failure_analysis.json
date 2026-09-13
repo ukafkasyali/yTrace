@@ -1,0 +1,1364 @@
+{
+  "checkpoint_selection": {
+    "best_observed_decoded_score": 0.8708333333333333,
+    "best_observed_decoded_step": 3000,
+    "best_observed_metrics": {
+      "affected_joints_set_f1": 0.8758417508417508,
+      "contact_f1": 0.9696969696969697,
+      "evidence_interval_iou": 0.292261345836944,
+      "onset_within_50ms": 0.8666666666666667,
+      "semantics_macro_f1": 1.0,
+      "strongest_joint_accuracy": 0.875
+    },
+    "best_validation_loss": 0.07827791051901319,
+    "best_validation_loss_step": 3600,
+    "decoded_evaluations": 16,
+    "eligible_evaluations": 0,
+    "final_metrics": {
+      "affected_joints_set_f1": 0.7218253968253968,
+      "contact_f1": 0.8666666666666667,
+      "evidence_interval_iou": 0.4363092435600618,
+      "onset_within_50ms": 0.7333333333333333,
+      "semantics_macro_f1": 0.9153439153439153,
+      "strongest_joint_accuracy": 0.5625
+    },
+    "final_minus_best_observed_decoded": {
+      "affected_joints_set_f1": -0.15401635401635394,
+      "contact_f1": -0.10303030303030303,
+      "evidence_interval_iou": 0.14404789772311777,
+      "onset_within_50ms": -0.13333333333333341,
+      "semantics_macro_f1": -0.08465608465608465,
+      "strongest_joint_accuracy": -0.3125
+    },
+    "gate_analysis": {
+      "first_pass/contact_f1": {
+        "maximum": 0.9696969696969697,
+        "passing_evaluations": 6,
+        "threshold": 0.95
+      },
+      "first_pass/schema_exact_match": {
+        "maximum": 0.8928571428571429,
+        "passing_evaluations": 0,
+        "threshold": 0.95
+      },
+      "first_pass/semantics_macro_f1": {
+        "maximum": 0.9777777777777779,
+        "passing_evaluations": 4,
+        "threshold": 0.9
+      }
+    },
+    "trajectory": [
+      {
+        "affected_joints_set_f1": 0.4383928571428572,
+        "contact_f1": 0.8823529411764706,
+        "evidence_interval_iou": 0.15659857553775888,
+        "first_pass/schema_exact_match": 0.6190476190476191,
+        "onset_within_50ms": 0.07142857142857142,
+        "rationale_presence": 0.7738095238095238,
+        "retry_rate": 0.32142857142857145,
+        "schema_exact_match": 0.8809523809523809,
+        "semantics_macro_f1": 0.5108225108225108,
+        "step": 250,
+        "strongest_joint_accuracy": 0.4375
+      },
+      {
+        "affected_joints_set_f1": 0.5745370370370371,
+        "contact_f1": 0.8275862068965517,
+        "evidence_interval_iou": 0.2269140257122711,
+        "first_pass/schema_exact_match": 0.8214285714285714,
+        "onset_within_50ms": 0.6,
+        "rationale_presence": 0.7023809523809523,
+        "retry_rate": 0.14285714285714285,
+        "schema_exact_match": 0.9523809523809523,
+        "semantics_macro_f1": 0.9327731092436974,
+        "step": 500,
+        "strongest_joint_accuracy": 0.375
+      },
+      {
+        "affected_joints_set_f1": 0.5595238095238095,
+        "contact_f1": 0.7857142857142857,
+        "evidence_interval_iou": 0.260288246620478,
+        "first_pass/schema_exact_match": 0.8214285714285714,
+        "onset_within_50ms": 0.5384615384615384,
+        "rationale_presence": 0.6428571428571429,
+        "retry_rate": 0.13095238095238096,
+        "schema_exact_match": 0.9166666666666666,
+        "semantics_macro_f1": 0.8775271512113617,
+        "step": 750,
+        "strongest_joint_accuracy": 0.375
+      },
+      {
+        "affected_joints_set_f1": 0.715974765974766,
+        "contact_f1": 0.967741935483871,
+        "evidence_interval_iou": 0.28152172805002096,
+        "first_pass/schema_exact_match": 0.8333333333333334,
+        "onset_within_50ms": 0.5714285714285714,
+        "rationale_presence": 0.9285714285714286,
+        "retry_rate": 0.14285714285714285,
+        "schema_exact_match": 0.9642857142857143,
+        "semantics_macro_f1": 0.9165032679738562,
+        "step": 1000,
+        "strongest_joint_accuracy": 0.5
+      },
+      {
+        "affected_joints_set_f1": 0.5721380471380472,
+        "contact_f1": 0.9696969696969697,
+        "evidence_interval_iou": 0.35913290253784,
+        "first_pass/schema_exact_match": 0.8928571428571429,
+        "onset_within_50ms": 0.5333333333333333,
+        "rationale_presence": 0.9047619047619048,
+        "retry_rate": 0.07142857142857142,
+        "schema_exact_match": 0.9642857142857143,
+        "semantics_macro_f1": 1.0,
+        "step": 1250,
+        "strongest_joint_accuracy": 0.5
+      },
+      {
+        "affected_joints_set_f1": 0.7817791005291005,
+        "contact_f1": 0.9375,
+        "evidence_interval_iou": 0.26842357159111147,
+        "first_pass/schema_exact_match": 0.8928571428571429,
+        "onset_within_50ms": 0.6428571428571429,
+        "rationale_presence": 0.9404761904761905,
+        "retry_rate": 0.10714285714285714,
+        "schema_exact_match": 0.9880952380952381,
+        "semantics_macro_f1": 0.9581699346405229,
+        "step": 1500,
+        "strongest_joint_accuracy": 0.8125
+      },
+      {
+        "affected_joints_set_f1": 0.7634920634920634,
+        "contact_f1": 0.9696969696969697,
+        "evidence_interval_iou": 0.3715668120939891,
+        "first_pass/schema_exact_match": 0.8571428571428571,
+        "onset_within_50ms": 0.6875,
+        "rationale_presence": 0.9880952380952381,
+        "retry_rate": 0.14285714285714285,
+        "schema_exact_match": 1.0,
+        "semantics_macro_f1": 0.9581699346405229,
+        "step": 1750,
+        "strongest_joint_accuracy": 0.625
+      },
+      {
+        "affected_joints_set_f1": 0.7671957671957671,
+        "contact_f1": 0.9696969696969697,
+        "evidence_interval_iou": 0.32270986844013083,
+        "first_pass/schema_exact_match": 0.7857142857142857,
+        "onset_within_50ms": 0.6666666666666666,
+        "rationale_presence": 0.8928571428571429,
+        "retry_rate": 0.21428571428571427,
+        "schema_exact_match": 0.9761904761904762,
+        "semantics_macro_f1": 1.0,
+        "step": 2000,
+        "strongest_joint_accuracy": 0.5625
+      },
+      {
+        "affected_joints_set_f1": 0.830537518037518,
+        "contact_f1": 0.9696969696969697,
+        "evidence_interval_iou": 0.31832567908813025,
+        "first_pass/schema_exact_match": 0.8214285714285714,
+        "onset_within_50ms": 0.7333333333333333,
+        "rationale_presence": 0.9285714285714286,
+        "retry_rate": 0.17857142857142858,
+        "schema_exact_match": 0.9642857142857143,
+        "semantics_macro_f1": 0.9581699346405229,
+        "step": 2250,
+        "strongest_joint_accuracy": 0.6875
+      },
+      {
+        "affected_joints_set_f1": 0.6541005291005292,
+        "contact_f1": 0.9696969696969697,
+        "evidence_interval_iou": 0.31932666810921784,
+        "first_pass/schema_exact_match": 0.7738095238095238,
+        "onset_within_50ms": 0.8666666666666667,
+        "rationale_presence": 0.8690476190476191,
+        "retry_rate": 0.17857142857142858,
+        "schema_exact_match": 0.9285714285714286,
+        "semantics_macro_f1": 0.9581699346405229,
+        "step": 2500,
+        "strongest_joint_accuracy": 0.8125
+      },
+      {
+        "affected_joints_set_f1": 0.7576208513708513,
+        "contact_f1": 0.9375,
+        "evidence_interval_iou": 0.3657249394751536,
+        "first_pass/schema_exact_match": 0.8690476190476191,
+        "onset_within_50ms": 0.8571428571428571,
+        "rationale_presence": 0.8214285714285714,
+        "retry_rate": 0.10714285714285714,
+        "schema_exact_match": 0.9642857142857143,
+        "semantics_macro_f1": 0.9581699346405229,
+        "step": 2750,
+        "strongest_joint_accuracy": 0.6875
+      },
+      {
+        "affected_joints_set_f1": 0.8758417508417508,
+        "contact_f1": 0.9696969696969697,
+        "evidence_interval_iou": 0.292261345836944,
+        "first_pass/schema_exact_match": 0.8452380952380952,
+        "onset_within_50ms": 0.8666666666666667,
+        "rationale_presence": 0.9642857142857143,
+        "retry_rate": 0.15476190476190477,
+        "schema_exact_match": 0.9880952380952381,
+        "semantics_macro_f1": 1.0,
+        "step": 3000,
+        "strongest_joint_accuracy": 0.875
+      },
+      {
+        "affected_joints_set_f1": 0.7597041847041847,
+        "contact_f1": 0.9375,
+        "evidence_interval_iou": 0.32162569167780036,
+        "first_pass/schema_exact_match": 0.75,
+        "onset_within_50ms": 0.7142857142857143,
+        "rationale_presence": 0.8333333333333334,
+        "retry_rate": 0.21428571428571427,
+        "schema_exact_match": 0.9047619047619048,
+        "semantics_macro_f1": 0.9777777777777779,
+        "step": 3250,
+        "strongest_joint_accuracy": 0.6875
+      },
+      {
+        "affected_joints_set_f1": 0.7967412217412218,
+        "contact_f1": 0.8666666666666667,
+        "evidence_interval_iou": 0.4028571016015412,
+        "first_pass/schema_exact_match": 0.7738095238095238,
+        "onset_within_50ms": 0.7857142857142857,
+        "rationale_presence": 0.7261904761904762,
+        "retry_rate": 0.16666666666666666,
+        "schema_exact_match": 0.9166666666666666,
+        "semantics_macro_f1": 0.9581699346405229,
+        "step": 3500,
+        "strongest_joint_accuracy": 0.6875
+      },
+      {
+        "affected_joints_set_f1": 0.7634920634920634,
+        "contact_f1": 0.8666666666666667,
+        "evidence_interval_iou": 0.43153669776020004,
+        "first_pass/schema_exact_match": 0.8095238095238095,
+        "onset_within_50ms": 0.8,
+        "rationale_presence": 0.7261904761904762,
+        "retry_rate": 0.13095238095238096,
+        "schema_exact_match": 0.9285714285714286,
+        "semantics_macro_f1": 0.8931216931216931,
+        "step": 3750,
+        "strongest_joint_accuracy": 0.625
+      },
+      {
+        "affected_joints_set_f1": 0.7218253968253968,
+        "contact_f1": 0.8666666666666667,
+        "evidence_interval_iou": 0.4363092435600618,
+        "first_pass/schema_exact_match": 0.7976190476190477,
+        "onset_within_50ms": 0.7333333333333333,
+        "rationale_presence": 0.7142857142857143,
+        "retry_rate": 0.14285714285714285,
+        "schema_exact_match": 0.9047619047619048,
+        "semantics_macro_f1": 0.9153439153439153,
+        "step": 3823,
+        "strongest_joint_accuracy": 0.5625
+      }
+    ]
+  },
+  "final_validation": {
+    "logged_metrics": {
+      "affected_joints_exact_match": 0.4583333333333333,
+      "affected_joints_n": 24,
+      "affected_joints_set_f1": 0.7218253968253968,
+      "answer_exact_match": 0.4642857142857143,
+      "contact_accuracy": 0.75,
+      "contact_f1": 0.8666666666666667,
+      "contact_n": 24,
+      "epoch": 0,
+      "evidence_end_mae_ms": 113.46666666666667,
+      "evidence_interval_coverage": 0.9375,
+      "evidence_interval_iou": 0.4363092435600618,
+      "evidence_interval_n": 16,
+      "evidence_start_mae_ms": 98.6,
+      "final_blank_rate": 0.0,
+      "first_pass_blank_rate": 0.14285714285714285,
+      "n": 84,
+      "onset_coverage": 0.9375,
+      "onset_mae_ms": 48.733333333333334,
+      "onset_median_ae_ms": 34.0,
+      "onset_n": 16,
+      "onset_p90_ae_ms": 106.59999999999997,
+      "onset_within_10ms": 0.13333333333333333,
+      "onset_within_25ms": 0.4666666666666667,
+      "onset_within_50ms": 0.7333333333333333,
+      "parse_validity": 0.9761904761904762,
+      "phase": "epoch",
+      "rationale_normalized_unique_count": 26,
+      "rationale_normalized_unique_rate": 0.43333333333333335,
+      "rationale_prediction_joint_consistency": 0.8666666666666667,
+      "rationale_premature_label_rate": 0.0,
+      "rationale_presence": 0.7142857142857143,
+      "rationale_target_joint_consistency": 0.6875,
+      "rationale_target_onset_consistency": 0.0,
+      "rationale_unique_count": 51,
+      "rationale_unique_rate": 0.85,
+      "retry_rate": 0.14285714285714285,
+      "schema_exact_match": 0.9047619047619048,
+      "schema_key_exact_match": 0.9761904761904762,
+      "semantics_accuracy": 0.9166666666666666,
+      "semantics_macro_f1": 0.9153439153439153,
+      "semantics_n": 24,
+      "step": 3823,
+      "strongest_joint/J1_accuracy": 0.5,
+      "strongest_joint/J1_n": 4,
+      "strongest_joint/J2_accuracy": 0.2,
+      "strongest_joint/J2_n": 5,
+      "strongest_joint/J4_accuracy": 0.8333333333333334,
+      "strongest_joint/J4_n": 6,
+      "strongest_joint/J5_accuracy": 1.0,
+      "strongest_joint/J5_n": 1,
+      "strongest_joint_accuracy": 0.5625,
+      "strongest_joint_macro_accuracy": 0.6333333333333333,
+      "strongest_joint_n": 16,
+      "strongest_joint_tail_accuracy": 1.0,
+      "strongest_joint_tail_n": 1
+    },
+    "row_analysis": {
+      "confusion": {
+        "contact": {
+          "False -> False": 5,
+          "False -> None": 2,
+          "False -> True": 1,
+          "True -> False": 3,
+          "True -> True": 13
+        },
+        "semantics": {
+          "'accidental' -> 'accidental'": 6,
+          "'accidental' -> 'free'": 2,
+          "'free' -> 'free'": 8,
+          "'intentional' -> 'intentional'": 8
+        },
+        "strongest_joint": {
+          "'J1' -> 'J1'": 2,
+          "'J1' -> 'J3'": 2,
+          "'J2' -> 'J1'": 1,
+          "'J2' -> 'J2'": 1,
+          "'J2' -> 'strongest'": 1,
+          "'J2' -> False": 1,
+          "'J2' -> None": 1,
+          "'J4' -> 'J1'": 1,
+          "'J4' -> 'J4'": 5,
+          "'J5' -> 'J5'": 1,
+          "None -> None": 8
+        }
+      },
+      "failure_counts": {
+        "affected_joints_error": 9,
+        "contact_error": 4,
+        "evidence_interval_iou_below_0.5": 9,
+        "evidence_interval_missing": 1,
+        "missing_rationale": 24,
+        "onset_error_over_50ms": 4,
+        "onset_missing": 1,
+        "parse_failure": 2,
+        "retry_required": 12,
+        "schema_value_violation": 6,
+        "semantics_error": 2,
+        "strongest_joint_error": 7
+      },
+      "failure_examples": [
+        {
+          "failure_types": [
+            "schema_value_violation",
+            "affected_joints_error",
+            "missing_rationale"
+          ],
+          "intent": "affected_joints",
+          "output_excerpt": " in\nAnswer: {\"affected_joints\":[\"affected_joints\"]}",
+          "prediction": {
+            "affected_joints": [
+              "affected_joints"
+            ]
+          },
+          "record_id": "accidental/05-25-16-33/event-0033/crop-0",
+          "target": {
+            "affected_joints": [
+              "J3"
+            ]
+          }
+        },
+        {
+          "failure_types": [
+            "contact_error",
+            "missing_rationale"
+          ],
+          "intent": "contact",
+          "output_excerpt": " in\nAnswer: {\"contact\":false}",
+          "prediction": {
+            "contact": false
+          },
+          "record_id": "accidental/04-22-16-10/event-0012/crop-0",
+          "target": {
+            "contact": true
+          }
+        },
+        {
+          "failure_types": [
+            "onset_missing",
+            "missing_rationale"
+          ],
+          "intent": "onset",
+          "output_excerpt": " in\nAnswer: {\"onset_ms\":null}",
+          "prediction": {
+            "onset_ms": null
+          },
+          "record_id": "accidental/05-26-10-48/event-0002/crop-0",
+          "target": {
+            "onset_ms": 533
+          }
+        },
+        {
+          "failure_types": [
+            "missing_rationale"
+          ],
+          "intent": "semantics",
+          "output_excerpt": " in\nAnswer: {\"event_type\":\"accidental\"}",
+          "prediction": {
+            "event_type": "accidental"
+          },
+          "record_id": "accidental/05-25-16-44/event-0020/crop-0",
+          "target": {
+            "event_type": "accidental"
+          }
+        },
+        {
+          "failure_types": [
+            "strongest_joint_error",
+            "missing_rationale"
+          ],
+          "intent": "strongest_joint",
+          "output_excerpt": " in order to support the diagnosis.\nAnswer: {\"strongest_joint\":null}",
+          "prediction": {
+            "strongest_joint": null
+          },
+          "record_id": "accidental/04-22-10-43/event-0004/crop-0",
+          "target": {
+            "strongest_joint": "J2"
+          }
+        },
+        {
+          "failure_types": [
+            "retry_required"
+          ],
+          "intent": "affected_joints",
+          "output_excerpt": "Rationale: All seven joint scores remain below the affected-channel criterion, leaving no joints to rank.\nAnswer: {\"affected_joints\":[]}",
+          "prediction": {
+            "affected_joints": []
+          },
+          "record_id": "accidental/04-22-15-22/free-0016",
+          "target": {
+            "affected_joints": []
+          }
+        },
+        {
+          "failure_types": [
+            "contact_error"
+          ],
+          "intent": "contact",
+          "output_excerpt": "Rationale: The telemetry leaves its calibrated no-contact range at about 622 ms and remains disturbed for 250 ms.\nAnswer: {\"contact\":true}",
+          "prediction": {
+            "contact": true
+          },
+          "record_id": "intentional/04-13-16-45/free-0018",
+          "target": {
+            "contact": false
+          }
+        },
+        {
+          "failure_types": [
+            "retry_required"
+          ],
+          "intent": "semantics",
+          "output_excerpt": "Rationale: No joint departs persistently from its training-calibrated no-contact range, supporting the final motion category.\nAnswer: {\"event_type\":\"free\"}",
+          "prediction": {
+            "event_type": "free"
+          },
+          "record_id": "accidental/04-22-16-10/free-0019",
+          "target": {
+            "event_type": "free"
+          }
+        },
+        {
+          "failure_types": [
+            "retry_required"
+          ],
+          "intent": "strongest_joint",
+          "output_excerpt": "Rationale: No joint crosses the calibrated disturbance threshold, so assigning a responsible joint would be unsupported.\nAnswer: {\"strongest_joint\":null}",
+          "prediction": {
+            "strongest_joint": null
+          },
+          "record_id": "intentional/03-23-11-35/free-0007",
+          "target": {
+            "strongest_joint": null
+          }
+        },
+        {
+          "failure_types": [
+            "evidence_interval_iou_below_0.5"
+          ],
+          "intent": "evidence_interval",
+          "output_excerpt": "Rationale: Persistent torque evidence is concentrated from 706 to 856 ms; outside those bounds it does not sustain the interval criterion.\nAnswer: {\"evidence_end_ms\":856,\"evidence_start_ms\":706}",
+          "prediction": {
+            "evidence_end_ms": 856,
+            "evidence_start_ms": 706
+          },
+          "record_id": "intentional/03-23-15-55/event-0031/crop-0",
+          "target": {
+            "evidence_end_ms": 609,
+            "evidence_start_ms": 359
+          }
+        },
+        {
+          "failure_types": [
+            "onset_error_over_50ms"
+          ],
+          "intent": "onset",
+          "output_excerpt": "Rationale: The first sustained departure from the calibrated baseline occurs near 707 ms, after which the disturbance continues through 957 ms.\nAnswer: {\"onset_ms\":707}",
+          "prediction": {
+            "onset_ms": 707
+          },
+          "record_id": "intentional/03-22-13-39/event-0003/crop-0",
+          "target": {
+            "onset_ms": 649
+          }
+        },
+        {
+          "failure_types": [
+            "schema_value_violation",
+            "strongest_joint_error",
+            "missing_rationale"
+          ],
+          "intent": "strongest_joint",
+          "output_excerpt": " -1 J2, 1 J3, 1 J4\nAnswer: {\"strongest_joint\":\"strongest\"}",
+          "prediction": {
+            "strongest_joint": "strongest"
+          },
+          "record_id": "intentional/03-29-13-50/event-0005/crop-0",
+          "target": {
+            "strongest_joint": "J2"
+          }
+        },
+        {
+          "failure_types": [
+            "onset_error_over_50ms",
+            "evidence_interval_iou_below_0.5"
+          ],
+          "intent": "summary",
+          "output_excerpt": "Rationale: A sustained torque excursion begins near 707 ms and spans 707\u2013957 ms; J5 has the largest normalized disturbance, with threshold-crossing support from J5.\nAnswer: {\"affected_joints\":[\"J5\"],\"contact\":true,\"event_type\":\"intentional\",\"evidence_end_ms\":957,\"evidence_start_ms\":707,\"onset_ms\":70",
+          "prediction": {
+            "affected_joints": [
+              "J5"
+            ],
+            "contact": true,
+            "event_type": "intentional",
+            "evidence_end_ms": 957,
+            "evidence_start_ms": 707,
+            "onset_ms": 707,
+            "strongest_joint": "J5"
+          },
+          "record_id": "intentional/03-23-15-55/event-0009/crop-0",
+          "target": {
+            "affected_joints": [
+              "J5"
+            ],
+            "contact": true,
+            "event_type": "intentional",
+            "evidence_end_ms": 818,
+            "evidence_start_ms": 568,
+            "onset_ms": 568,
+            "strongest_joint": "J5"
+          }
+        },
+        {
+          "failure_types": [
+            "affected_joints_error"
+          ],
+          "intent": "affected_joints",
+          "output_excerpt": "Rationale: The channels crossing the calibrated disturbance threshold are J2, J4, J6, ordered by their normalized evidence strength.\nAnswer: {\"affected_joints\":[\"J2\",\"J4\",\"J6\"]}",
+          "prediction": {
+            "affected_joints": [
+              "J2",
+              "J4",
+              "J6"
+            ]
+          },
+          "record_id": "accidental/03-15-16-30/event-0015/crop-0",
+          "target": {
+            "affected_joints": [
+              "J4",
+              "J2",
+              "J6",
+              "J3"
+            ]
+          }
+        },
+        {
+          "failure_types": [
+            "evidence_interval_missing",
+            "missing_rationale"
+          ],
+          "intent": "evidence_interval",
+          "output_excerpt": " in order to avoid the compact, sustained disturbance across the specified window\nAnswer: {\"evidence_end_ms\":null,\"evidence_start_ms\":null}",
+          "prediction": {
+            "evidence_end_ms": null,
+            "evidence_start_ms": null
+          },
+          "record_id": "accidental/03-15-17-23/event-0008/crop-0",
+          "target": {
+            "evidence_end_ms": 748,
+            "evidence_start_ms": 735
+          }
+        },
+        {
+          "failure_types": [
+            "semantics_error",
+            "missing_rationale"
+          ],
+          "intent": "semantics",
+          "output_excerpt": " in\nAnswer: {\"event_type\":\"free\"}",
+          "prediction": {
+            "event_type": "free"
+          },
+          "record_id": "accidental/03-15-17-23/event-0015/crop-0",
+          "target": {
+            "event_type": "accidental"
+          }
+        },
+        {
+          "failure_types": [
+            "strongest_joint_error"
+          ],
+          "intent": "strongest_joint",
+          "output_excerpt": "Rationale: The disturbance ranking is led by J1 at 1.21, exceeding the next-highest channel J2 at 0.87.\nAnswer: {\"strongest_joint\":\"J1\"}",
+          "prediction": {
+            "strongest_joint": "J1"
+          },
+          "record_id": "accidental/05-26-13-52/event-0032/crop-0",
+          "target": {
+            "strongest_joint": "J2"
+          }
+        },
+        {
+          "failure_types": [
+            "evidence_interval_iou_below_0.5"
+          ],
+          "intent": "summary",
+          "output_excerpt": "Rationale: A sustained torque excursion begins near 372 ms and spans 372\u2013622 ms; J1 has the largest normalized disturbance, with threshold-crossing support from J1.\nAnswer: {\"affected_joints\":[\"J1\"],\"contact\":true,\"event_type\":\"accidental\",\"evidence_end_ms\":622,\"evidence_start_ms\":372,\"onset_ms\":372",
+          "prediction": {
+            "affected_joints": [
+              "J1"
+            ],
+            "contact": true,
+            "event_type": "accidental",
+            "evidence_end_ms": 622,
+            "evidence_start_ms": 372,
+            "onset_ms": 372,
+            "strongest_joint": "J1"
+          },
+          "record_id": "accidental/05-26-10-27/event-0022/crop-0",
+          "target": {
+            "affected_joints": [
+              "J1"
+            ],
+            "contact": true,
+            "event_type": "accidental",
+            "evidence_end_ms": 439,
+            "evidence_start_ms": 409,
+            "onset_ms": 388,
+            "strongest_joint": "J1"
+          }
+        },
+        {
+          "failure_types": [
+            "retry_required"
+          ],
+          "intent": "affected_joints",
+          "output_excerpt": "Rationale: All seven joint scores remain below the affected-channel criterion, leaving no joints to rank.\nAnswer: {\"affected_joints\":[]}",
+          "prediction": {
+            "affected_joints": []
+          },
+          "record_id": "intentional/04-10-16-46/free-0000",
+          "target": {
+            "affected_joints": []
+          }
+        },
+        {
+          "failure_types": [
+            "missing_rationale"
+          ],
+          "intent": "contact",
+          "output_excerpt": "\n\nAnswer: {\"contact\":false}",
+          "prediction": {
+            "contact": false
+          },
+          "record_id": "accidental/04-22-16-10/free-0013",
+          "target": {
+            "contact": false
+          }
+        },
+        {
+          "failure_types": [
+            "missing_rationale"
+          ],
+          "intent": "semantics",
+          "output_excerpt": "\n\nAnswer: {\"event_type\":\"free\"}",
+          "prediction": {
+            "event_type": "free"
+          },
+          "record_id": "accidental/04-22-15-22/free-0037",
+          "target": {
+            "event_type": "free"
+          }
+        },
+        {
+          "failure_types": [
+            "missing_rationale"
+          ],
+          "intent": "strongest_joint",
+          "output_excerpt": " in order to avoid the strongest joint disturbance\nAnswer: {\"strongest_joint\":null}",
+          "prediction": {
+            "strongest_joint": null
+          },
+          "record_id": "accidental/05-28-20-14/free-0018",
+          "target": {
+            "strongest_joint": null
+          }
+        },
+        {
+          "failure_types": [
+            "onset_error_over_50ms"
+          ],
+          "intent": "onset",
+          "output_excerpt": "Rationale: The first sustained departure from the calibrated baseline occurs near 266 ms, after which the disturbance continues through 516 ms.\nAnswer: {\"onset_ms\":266}",
+          "prediction": {
+            "onset_ms": 266
+          },
+          "record_id": "intentional/04-13-16-31/event-0009/crop-0",
+          "target": {
+            "onset_ms": 318
+          }
+        },
+        {
+          "failure_types": [
+            "affected_joints_error",
+            "evidence_interval_iou_below_0.5"
+          ],
+          "intent": "summary",
+          "output_excerpt": "Rationale: A sustained torque excursion begins near 707 ms and spans 707\u2013957 ms; J1 has the largest normalized disturbance, with threshold-crossing support from J1.\nAnswer: {\"affected_joints\":[\"J1\"],\"contact\":true,\"event_type\":\"intentional\",\"evidence_end_ms\":957,\"evidence_start_ms\":707,\"onset_ms\":70",
+          "prediction": {
+            "affected_joints": [
+              "J1"
+            ],
+            "contact": true,
+            "event_type": "intentional",
+            "evidence_end_ms": 957,
+            "evidence_start_ms": 707,
+            "onset_ms": 707,
+            "strongest_joint": "J1"
+          },
+          "record_id": "intentional/03-22-14-15/event-0033/crop-0",
+          "target": {
+            "affected_joints": [
+              "J1",
+              "J4"
+            ],
+            "contact": true,
+            "event_type": "intentional",
+            "evidence_end_ms": 910,
+            "evidence_start_ms": 830,
+            "onset_ms": 660,
+            "strongest_joint": "J1"
+          }
+        },
+        {
+          "failure_types": [
+            "schema_value_violation",
+            "affected_joints_error",
+            "missing_rationale"
+          ],
+          "intent": "affected_joints",
+          "output_excerpt": " in\nAnswer: {\"affected_joints\":[\"affected_joints\"]}",
+          "prediction": {
+            "affected_joints": [
+              "affected_joints"
+            ]
+          },
+          "record_id": "accidental/05-27-17-34/event-0012/crop-0",
+          "target": {
+            "affected_joints": [
+              "J1"
+            ]
+          }
+        },
+        {
+          "failure_types": [
+            "contact_error",
+            "missing_rationale"
+          ],
+          "intent": "contact",
+          "output_excerpt": " in\nAnswer: {\"contact\":false}",
+          "prediction": {
+            "contact": false
+          },
+          "record_id": "accidental/04-22-13-56/event-0020/crop-0",
+          "target": {
+            "contact": true
+          }
+        },
+        {
+          "failure_types": [
+            "semantics_error",
+            "missing_rationale"
+          ],
+          "intent": "semantics",
+          "output_excerpt": " in order to avoid the final judgmental category.\nAnswer: {\"event_type\":\"free\"}",
+          "prediction": {
+            "event_type": "free"
+          },
+          "record_id": "accidental/05-27-17-34/event-0024/crop-0",
+          "target": {
+            "event_type": "accidental"
+          }
+        },
+        {
+          "failure_types": [
+            "strongest_joint_error",
+            "affected_joints_error",
+            "evidence_interval_iou_below_0.5"
+          ],
+          "intent": "summary",
+          "output_excerpt": "Rationale: The signal enters a persistent disturbance regime at about 677 ms for 250 ms, led by J3 and accompanied by threshold crossings on J3.\nAnswer: {\"affected_joints\":[\"J3\"],\"contact\":true,\"event_type\":\"accidental\",\"evidence_end_ms\":927,\"evidence_start_ms\":677,\"onset_ms\":677,\"strongest_joint\":\"",
+          "prediction": {
+            "affected_joints": [
+              "J3"
+            ],
+            "contact": true,
+            "event_type": "accidental",
+            "evidence_end_ms": 927,
+            "evidence_start_ms": 677,
+            "onset_ms": 677,
+            "strongest_joint": "J3"
+          },
+          "record_id": "accidental/05-26-10-48/event-0007/crop-0",
+          "target": {
+            "affected_joints": [
+              "J1"
+            ],
+            "contact": true,
+            "event_type": "accidental",
+            "evidence_end_ms": 687,
+            "evidence_start_ms": 677,
+            "onset_ms": 665,
+            "strongest_joint": "J1"
+          }
+        },
+        {
+          "failure_types": [
+            "schema_value_violation",
+            "affected_joints_error",
+            "missing_rationale",
+            "retry_required"
+          ],
+          "intent": "affected_joints",
+          "output_excerpt": " and (not) mean entirely sufficient?\nAnswer: {\"affected_joints\":[\"null\"]}",
+          "prediction": {
+            "affected_joints": [
+              "null"
+            ]
+          },
+          "record_id": "intentional/03-23-18-22/free-0011",
+          "target": {
+            "affected_joints": []
+          }
+        },
+        {
+          "failure_types": [
+            "parse_failure",
+            "missing_rationale",
+            "retry_required"
+          ],
+          "intent": "contact",
+          "output_excerpt": "\n\nAnswer: {\"contact\":false}. Answer: false\nAnswer: null",
+          "prediction": null,
+          "record_id": "intentional/03-23-18-22/free-0003",
+          "target": {
+            "contact": false
+          }
+        }
+      ],
+      "intent_counts": {
+        "affected_joints": 12,
+        "contact": 12,
+        "evidence_interval": 12,
+        "onset": 12,
+        "semantics": 12,
+        "strongest_joint": 12,
+        "summary": 12
+      },
+      "n": 84,
+      "per_intent": {
+        "affected_joints": {
+          "answer_exact_match": 0.25,
+          "first_pass_blank_rate": 0.3333333333333333,
+          "n": 12,
+          "parse_validity": 1.0,
+          "rationale_presence": 0.6666666666666666,
+          "retry_rate": 0.3333333333333333,
+          "schema_validity": 0.6666666666666666
+        },
+        "contact": {
+          "answer_exact_match": 0.5,
+          "first_pass_blank_rate": 0.16666666666666666,
+          "n": 12,
+          "parse_validity": 0.8333333333333334,
+          "rationale_presence": 0.5,
+          "retry_rate": 0.16666666666666666,
+          "schema_validity": 0.8333333333333334
+        },
+        "evidence_interval": {
+          "answer_exact_match": 0.3333333333333333,
+          "first_pass_blank_rate": 0.08333333333333333,
+          "n": 12,
+          "parse_validity": 1.0,
+          "rationale_presence": 0.9166666666666666,
+          "retry_rate": 0.08333333333333333,
+          "schema_validity": 1.0
+        },
+        "onset": {
+          "answer_exact_match": 0.3333333333333333,
+          "first_pass_blank_rate": 0.08333333333333333,
+          "n": 12,
+          "parse_validity": 1.0,
+          "rationale_presence": 0.8333333333333334,
+          "retry_rate": 0.08333333333333333,
+          "schema_validity": 1.0
+        },
+        "semantics": {
+          "answer_exact_match": 0.8333333333333334,
+          "first_pass_blank_rate": 0.16666666666666666,
+          "n": 12,
+          "parse_validity": 1.0,
+          "rationale_presence": 0.5,
+          "retry_rate": 0.16666666666666666,
+          "schema_validity": 1.0
+        },
+        "strongest_joint": {
+          "answer_exact_match": 0.6666666666666666,
+          "first_pass_blank_rate": 0.16666666666666666,
+          "n": 12,
+          "parse_validity": 1.0,
+          "rationale_presence": 0.5833333333333334,
+          "retry_rate": 0.16666666666666666,
+          "schema_validity": 0.8333333333333334
+        },
+        "summary": {
+          "answer_exact_match": 0.3333333333333333,
+          "first_pass_blank_rate": 0.0,
+          "n": 12,
+          "parse_validity": 1.0,
+          "rationale_presence": 1.0,
+          "retry_rate": 0.0,
+          "schema_validity": 1.0
+        }
+      },
+      "rationales": {
+        "limitation": "Lexical consistency and diversity do not establish that a generated rationale is a faithful explanation of the model's signal-dependent computation.",
+        "most_common_normalized_templates": [
+          {
+            "count": 6,
+            "template": "a sustained torque excursion begins near # ms and spans #\u2013# ms; j# has the largest normalized disturbance, with threshold-crossing support from j#."
+          },
+          {
+            "count": 5,
+            "template": "the telemetry leaves its calibrated no-contact range at about # ms and remains disturbed for # ms."
+          },
+          {
+            "count": 5,
+            "template": "the first sustained departure from the calibrated baseline occurs near # ms, after which the disturbance continues through # ms."
+          },
+          {
+            "count": 5,
+            "template": "a localized excursion spans #\u2013# ms with j# dominant and # threshold-crossing joints, providing the evidence for the final category."
+          },
+          {
+            "count": 4,
+            "template": "persistent torque evidence is concentrated from # to # ms; outside those bounds it does not sustain the interval criterion."
+          },
+          {
+            "count": 3,
+            "template": "all seven joint scores remain below the affected-channel criterion, leaving no joints to rank."
+          },
+          {
+            "count": 3,
+            "template": "the signal never enters a persistent disturbance regime, so interval bounds cannot be supported."
+          },
+          {
+            "count": 3,
+            "template": "the sustained disturbance regime begins at # ms and ends at # ms, defining a # ms evidence interval."
+          },
+          {
+            "count": 3,
+            "template": "j# has the largest normalized disturbance score (#), ahead of j# (#), making it the strongest joint-level evidence."
+          },
+          {
+            "count": 2,
+            "template": "no sustained disturbance transition is detected, so a contact onset cannot be localized in this window."
+          }
+        ],
+        "normalized_unique_rate": 0.43333333333333335,
+        "presence_rate": 0.7142857142857143
+      },
+      "target_strongest_joint_counts": {
+        "J1": 4,
+        "J2": 5,
+        "J4": 6,
+        "J5": 1
+      },
+      "temporal": {
+        "constant_median_mae_ms_on_covered_rows": 130.26666666666668,
+        "evidence_interval_mean_iou": 0.4363092435600618,
+        "onset_bias_ms": 25.666666666666668,
+        "onset_coverage": 0.9375,
+        "onset_mae_ms": 48.733333333333334,
+        "onset_target_prediction_correlation": 0.9033103976161387,
+        "paired_onsets": 15
+      }
+    }
+  },
+  "findings": [
+    {
+      "code": "checkpoint_gate_deadlock",
+      "evidence": "0/16 decoded evaluations were eligible; never-passed gates: first_pass/schema_exact_match max=0.893 < 0.950.",
+      "implication": "No task-selected grounding checkpoint was saved; deployment falls back to token-loss selection.",
+      "recommendation": "Tune gates from an explicit pre-run acceptance policy or always retain the best observed decoded checkpoint separately.",
+      "severity": "critical"
+    },
+    {
+      "code": "late_decoded_regression",
+      "evidence": "Best observed decoded step=3000; final-minus-best metrics={'contact_f1': -0.10303030303030303, 'strongest_joint_accuracy': -0.3125, 'affected_joints_set_f1': -0.15401635401635394, 'onset_within_50ms': -0.13333333333333341}.",
+      "implication": "Continuing training improved token likelihood while degrading operator-facing answers.",
+      "recommendation": "Select checkpoints using predeclared decoded validation metrics and confirm once on unused recording groups.",
+      "severity": "high"
+    },
+    {
+      "code": "rationale_contract_not_reliable",
+      "evidence": "Only 71.4% of final validation outputs contained a parseable Rationale section.",
+      "implication": "The conversational observability contract is not consistently satisfied even when JSON parses.",
+      "recommendation": "Report rationale coverage separately and reject or visibly label missing rationales in the demo.",
+      "severity": "high"
+    },
+    {
+      "code": "retry_masks_generation_instability",
+      "evidence": "First-pass schema=0.798, post-retry schema=0.905, retry rate=0.143.",
+      "implication": "A second decode improves reporting metrics but increases latency and hides unreliable first responses.",
+      "recommendation": "Treat first-pass validity as the deployment metric; add constrained decoding or stronger schema supervision.",
+      "severity": "high"
+    },
+    {
+      "code": "joint_slices_not_observable",
+      "evidence": "Final panel has no strongest-joint targets for J3, J6, J7.",
+      "implication": "Aggregate joint accuracy cannot characterize these joints under natural prevalence.",
+      "recommendation": "Keep natural-prevalence headline metrics, but add a separate diagnostic joint-coverage panel without training rebalancing.",
+      "severity": "medium"
+    },
+    {
+      "code": "manifest_hypothesis_mismatch",
+      "evidence": "Immutable hypothesis says 'focused_three_intent_curriculum_without_channel_permutation', while curriculum_intents='all' and receipts contain 7 intents.",
+      "implication": "A headline metadata field misdescribes the experiment even though detailed receipt fields are correct.",
+      "recommendation": "Use the detailed intent counts as authoritative and validate hypothesis labels against materialized views before launch.",
+      "severity": "medium"
+    },
+    {
+      "code": "no_untouched_test_receipt",
+      "evidence": "The training run directory contains validation/probe receipts but no test prediction receipt.",
+      "implication": "This run supports model selection analysis, not a new held-out performance claim.",
+      "recommendation": "Evaluate the frozen checkpoint once on unused recording groups; do not tune after inspecting them.",
+      "severity": "medium"
+    },
+    {
+      "code": "reused_small_validation_panel",
+      "evidence": "The same 84-row panel was decoded 16 times; smallest intent slice n=12.",
+      "implication": "Checkpoint rankings are noisy and repeated inspection can overfit decisions to this panel.",
+      "recommendation": "Use it for monitoring only, then confirm the frozen choice on new recording groups with session-level intervals.",
+      "severity": "medium"
+    },
+    {
+      "code": "training_prompts_not_fully_fitted",
+      "evidence": "Final fixed training-probe exact match=0.583.",
+      "implication": "The model remains capacity/optimization limited on exact training prompts; validation errors are not purely overfit.",
+      "recommendation": "Inspect prompt-family losses and output-token allocation before adding epochs.",
+      "severity": "medium"
+    }
+  ],
+  "methodology_limits": [
+    "Validation was repeatedly inspected during training and is not an untouched confirmation set.",
+    "The 84-row generation panel is useful for observability but too small for stable rare-slice claims.",
+    "Strongest-joint, affected-joint, and evidence-interval targets measure agreement with deterministic signal rules, not physical impact location.",
+    "Zeroing all channels is a coarse dependence check; it does not prove temporal or channel-grounded reasoning.",
+    "Rationale lexical checks do not prove faithful reasoning."
+  ],
+  "optimization": {
+    "final_training_probe": {
+      "affected_joints_exact_match": 0.46153846153846156,
+      "affected_joints_n": 13,
+      "affected_joints_set_f1": 0.5897435897435896,
+      "answer_exact_match": 0.5833333333333334,
+      "contact_accuracy": 1.0,
+      "contact_f1": 1.0,
+      "contact_n": 13,
+      "epoch": 0,
+      "event": "training_probe_eval",
+      "evidence_end_mae_ms": 73.33333333333333,
+      "evidence_interval_coverage": 1.0,
+      "evidence_interval_iou": 0.5307456304462371,
+      "evidence_interval_n": 9,
+      "evidence_start_mae_ms": 62.0,
+      "final_blank_rate": 0.0,
+      "first_pass/affected_joints_exact_match": 0.38461538461538464,
+      "first_pass/affected_joints_n": 13,
+      "first_pass/affected_joints_set_f1": 0.5897435897435896,
+      "first_pass/answer_exact_match": 0.4791666666666667,
+      "first_pass/contact_accuracy": 0.9230769230769231,
+      "first_pass/contact_f1": 1.0,
+      "first_pass/contact_n": 13,
+      "first_pass/evidence_end_mae_ms": 73.33333333333333,
+      "first_pass/evidence_interval_coverage": 1.0,
+      "first_pass/evidence_interval_iou": 0.5307456304462371,
+      "first_pass/evidence_interval_n": 9,
+      "first_pass/evidence_start_mae_ms": 62.0,
+      "first_pass/n": 48,
+      "first_pass/onset_coverage": 1.0,
+      "first_pass/onset_mae_ms": 60.44444444444444,
+      "first_pass/onset_median_ae_ms": 57.0,
+      "first_pass/onset_n": 9,
+      "first_pass/onset_p90_ae_ms": 138.0,
+      "first_pass/onset_within_10ms": 0.2222222222222222,
+      "first_pass/onset_within_25ms": 0.4444444444444444,
+      "first_pass/onset_within_50ms": 0.4444444444444444,
+      "first_pass/parse_validity": 0.8958333333333334,
+      "first_pass/schema_exact_match": 0.8333333333333334,
+      "first_pass/schema_key_exact_match": 0.8958333333333334,
+      "first_pass/semantics_accuracy": 0.9230769230769231,
+      "first_pass/semantics_macro_f1": 0.9259259259259259,
+      "first_pass/semantics_n": 13,
+      "first_pass/strongest_joint/J1_accuracy": 1.0,
+      "first_pass/strongest_joint/J1_n": 1,
+      "first_pass/strongest_joint/J2_accuracy": 0.3333333333333333,
+      "first_pass/strongest_joint/J2_n": 3,
+      "first_pass/strongest_joint/J3_accuracy": 1.0,
+      "first_pass/strongest_joint/J3_n": 1,
+      "first_pass/strongest_joint/J4_accuracy": 0.6666666666666666,
+      "first_pass/strongest_joint/J4_n": 3,
+      "first_pass/strongest_joint/J6_accuracy": 1.0,
+      "first_pass/strongest_joint/J6_n": 1,
+      "first_pass/strongest_joint_accuracy": 0.6666666666666666,
+      "first_pass/strongest_joint_macro_accuracy": 0.7999999999999999,
+      "first_pass/strongest_joint_n": 9,
+      "first_pass/strongest_joint_tail_accuracy": 1.0,
+      "first_pass/strongest_joint_tail_n": 1,
+      "first_pass_blank_rate": 0.08333333333333333,
+      "intent/affected_joints/affected_joints_exact_match": 0.2857142857142857,
+      "intent/affected_joints/affected_joints_n": 7,
+      "intent/affected_joints/affected_joints_set_f1": 0.5238095238095238,
+      "intent/affected_joints/answer_exact_match": 0.2857142857142857,
+      "intent/affected_joints/n": 7,
+      "intent/affected_joints/parse_validity": 1.0,
+      "intent/affected_joints/schema_exact_match": 0.5714285714285714,
+      "intent/affected_joints/schema_key_exact_match": 1.0,
+      "intent/contact/answer_exact_match": 1.0,
+      "intent/contact/contact_accuracy": 1.0,
+      "intent/contact/contact_f1": 1.0,
+      "intent/contact/contact_n": 7,
+      "intent/contact/n": 7,
+      "intent/contact/parse_validity": 1.0,
+      "intent/contact/schema_exact_match": 1.0,
+      "intent/contact/schema_key_exact_match": 1.0,
+      "intent/evidence_interval/answer_exact_match": 0.2857142857142857,
+      "intent/evidence_interval/evidence_end_mae_ms": 73.0,
+      "intent/evidence_interval/evidence_interval_coverage": 1.0,
+      "intent/evidence_interval/evidence_interval_iou": 0.5176313682117666,
+      "intent/evidence_interval/evidence_interval_n": 5,
+      "intent/evidence_interval/evidence_start_mae_ms": 66.4,
+      "intent/evidence_interval/n": 7,
+      "intent/evidence_interval/parse_validity": 1.0,
+      "intent/evidence_interval/schema_exact_match": 1.0,
+      "intent/evidence_interval/schema_key_exact_match": 1.0,
+      "intent/onset/answer_exact_match": 0.2857142857142857,
+      "intent/onset/n": 7,
+      "intent/onset/onset_coverage": 1.0,
+      "intent/onset/onset_mae_ms": 49.8,
+      "intent/onset/onset_median_ae_ms": 19.0,
+      "intent/onset/onset_n": 5,
+      "intent/onset/onset_p90_ae_ms": 122.4,
+      "intent/onset/onset_within_10ms": 0.4,
+      "intent/onset/onset_within_25ms": 0.6,
+      "intent/onset/onset_within_50ms": 0.6,
+      "intent/onset/parse_validity": 1.0,
+      "intent/onset/schema_exact_match": 1.0,
+      "intent/onset/schema_key_exact_match": 1.0,
+      "intent/semantics/answer_exact_match": 1.0,
+      "intent/semantics/n": 7,
+      "intent/semantics/parse_validity": 1.0,
+      "intent/semantics/schema_exact_match": 1.0,
+      "intent/semantics/schema_key_exact_match": 1.0,
+      "intent/semantics/semantics_accuracy": 1.0,
+      "intent/semantics/semantics_macro_f1": 1.0,
+      "intent/semantics/semantics_n": 7,
+      "intent/strongest_joint/answer_exact_match": 0.8571428571428571,
+      "intent/strongest_joint/n": 7,
+      "intent/strongest_joint/parse_validity": 1.0,
+      "intent/strongest_joint/schema_exact_match": 1.0,
+      "intent/strongest_joint/schema_key_exact_match": 1.0,
+      "intent/strongest_joint/strongest_joint/J1_accuracy": 1.0,
+      "intent/strongest_joint/strongest_joint/J1_n": 1,
+      "intent/strongest_joint/strongest_joint/J2_accuracy": 1.0,
+      "intent/strongest_joint/strongest_joint/J2_n": 1,
+      "intent/strongest_joint/strongest_joint/J3_accuracy": 1.0,
+      "intent/strongest_joint/strongest_joint/J3_n": 1,
+      "intent/strongest_joint/strongest_joint/J4_accuracy": 0.5,
+      "intent/strongest_joint/strongest_joint/J4_n": 2,
+      "intent/strongest_joint/strongest_joint_accuracy": 0.8,
+      "intent/strongest_joint/strongest_joint_macro_accuracy": 0.875,
+      "intent/strongest_joint/strongest_joint_n": 5,
+      "intent/summary/affected_joints_exact_match": 0.6666666666666666,
+      "intent/summary/affected_joints_n": 6,
+      "intent/summary/affected_joints_set_f1": 0.6666666666666666,
+      "intent/summary/answer_exact_match": 0.3333333333333333,
+      "intent/summary/contact_accuracy": 1.0,
+      "intent/summary/contact_f1": 1.0,
+      "intent/summary/contact_n": 6,
+      "intent/summary/evidence_end_mae_ms": 73.75,
+      "intent/summary/evidence_interval_coverage": 1.0,
+      "intent/summary/evidence_interval_iou": 0.5471384582393254,
+      "intent/summary/evidence_interval_n": 4,
+      "intent/summary/evidence_start_mae_ms": 56.5,
+      "intent/summary/n": 6,
+      "intent/summary/onset_coverage": 1.0,
+      "intent/summary/onset_mae_ms": 73.75,
+      "intent/summary/onset_median_ae_ms": 75.0,
+      "intent/summary/onset_n": 4,
+      "intent/summary/onset_p90_ae_ms": 116.9,
+      "intent/summary/onset_within_10ms": 0.0,
+      "intent/summary/onset_within_25ms": 0.25,
+      "intent/summary/onset_within_50ms": 0.25,
+      "intent/summary/parse_validity": 1.0,
+      "intent/summary/schema_exact_match": 1.0,
+      "intent/summary/schema_key_exact_match": 1.0,
+      "intent/summary/semantics_accuracy": 0.8333333333333334,
+      "intent/summary/semantics_macro_f1": 0.8222222222222223,
+      "intent/summary/semantics_n": 6,
+      "intent/summary/strongest_joint/J2_accuracy": 0.0,
+      "intent/summary/strongest_joint/J2_n": 2,
+      "intent/summary/strongest_joint/J4_accuracy": 1.0,
+      "intent/summary/strongest_joint/J4_n": 1,
+      "intent/summary/strongest_joint/J6_accuracy": 1.0,
+      "intent/summary/strongest_joint/J6_n": 1,
+      "intent/summary/strongest_joint_accuracy": 0.5,
+      "intent/summary/strongest_joint_macro_accuracy": 0.6666666666666666,
+      "intent/summary/strongest_joint_n": 4,
+      "intent/summary/strongest_joint_tail_accuracy": 1.0,
+      "intent/summary/strongest_joint_tail_n": 1,
+      "loss": 0.09366123015447045,
+      "loss_fraction_of_initial": 0.013540456928970147,
+      "matched_generalization_gap": 0.006710018307286958,
+      "matched_relative_generalization_gap": 0.0716413642680166,
+      "matched_validation_loss": 0.1003712484617574,
+      "n": 48,
+      "onset_coverage": 1.0,
+      "onset_mae_ms": 60.44444444444444,
+      "onset_median_ae_ms": 57.0,
+      "onset_n": 9,
+      "onset_p90_ae_ms": 138.0,
+      "onset_within_10ms": 0.2222222222222222,
+      "onset_within_25ms": 0.4444444444444444,
+      "onset_within_50ms": 0.4444444444444444,
+      "parse_validity": 1.0,
+      "phase": "epoch",
+      "rationale_normalized_unique_count": 21,
+      "rationale_normalized_unique_rate": 0.5121951219512195,
+      "rationale_prediction_joint_consistency": 1.0,
+      "rationale_premature_label_rate": 0.0,
+      "rationale_presence": 0.8541666666666666,
+      "rationale_target_joint_consistency": 0.7777777777777778,
+      "rationale_target_onset_consistency": 0.0,
+      "rationale_unique_count": 39,
+      "rationale_unique_rate": 0.9512195121951219,
+      "relative_signal_loss_gap": 1.5412913122364345,
+      "retry_rate": 0.10416666666666667,
+      "schema_exact_match": 0.9375,
+      "schema_key_exact_match": 1.0,
+      "semantics_accuracy": 0.9230769230769231,
+      "semantics_macro_f1": 0.9259259259259259,
+      "semantics_n": 13,
+      "signal_loss_gap": 0.14435924033046246,
+      "step": 3823,
+      "strongest_joint/J1_accuracy": 1.0,
+      "strongest_joint/J1_n": 1,
+      "strongest_joint/J2_accuracy": 0.3333333333333333,
+      "strongest_joint/J2_n": 3,
+      "strongest_joint/J3_accuracy": 1.0,
+      "strongest_joint/J3_n": 1,
+      "strongest_joint/J4_accuracy": 0.6666666666666666,
+      "strongest_joint/J4_n": 3,
+      "strongest_joint/J6_accuracy": 1.0,
+      "strongest_joint/J6_n": 1,
+      "strongest_joint_accuracy": 0.6666666666666666,
+      "strongest_joint_macro_accuracy": 0.7999999999999999,
+      "strongest_joint_n": 9,
+      "strongest_joint_tail_accuracy": 1.0,
+      "strongest_joint_tail_n": 1,
+      "timestamp": 1789268809.067207,
+      "zero_signal_loss": 0.2380204704849329
+    },
+    "final_validation_signal_ablation": {
+      "delta/affected_joints_exact_match": 0.0,
+      "delta/affected_joints_n": 0.0,
+      "delta/affected_joints_set_f1": 0.7142857142857143,
+      "delta/answer_exact_match": 0.08333333333333337,
+      "delta/contact_accuracy": 0.0,
+      "delta/contact_f1": 1.0,
+      "delta/contact_n": 0.0,
+      "delta/evidence_interval_coverage": 1.0,
+      "delta/evidence_interval_n": 0.0,
+      "delta/onset_coverage": 1.0,
+      "delta/onset_n": 0.0,
+      "delta/parse_validity": -0.08333333333333337,
+      "delta/schema_exact_match": 0.08333333333333337,
+      "delta/schema_key_exact_match": -0.08333333333333337,
+      "delta/semantics_accuracy": 0.75,
+      "delta/semantics_macro_f1": 0.8666666666666667,
+      "delta/semantics_n": 0.0,
+      "delta/strongest_joint/J4_accuracy": 0.0,
+      "delta/strongest_joint/J4_n": 0.0,
+      "delta/strongest_joint_accuracy": 0.0,
+      "delta/strongest_joint_macro_accuracy": 0.0,
+      "delta/strongest_joint_n": 0.0
+    },
+    "latest_zero_signal_prediction_change_rate": 0.75
+  },
+  "report_contract": {
+    "scope": "completed-run validation methodology audit; not a test-set score or safety claim",
+    "target_sources": {
+      "deterministic_measurements_or_pseudolabels": [
+        "strongest joint",
+        "affected joints",
+        "evidence interval"
+      ],
+      "generated_predictions": "prediction/output fields in generation receipts",
+      "source_annotations": [
+        "contact/event semantics",
+        "manual event onset"
+      ]
+    }
+  },
+  "run": {
+    "elapsed_hours": 3.2076080729494443,
+    "final_step": 3823,
+    "path": "docs/submission/evaluation/v6-validation/source",
+    "state": "complete",
+    "stop_reason": "epochs_complete"
+  }
+}
