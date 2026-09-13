@@ -679,7 +679,11 @@ class NativeVerifier:
 
     def _hugging_face(self, url: str) -> NativeDocument:
         namespace = "/".join(urlsplit(url).path.strip("/").split("/")[1:3])
-        payload = self._get_json(f"https://huggingface.co/api/datasets/{namespace}")
+        # Hugging Face omits sibling sizes and LFS details unless file metadata is requested.
+        # Source: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.dataset_info
+        payload = self._get_json(
+            f"https://huggingface.co/api/datasets/{namespace}?blobs=true"
+        )
         card = payload.get("cardData") or {}
         siblings = _object_items(payload.get("siblings"))
         files = []
@@ -689,8 +693,8 @@ class NativeVerifier:
         for item in siblings:
             lfs = item.get("lfs") if isinstance(item.get("lfs"), dict) else {}
             name = str(item.get("rfilename", ""))
-            lfs_oid = lfs.get("oid")
-            checksum = _source_checksum(f"sha256:{lfs_oid}") if lfs_oid else None
+            lfs_sha256 = lfs.get("sha256") or lfs.get("oid")
+            checksum = _source_checksum(f"sha256:{lfs_sha256}") if lfs_sha256 else None
             files.append(
                 NativeFile(
                     name=name,
@@ -715,6 +719,6 @@ class NativeVerifier:
             name=str(payload.get("id", namespace)),
             revision=revision,
             license_id=card.get("license"),
-            text=str(payload.get("description") or card),
+            text=_plain_text(str(payload.get("description") or card)),
             files=files,
         )

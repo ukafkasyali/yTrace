@@ -205,6 +205,26 @@ def test_identity_judge_promotes_a_native_dataset_with_direct_measurements() -> 
     assert result.evidence[0].claim_key == "dataset_identity"
 
 
+def test_identity_judge_promotes_a_hugging_face_telemetry_benchmark() -> None:
+    judge = EvidenceRelevanceJudge(settings())
+    document = NativeDocument(
+        source_url="https://huggingface.co/datasets/FactoryBench/FactoryBench",
+        source_kind=SourceKind.HUGGING_FACE,
+        name="FactoryBench",
+        revision="2561c2c90560ae3df90ef8136f774faa5fb4b4e3",
+        text=(
+            "FactoryBench is a benchmark for evaluating machine-behavior reasoning in "
+            "time-series models over industrial robotic telemetry and raw signals."
+        ),
+        files=[NativeFile(name="factorywave/kuka_signals.parquet", size=424_166_979)],
+    )
+
+    result = judge.evaluate_dataset_identity("ds_111111111111", document)
+
+    assert result.is_dataset_artifact is True
+    assert result.evidence[0].claim_key == "dataset_identity"
+
+
 def test_acquisition_gate_fails_when_cached_data_exceeds_request_bound() -> None:
     candidate = canonicalize_results(
         TavilySearchAdapter(settings())
@@ -732,13 +752,18 @@ def test_hugging_face_native_adapter_contract() -> None:
             {
                 "rfilename": "train.parquet",
                 "size": 300,
-                "lfs": {"oid": "b" * 64, "size": 300},
+                "lfs": {"sha256": "b" * 64, "size": 300, "pointerSize": 131},
             }
         ],
     }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["blobs"] == "true"
+        return httpx.Response(200, json=payload)
+
     verifier = NativeVerifier(
         settings(),
-        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        httpx.Client(transport=httpx.MockTransport(handler)),
         validate_dns=False,
     )
     candidate = DatasetCandidate(

@@ -200,13 +200,15 @@ class EvidenceRelevanceJudge:
             dataset_statement = re.compile(
                 r"\b(?:this dataset|data set contains|dataset contains|raw data|recorded "
                 r"(?:data|measurements|signals)|sensor data|time[- ]series data|"
-                r"measurement dataset)\b",
+                r"measurement dataset|benchmark\s+for\b[^.\n]{0,240}\b(?:time[- ]series|"
+                r"telemetry|measurements?|signals?))\b",
                 re.IGNORECASE,
             )
             quote = _source_excerpt(source, dataset_statement)
             supported = bool(quote and not discovery_role.search(source))
             reason = (
-                "Primary source hosts files and describes them as recorded dataset observations"
+                "Primary source hosts files and describes dataset observations or "
+                "benchmark telemetry"
                 if supported
                 else "Primary source describes a discovery or documentation resource, not data"
             )
