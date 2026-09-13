@@ -23,7 +23,7 @@ Do not memorize a generated answer as a guaranteed future result. Read the actua
 
 ## Jury questions
 
-**Why use a TSLM when the feature baseline wins?** Use the feature baseline when the task is only a fixed label. Trace tests a different benefit: one model output that carries event type, relative timing and joint attribution into a readable, evidence-linked investigation handoff. We have not yet measured whether that handoff benefit justifies the lower reliability. We do not claim the TSLM is necessary for calculating peaks, ranges or the fixed benchmark labels.
+**Why use a TSLM when the feature baseline wins?** Use the feature baseline when the task is only a fixed label. Trace is designed around a different benefit: one model output that carries event type, relative timing and joint attribution into a readable, evidence-linked investigation handoff. We have not yet measured whether that handoff benefit justifies the lower reliability. We do not claim the TSLM is necessary for calculating peaks, ranges or the fixed benchmark labels.
 
 **How is this faster than just looking at charts?** The manual workflow is scrolling seven synchronized 1 kHz traces and writing notes by hand; in Trace the same incident is marker → analyze → linked evidence → export in a few interactions, as shown in the demo. We deliberately state this as a workflow demonstration, not a measured time saving: the timed engineer study is prepared (`PILOT.md`) but has not been run.
 

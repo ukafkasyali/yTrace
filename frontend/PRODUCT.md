@@ -8,7 +8,7 @@ web
 React, TypeScript and Vite implement an isolated frontend module. No hosting target is committed. Python ingestion and inference remain independently owned services.
 
 ## Users
-Controls and test engineers preparing a handoff after a recorded robot stop; Samet builds the hackathon dashboard. Uğur and Atakan own ingestion; Atakan, Uğur and Ece own model training.
+Controls and test engineers preparing a handoff after a recorded contact event; Samet builds the hackathon dashboard. Uğur and Atakan own ingestion; Atakan, Uğur and Ece own model training.
 
 ## Product Purpose
 Turn a recorded contact interval into a reviewable handoff: a trained OpenTSLM prediction, deterministic measurements, linked raw signals, provenance, and an export for the controls lead or vendor.

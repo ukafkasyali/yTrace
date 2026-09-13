@@ -155,7 +155,7 @@ export default function EvaluationWorkspace() {
   return <section className="workspace-content evaluation-content" aria-labelledby="evaluation-title">
     <header className="workspace-heading evaluation-heading"><div><h1 id="evaluation-title">Held-out baseline comparison</h1><p>{comparison.window_count} test windows · seed {comparison.selection_seed} · seven joints · 1,024 samples at 1 kHz.</p></div><BarChart3 size={22} aria-hidden="true" /></header>
 
-    <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>The transparent baseline wins classification; each learned model adds a different capability.</strong><p>The CNN gives the best typical onset timing. On answered contact windows, OpenTSLM has the lowest recorded onset P90; only 77.93% of its full generations are usable.</p></div></div>
+    <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>Simple features win fixed classification.</strong><p>OpenTSLM returns class, timing and joint fields in one readable handoff, but only 77.93% of its full generations are usable. The CNN gives the best typical onset timing.</p></div></div>
 
     <dl className="evaluation-summary evaluation-summary-four">
       <div><dt>Best semantics macro-F1</dt><dd>0.9880</dd><small>Signal features</small></div>
