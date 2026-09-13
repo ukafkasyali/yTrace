@@ -150,6 +150,50 @@ geometry and global frame remain schematic. Torque alone does not reconstruct po
 The submission index, two-minute demo, verification and limitations are in `docs/submission/`.
 Do not prioritize live telemetry, robot control, exact 3D reconstruction or more chat models.
 
+## Submission freeze and jury story — 13 September 2026
+
+The product is now feature-complete for the challenge demo. The single jury-facing
+promise is:
+
+> Trace turns one recorded robot incident from seven synchronized signals into a
+> reviewable investigation: a model hypothesis, deterministic measurements, linked
+> raw evidence, a reference comparison and an exportable report.
+
+Do not call the generated text a full reasoning trace or verified root cause. Call it
+an evidence-linked OpenTSLM interpretation. The trained model is useful because it
+answers a richer incident question and produces a readable investigation object; it
+does not beat the dedicated feature or CNN baselines on direct classification.
+
+Use this demo path and omit unrelated features unless a judge asks:
+
+1. Pre-run the original `[5.787,6.811)` analysis before the presentation clock.
+2. Replay the recorded articulation into the publisher marker and identify the mark
+   as an annotation.
+3. Reveal the OpenTSLM prediction beside deterministic torque measurements.
+4. Open its exact seven-channel evidence, then compare the incident with a reference.
+5. Export the Markdown investigation report.
+6. Open Evaluation briefly: the CNN wins direct prediction; OpenTSLM adds a readable,
+   evidence-linked output and currently has a 77.93% parse-validity weakness.
+
+Do not show the data-sourcing workspace in the core two-minute demo. It is bonus
+infrastructure, not the incident-forensics value proposition. Keep PR #19 isolated
+until after the submission demo unless its full integration is reviewed, rebased and
+shown to improve a required criterion without destabilizing the app.
+
+Remaining work is evidence and delivery, not more surface area:
+
+1. Run at least a small timed charts-only versus Trace pilot and record every result;
+   if no participant is available, state that the benefit remains a hypothesis.
+2. Complete the approved checkpoint/adapter handoff and name a rollback owner.
+3. Rehearse the two-minute path with the CPU service, a pre-run answer and the recorded
+   fallback; measure the final end-to-end timing.
+4. Improve structured-output reliability only on validation. Do not tune on the
+   inspected test set or change the deployed checkpoint before a controlled release.
+
+All agents should inspect `origin/main` and open PRs before editing. During this freeze,
+avoid frontend redesigns, new datasets, new model families and broad ingestion work.
+Document any exception against one of the four remaining items above in its handoff.
+
 ## Repository setup checks
 
 Before doing repository work in Codex, verify that Entire is active for the current worktree:
@@ -213,10 +257,10 @@ change is deployed. Use separate `codex/` worktrees/branches for parallel editin
 Do not reset, stash, stage or commit another agent's changes. Each worker opens a
 focused draft PR; the coordinating task integrates and deploys in sequence.
 
-Latest inspected main: `df84f79` (PR #12, bounded semantic-agent validation/repair).
-It follows `5ffdc99` (strict model input shape, three backend-served examples,
-input receipts and UI walkthrough). The inference service still serves canary-v4;
-new training files do not automatically replace that checkpoint.
+Latest inspected main: `9f3558f` (pipeline-backed in-app baseline comparison).
+The inference service still serves canary-v4; new training files do not automatically
+replace that checkpoint. PR #19 is a broad draft sourcing/ingestion integration and
+is outside the submission freeze unless the coordinator explicitly reopens it.
 
 **Current user priority overrides the general backlog:** simplify the investigation
 UI, restore prominent robot access and per-recording motion, and fix replay/chat
