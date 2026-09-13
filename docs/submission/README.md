@@ -48,7 +48,7 @@ These test results were already inspected by the team. Further tuning must use v
 ## Team integration, checked 13 September 2026
 
 - Main `db68e6c` contains the source workspace, held-out comparison page and frozen replay workflow used by this branch.
-- Open [PR #19, Integrate approved dataset sourcing with one-shot ingestion](https://github.com/ukafkasyali/ysamet/pull/19) is a broad draft. It remains outside the two-minute demo until its service startup, dependencies and end-to-end provider path receive focused review.
+- The demonstrated sourcing boundary is the approved, revision-pinned manifest. Browser acquisition and import into Replay are not claimed in this submission build.
 - Saved feature, CNN, OpenTSLM and Qwen outputs are compared from their recorded artifacts. CNN remains evaluation-only because no CNN checkpoint or live endpoint is connected.
 - The final integration evidence and known limits are recorded in [verification](VERIFICATION.md).
 

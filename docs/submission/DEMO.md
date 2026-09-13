@@ -29,7 +29,7 @@ Do not memorize a generated answer as a guaranteed future result. Read the actua
 
 **Why did you not show the reference comparison?** It is optional investigation depth for a matched motion phase and payload. The core two-minute proof is the exact input, cross-check and auditable handoff; open Compare only if the judge asks how to inspect change across runs.
 
-**What is agentic?** The existing workflow composes deterministic measurement tools with a specialized trained model. The separate dataset-scout PR handles bounded sourcing and review. Bounded documentation search is merged infrastructure, not a claimed live forensic RAG agent.
+**What is agentic?** The investigation workflow composes deterministic measurement tools with a specialized trained model. The dataset scout performs bounded sourcing, native-evidence checks and human approval into a revision-pinned manifest. Browser acquisition is not connected, and bounded documentation search is not presented as a live forensic RAG agent.
 
 **What business value is demonstrated?** A traceable investigation and export workflow is demonstrated. Reduced debugging time is a hypothesis with a defined pilot; no customer ROI or downtime reduction has been measured.
 
