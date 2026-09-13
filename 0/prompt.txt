@@ -1,0 +1,39 @@
+Can you resume
+
+---
+
+summarize the current state of the pipeline
+
+---
+
+Perform a release-candidate end-to-end smoke test of the current ingestion pipeline on `codex/ingestion-onboarding-integration`.
+
+Do not add new architecture or features.
+
+Select the smallest suitable real approved-source dataset already available to the system and exercise the complete user-facing flow:
+
+`approved source → acquisition → inventory → SourceDescriptor → persisted onboarding → human resolution if required → connector/build → TimeF → TimeNet load/read-back → receipt → records → COMPLETED`
+
+Verify state transitions, persisted job state, receipt contents, record APIs, and frontend behavior.
+
+After successful completion, restart only the ingestion API and worker and verify that the completed ingestion, receipt, and records remain available without reacquisition or rebuilding.
+
+If anything fails, identify the smallest root-cause fix necessary to make the end-to-end flow work. Do not perform unrelated refactors, deployment work, coding-agent integration, worktree isolation, or architectural changes.
+
+Report:
+
+1. &#x20;Dataset/source used&#x20;
+2. &#x20;Exact state transitions observed&#x20;
+3. &#x20;Human-resolution behavior, if exercised&#x20;
+4. &#x20;Final TimeF/load verification&#x20;
+5. &#x20;Persistence-after-restart result&#x20;
+6. &#x20;Any blocking bugs and minimal fixes&#x20;
+7. &#x20;Whether the branch is demo-ready
+
+---
+
+zenodo is down, so we can stop tryign to access it
+
+---
+
+If finding a repo online is too dificult, we can try to skip it

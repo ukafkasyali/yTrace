@@ -1,0 +1,58 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CXTG08YQMWG1HRZJ19QQ0A",
+  "session_id": "01a099a2-dad7-7d70-acfb-46e59d1026d2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T08:23:30.139196064Z",
+  "branch": "codex/ingestion-onboarding-integration",
+  "checkpoints_count": 3,
+  "save_step_count": 1,
+  "files_touched": [
+    "data_ingestion/src/dataset_profiler/ingestion/generic.py",
+    "data_ingestion/tests/test_generic_import.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "370d0dc9b10e",
+  "checkpoint_transcript_start": 492,
+  "transcript_lines_at_start": 492,
+  "compact_transcript_start": 93,
+  "token_usage": {
+    "input_tokens": 424658,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 18160896,
+    "output_tokens": 39677,
+    "api_call_count": 138
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T08:23:29.947994868Z",
+    "agent_lines": 78,
+    "agent_removed": 7,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 78,
+    "total_lines_changed": 85,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 78,
+      "agent_lines_removed": 7
+    }
+  ]
+}
