@@ -176,7 +176,7 @@ export default function EvaluationWorkspace() {
         <div><dt>Shift response</dt><dd>{(rationaleEquivariance.shift_prediction_change_rate * 100).toFixed(0)}%</dd><small>{rationaleEquivariance.shift_ms} ms shift · predictions changed</small></div>
         <div><dt>Channel permutation</dt><dd>{(rationaleEquivariance.channel_permutation_accuracy * 100).toFixed(1)}%</dd><small>expected swapped joint · n={rationaleEquivariance.sample_count}</small></div>
       </dl>
-      <p className="table-note">The zero-signal panel changed 75% of predictions and reduced semantics macro-F1 to 0.133, supporting signal use. Rationale presence was 72.6%, so explanation availability and grounding remain separate from answer accuracy. These are small validation checks, not test-set gains.</p>
+      <p className="table-note">The zero-signal panel changed 75% of predictions and reduced semantics macro-F1 to 0.133, supporting signal use. Rationale presence was 72.6%, so explanation availability and grounding remain separate from answer accuracy. These are small validation checks, not test-set gains. <span className="mono">Checkpoint {rationaleFollowup.checkpoint_sha256.slice(0, 12)}…</span></p>
     </section>
 
     <section className="evaluation-table-section" aria-labelledby="results-title">

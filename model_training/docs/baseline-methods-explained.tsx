@@ -332,7 +332,7 @@ function BaselineMethodsExplained() {
       </Grid>
 
       <Row gap={8} align="center" justify="space-between" wrap style={{ borderTop: `1px solid ${theme.stroke.tertiary}`, paddingTop: 14 }}>
-        <Text tone="tertiary" size="small">Repository sources: data preparation, feature baseline, CNN, OpenTSLM trainer/dataset, plot VLM, metrics, manifests, and comparison report.</Text>
+        <Text tone="tertiary" size="small">Repository sources: data preparation, feature baseline, CNN, OpenTSLM trainer/dataset, plot VLM, metrics, manifests, comparison report, and <Code>opentslm-rationale-followup.json</Code>.</Text>
         <Row gap={8} wrap>
           <Button variant="ghost" onClick={() => dispatch({ type: "openFile", path: "model_training/src/robot_observability/baseline.py" })}>Feature code</Button>
           <Button variant="ghost" onClick={() => dispatch({ type: "openFile", path: "model_training/src/robot_observability/cnn_baseline.py" })}>CNN code</Button>
