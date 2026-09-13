@@ -1,9 +1,1 @@
-run finished, give me a brief analysis of the results, and create an analysis script that analyzes the failure modes of the methodology
-
----
-
-run the failure analysis, you can go fully agentic and analyze it yourself. I need a good analysis artifact to present at todays hacakathon. We will stop trying to improve the model, now the focus is gathering results and putting them in a presentable format.
-
----
-
 update the model performance comparison json and then push that to main
