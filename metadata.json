@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C5XBVK0QXPB64ZJ8J8FZFH",
+  "strategy": "manual-commit",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/investigationSession.test.ts",
+    "frontend/src/assistant/investigationSession.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 12976,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2230800,
+    "output_tokens": 5090,
+    "api_call_count": 11
+  }
+}
