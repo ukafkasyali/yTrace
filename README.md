@@ -1,6 +1,6 @@
 # y/trace
 
-**Second place out of 11 teams at the Zurich Temporal AI Challenge and selected for the Munich finals.**
+**Second place at the Zurich Temporal AI Challenge and selected for the Munich finals.**
 
 y/trace is a replay workbench for investigating recorded robot contact events. It combines real KUKA telemetry, deterministic signal measurements, recorded robot articulation, and a trained OpenTSLM interpretation in one reviewable incident report.
 
@@ -182,5 +182,3 @@ The 3D view uses separately recorded joint angles. Its body geometry and global 
 ## Team
 
 Built by **Samet Degirmenci, Baris Can, Atakan Topaloglu, Ugur Kafkasyali, and Ece Akdeniz**.
-
-Team y/agent placed second in the Zurich qualifier and advanced to the Munich finals.

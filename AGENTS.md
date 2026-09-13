@@ -1,6 +1,6 @@
 # y/trace agent guide
 
-y/trace is a replay-only robot observability workbench built for the Aionic Labs × Agentic Systems Lab Temporal AI Challenge. Team y/agent placed second out of 11 teams at the Zurich qualifier and advanced to the Munich finals.
+y/trace is a replay-only robot observability workbench built for the Aionic Labs × Agentic Systems Lab Temporal AI Challenge. Team y/agent placed second at the Zurich qualifier and advanced to the Munich finals.
 
 ## Product contract
 
