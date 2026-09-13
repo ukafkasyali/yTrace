@@ -202,6 +202,9 @@ wait_for_url "dataset ingestion" "http://127.0.0.1:8002/docs" "$INGESTION_API_PI
   cd "$INGESTION_DIR"
   export INGESTION_SOURCING_API_URL="http://127.0.0.1:8001"
   export INGESTION_DATA_DIR="$INGESTION_DIR/var/ingestion"
+  if [[ "$MODE" == "cached" ]]; then
+    export INGESTION_ALLOW_PRELOADED_TIMEF_DEMO=true
+  fi
   exec "$INGESTION_DIR/.venv/bin/dataset-ingestion-worker"
 ) &
 INGESTION_WORKER_PID="$!"

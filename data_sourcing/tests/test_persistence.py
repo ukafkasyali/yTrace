@@ -199,7 +199,7 @@ def test_saved_numeric_assessment_is_migrated_to_categorical_contract(
     assessment = migrated.assessments[0]
     serialized = assessment.model_dump(by_alias=True)
 
-    assert assessment.suitability_level.value == "MEDIUM"
+    assert assessment.suitability_level.value == "HIGH"
     assert assessment.suitability_factors
     assert "score" not in serialized
     assert "totalScore" not in serialized

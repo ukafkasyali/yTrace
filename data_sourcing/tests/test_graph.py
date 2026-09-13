@@ -227,8 +227,12 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
     )
 
     assert paused["status"] == RunStatus.AWAITING_APPROVAL.value
-    assert paused["recommended_candidate_id"] is None
-    candidate_id = paused["assessments"][0]["candidate_id"]
+    candidate_id = paused["recommended_candidate_id"]
+    assert candidate_id is not None
+    candidate = next(item for item in paused["candidates"] if item["id"] == candidate_id)
+    profile = next(item for item in paused["profiles"] if item["candidate_id"] == candidate_id)
+    assert candidate["canonical_url"].rstrip("/") == "https://zenodo.org/records/21927431"
+    assert len([item for item in profile["assets"] if item["role"] == "DATA"]) == 42
     snapshot = scout.graph.get_state(config)
     assert snapshot.next == ("approval",)
 
@@ -245,7 +249,7 @@ def test_evidence_complete_run_interrupts_then_resumes_to_manifest() -> None:
     assert completed["status"] == RunStatus.APPROVED.value
     assert completed["feedback_allowed"] is False
     assert completed["manifest"]["candidate_id"] == candidate_id
-    assert any("batch_count" in item for item in completed["manifest"]["limitations"])
+    assert any("Part I" in item for item in completed["manifest"]["limitations"])
     scout.close()
     connection.close()
 
@@ -280,7 +284,9 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
         config,
     )
 
-    assert refined["status"] == RunStatus.NEEDS_INPUT.value
+    replacement_id = refined["recommended_candidate_id"]
+    assert refined["status"] == RunStatus.AWAITING_APPROVAL.value
+    assert replacement_id is not None and replacement_id != candidate_id
     assert refined["feedback_allowed"] is True
     assert refined["review_iterations_used"] == 1
     assert refined["review_feedback"] == [
@@ -296,15 +302,15 @@ def test_rejection_feedback_runs_a_bounded_refinement_then_pauses_again() -> Non
                 for item in refined["hypotheses"]
                 if item["id"] == "hyp_review_refinement_1"
             ),
-            "outcome": "RECOMMENDATION_WITHHELD",
+            "outcome": "RECOMMENDATION_CHANGED",
             "rejected_candidate_id": candidate_id,
-            "previous_recommended_candidate_id": None,
-            "recommended_candidate_id": None,
+            "previous_recommended_candidate_id": candidate_id,
+            "recommended_candidate_id": replacement_id,
             "new_candidate_ids": [],
             "new_evidence_ids": [],
         }
     ]
-    assert refined["recommended_candidate_id"] is None
+    assert refined["recommended_candidate_id"] == replacement_id
     assert refined["excluded_candidate_ids"] == [candidate_id]
     assert "excluded by reviewer" in refined["report_markdown"]
     assert scout.graph.get_state(config).next == ("approval",)

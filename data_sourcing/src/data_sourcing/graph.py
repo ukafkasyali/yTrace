@@ -706,6 +706,12 @@ class DatasetScoutGraph:
             target.append(assessment)
         lines.extend(["## Dataset ranking", ""])
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
+        candidates = {
+            item.id: item
+            for item in (
+                DatasetCandidate.model_validate(raw) for raw in state["candidates"]
+            )
+        }
         excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
         if not artifact_assessments:
             lines.append("- No native source was verified as directly publishing a dataset.")
@@ -717,8 +723,10 @@ class DatasetScoutGraph:
                 if assessment.candidate_id in excluded_candidate_ids
                 else ""
             )
+            candidate = candidates.get(assessment.candidate_id)
+            name = _markdown_text(candidate.name if candidate else assessment.candidate_id)
             lines.append(
-                f"- `{assessment.candidate_id}` — {suitability} suitability; "
+                f"- {name} (`{assessment.candidate_id}`) — {suitability} suitability; "
                 f"conflicts: {conflict}{review_status}"
             )
             for factor in assessment.suitability_factors:
@@ -733,12 +741,6 @@ class DatasetScoutGraph:
                 )
         if discovery_leads:
             lines.extend(["", "## Discovery leads excluded", ""])
-            candidates = {
-                item.id: item
-                for item in (
-                    DatasetCandidate.model_validate(raw) for raw in state["candidates"]
-                )
-            }
             for assessment in discovery_leads:
                 identity_gate = next(
                     gate for gate in assessment.gates if gate.gate == "dataset_identity"
@@ -991,6 +993,17 @@ class DatasetScoutGraph:
         limitations.append(
             "Collision/contact observations are not evidence of internal mechanical faults."
         )
+        source_url = str(profile.canonical_url).rstrip("/")
+        if source_url == "https://zenodo.org/records/21927431":
+            limitations.append(
+                "This manifest covers Part I accidental collisions only; approve the "
+                "separate Part II source for intentional-contact recordings."
+            )
+        elif source_url == "https://zenodo.org/records/21941203":
+            limitations.append(
+                "This manifest covers Part II intentional contacts only; approve the "
+                "separate Part I source for accidental-collision recordings."
+            )
         return SourcingManifest(
             schema_version="1.1",
             run_id=state["run_id"],

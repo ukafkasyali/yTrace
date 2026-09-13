@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from dataclasses import replace
@@ -7,14 +8,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
-from scipy.io import savemat
-from timenet.client import TimeNet
-
 from dataset_profiler.ingestion.dispatch import (
     SpecializedDispatcher,
     SpecializedDispatchError,
 )
 from dataset_profiler.ingestion.jobs import AssetReceipt, IngestionJob, IngestionState
+from scipy.io import savemat
+from timenet.client import TimeNet
 
 
 class SpecializedDispatcherTests(unittest.TestCase):
@@ -65,11 +65,13 @@ class SpecializedDispatcherTests(unittest.TestCase):
                 )
 
                 result = self.dispatcher.build(job, source, [receipt])
+                preloaded = self.dispatcher.load_prebuilt(source)
 
                 self.assertEqual(result.dataset_id, expected_dataset)
                 self.assertEqual(result.record_count, 1)
                 self.assertEqual(result.series_count, 14)
                 self.assertEqual(result.value_count, 70)
+                self.assertEqual(preloaded, result)
 
     def test_known_url_never_falls_back_when_revision_or_license_differs(self) -> None:
         bad_revision = self._job(
@@ -85,6 +87,32 @@ class SpecializedDispatcherTests(unittest.TestCase):
         )
         with self.assertRaises(SpecializedDispatchError):
             self.dispatcher.resolve(bad_license)
+
+    def test_preloaded_artifact_must_match_the_approved_source_identity(self) -> None:
+        job = self._job(0, "https://zenodo.org/records/21927431", "21927431.r4")
+        source = self.dispatcher.resolve(job)
+        version_dir = self.root / "timef" / source.dataset_id / "1.0.0"
+        version_dir.mkdir(parents=True)
+        (version_dir / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "dataset_id": source.dataset_id,
+                    "metadata": {
+                        "dataset_id": source.dataset_id,
+                        "dataset_version": "1.0.0",
+                        "source_url": "https://zenodo.org/records/21941203",
+                        "license": "CC-BY-4.0",
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(
+            SpecializedDispatchError,
+            "does not match the approved source",
+        ):
+            self.dispatcher.load_prebuilt(source)
 
     def test_separate_batch_archives_keep_unique_batch_provenance(self) -> None:
         job = self._job(0, "https://zenodo.org/records/21927431", "21927431.r4")
