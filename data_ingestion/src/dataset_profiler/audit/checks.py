@@ -38,14 +38,22 @@ def audit_profile_inputs(files: list[FileProfile], runs: list[RunProfile]) -> Au
     for file in files:
         for variable in file.variables:
             shape = tuple(variable.shape)
-            if variable.ndim == 2 and len(shape) == 2 and shape[1] > shape[0]:
-                schema_shape = (shape[0], -1)  # sample count is intentionally variable
+            axes = (variable.nested_structure.get("structural_axes", {})
+                    if isinstance(variable.nested_structure, dict) else {})
+            sample_axis = axes.get("sample_axis")
+            channel_axis = axes.get("channel_axis")
+            if variable.ndim == 2 and sample_axis is not None:
+                mutable_shape = list(shape)
+                mutable_shape[sample_axis] = -1
+                schema_shape = tuple(mutable_shape)
             elif variable.ndim == 2 and len(shape) == 2 and shape[1] == 1:
                 schema_shape = (-1, 1)  # variable-length column vector
             else:
                 schema_shape = shape
             schemas[file.source_run_id][variable.name] = (schema_shape, variable.dtype)
-            if variable.ndim == 2 and len(variable.shape) == 2 and variable.shape[1] > variable.shape[0]:
+            if channel_axis is not None:
+                channels[variable.name][file.source_run_id] = variable.shape[channel_axis]
+            elif variable.ndim == 2 and len(variable.shape) == 2 and variable.shape[1] > variable.shape[0]:
                 channels[variable.name][file.source_run_id] = variable.shape[0]
 
     all_variables = sorted({name for schema in schemas.values() for name in schema})

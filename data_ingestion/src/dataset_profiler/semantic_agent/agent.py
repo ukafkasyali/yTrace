@@ -13,11 +13,11 @@ from ..evidence import Evidence, EvidenceError, EvidenceSession
 from ..models import DatasetProfile
 from ..semantic_spec import DatasetSpec
 
-SYSTEM_PROMPT = """You construct one DatasetSpec v0.1 from bounded dataset evidence. Investigate using the provided tools before making semantic assertions. You have no raw arrays, filesystem, web access, connector code, reference specifications, or dataset-specific prior facts. Classify semantic and unit claims as observed, documented, inferred, or unresolved. Never fabricate evidence IDs: use only IDs returned by tools. Documented claims require documentation evidence; inferred claims must be conservative with evidence and confidence. Prefer unresolved over guessing.
+SYSTEM_PROMPT = """You construct one DatasetSpec v0.2 from bounded dataset evidence. Investigate using the provided tools before making semantic assertions. You have no raw arrays, filesystem, web access, connector code, reference specifications, or dataset-specific prior facts. Classify semantic, unit, and sampling-rate claims as observed, documented, inferred, or unresolved. Never fabricate evidence IDs: use only IDs returned by tools. Documented claims require documentation evidence; inferred claims must be conservative with evidence and confidence. Prefer unresolved over guessing.
 
 Documentation discovery is iterative and bounded. Begin from dataset-level context: identity, subset names, summary, metadata, and documentation source names. Do not expect author documentation to use DatasetSpec terms, raw variable names, or ontology labels. For an important unknown, form several short, concrete lexical hypotheses using vocabulary from that context. Each documentation search must use one short concept or phrase, never a comma-separated list of alternatives. If a specific search has no useful result, broaden it: remove schema wording, use a shorter concept, or try an author-facing/domain term. Do not immediately conclude documentation is absent. When a broad search returns an excerpt, treat its wording as new vocabulary and, when useful, refine with a later search. Prefer broad → informative → refined queries; do not exhaust the budget with near-duplicates. Variable names are clues, not the only search terms. Search effort should focus on fields that materially affect the specification.
 
-Return only a DatasetSpec wire object, never a dataset summary. Its exact top-level keys are schema_version (the literal string \"0.1\"), identity, record_discovery, source_variables, signals, time_axes, events, provenance, tasks, and record_defaults. Use this exact wire shape: identity={dataset_id,source_subsets,compatible_profile_ids}; record_discovery={record_unit,boundary,included_run_ids}; source_variables is an array of {name,role} where role is signal/time/event/metadata; each signal={source_variable,semantic_type,channels:{count,source_indices,target_names},dtype,unit:{name,symbol,resolution:{status,confidence,evidence}},sampling:{rate_hz,time_axis},semantics:{status,confidence,evidence}}; each time axis={name,source_variable,kind,unit,monotonic,embedded_signal_row}; each event={source_variable,semantic_type,source_index_base,index_conversion,time_axis,timestamp_rule,mapping_type,preserve_fields,semantics:{status,confidence,evidence}}; provenance is an array of {field,scope,required}; tasks is an array of {name,task_type,target}; record_defaults={subject_ids,start_time}. Never use null for an array: channels.source_indices and target_names must each be arrays of length count (use indices 0 through count-1 and neutral names such as channel_0); subject_ids and preserve_fields are arrays. A claim status is observed/documented/inferred/unresolved; confidence is low/medium/high or null (unresolved must be null and have empty evidence). Time kind is regular/irregular; embedded_signal_row is an integer or null. Event values must be source_index_base zero_based/matlab_one_based, index_conversion identity/subtract_one, timestamp_rule lookup_time_axis, mapping_type timef_point_annotation. Provenance scope is record/series. Use [] for no items and null only for nullable scalar fields."""
+Return only a DatasetSpec wire object, never a dataset summary. Its exact top-level keys are schema_version (the literal string \"0.2\"), identity, record_discovery, source_variables, signals, time_axes, events, provenance, tasks, and record_defaults. Use this exact wire shape: identity={dataset_id,source_subsets,compatible_profile_ids}; record_discovery={record_unit,boundary,included_run_ids}; source_variables is an array of {name,role} where role is signal/time/event/metadata; each signal={source_variable,semantic_type,channels:{count,source_indices,target_names},dtype:null,observed_dtypes:[all profiled physical dtypes],unit:{name,symbol,resolution:{status,confidence,evidence}},sampling:{rate_hz:null,time_axis},semantics:{status,confidence,evidence}}; each time axis={name,source_variable,kind,unit,monotonic,embedded_signal_row,sampling_rate,sample_index_origin}. For an implicit sample clock use kind=implicit_regular, source_variable=null, monotonic=true, embedded_signal_row=null, sample_index_origin=0, and sampling_rate={value,unit,resolution:{status,confidence,evidence}}. A documented implicit rate requires documentation evidence; do not create a fictional time source. For raw time arrays use kind=regular/irregular, the observed source_variable, sampling_rate=null, and sample_index_origin=null. Each event={source_variable,semantic_type,source_index_base,index_conversion,time_axis,timestamp_rule,mapping_type,preserve_fields,semantics:{status,confidence,evidence}}; provenance is an array of {field,scope,required}; tasks is an array of {name,task_type,target}; record_defaults={subject_ids,start_time}. Never use null for an array: observed_dtypes, channels.source_indices, and target_names must be arrays; subject_ids and preserve_fields are arrays. A claim status is observed/documented/inferred/unresolved; confidence is low/medium/high or null (unresolved must be null and have empty evidence). Time kind is regular/irregular/implicit_regular. Event values must be source_index_base zero_based/matlab_one_based, index_conversion identity/subtract_one, timestamp_rule lookup_time_axis, mapping_type timef_point_annotation. Provenance scope is record/series. Use [] for no items and null only for nullable scalar fields."""
 
 TOOLS = {
     "dataset_summary": {"type": "object", "properties": {}, "additionalProperties": False},
@@ -50,7 +50,8 @@ class SemanticAgent:
         self.client, self.max_turns = client, max_turns
 
     def run(self, profile: DatasetProfile, session: EvidenceSession, *, user_context: str | None = None) -> SemanticAgentRun:
-        if hasattr(self.client, "reset"): self.client.reset()
+        if hasattr(self.client, "reset"):
+            self.client.reset()
         messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
         if user_context:
             messages.append({"role": "user", "content": user_context})
@@ -67,10 +68,12 @@ class SemanticAgent:
                 trace["effective_reasoning_effort"] = getattr(self.client, "effective_reasoning_effort", None)
                 trace["reasoning_fallback_reason"] = getattr(self.client, "fallback_reason", None)
                 raise SemanticAgentError(f"Model request failed: {exc}", trace) from exc
-            if response.get("response_id"): trace["response_ids"].append(response["response_id"])
+            if response.get("response_id"):
+                trace["response_ids"].append(response["response_id"])
             if response.get("response_id"):
                 trace["responses"].append({key: response.get(key) for key in ("response_id", "status", "error", "incomplete_details", "output_item_types")})
-            if response.get("usage"): trace.setdefault("usage", []).append(response["usage"])
+            if response.get("usage"):
+                trace.setdefault("usage", []).append(response["usage"])
             calls = response.get("tool_calls", [])
             if calls:
                 messages.append({"role": "assistant", "tool_calls": [_wire_tool_call(call) for call in calls]})
@@ -82,7 +85,10 @@ class SemanticAgent:
                 continue
             raw = response.get("content")
             trace["raw_structured_output"] = raw
-            try: spec = DatasetSpec.from_dict(_normalize_wire(json.loads(raw if isinstance(raw, str) else json.dumps(raw))))
+            try:
+                spec = DatasetSpec.from_dict(_normalize_wire(json.loads(
+                    raw if isinstance(raw, str) else json.dumps(raw)
+                )))
             except (TypeError, ValueError, KeyError) as exc:
                 trace["failure"] = {"kind": "parse_or_schema", "message": str(exc)}
                 raise SemanticAgentError(f"Model returned invalid DatasetSpec: {exc}", trace) from exc
@@ -98,18 +104,25 @@ def generate_dataset_spec(profile: DatasetProfile, evidence_session: EvidenceSes
     return SemanticAgent(client).run(profile, evidence_session)
 
 def _dispatch(session: EvidenceSession, name: str, arguments: dict[str, Any]) -> Any:
-    if name not in TOOLS: return {"ok": False, "error": f"Unknown bounded tool {name!r}"}
-    try: return getattr(session, name)(**arguments)
-    except (TypeError, ValueError) as exc: return {"ok": False, "error": str(exc)}
+    if name not in TOOLS:
+        return {"ok": False, "error": f"Unknown bounded tool {name!r}"}
+    try:
+        return getattr(session, name)(**arguments)
+    except (TypeError, ValueError) as exc:
+        return {"ok": False, "error": str(exc)}
 
 def _result_dict(result: Any) -> Any:
-    if isinstance(result, (Evidence, EvidenceError)): return result.to_dict()
-    if isinstance(result, list): return [_result_dict(item) for item in result]
+    if isinstance(result, (Evidence, EvidenceError)):
+        return result.to_dict()
+    if isinstance(result, list):
+        return [_result_dict(item) for item in result]
     return result
 
 def _evidence_ids(result: Any) -> list[str]:
-    if isinstance(result, Evidence): return [result.id]
-    if isinstance(result, list): return [item.id for item in result if isinstance(item, Evidence)]
+    if isinstance(result, Evidence):
+        return [result.id]
+    if isinstance(result, list):
+        return [item.id for item in result if isinstance(item, Evidence)]
     return []
 
 def _wire_tool_call(call: dict[str, Any]) -> dict[str, Any]:
@@ -119,7 +132,7 @@ def _wire_tool_call(call: dict[str, Any]) -> dict[str, Any]:
 def dataset_spec_json_schema() -> dict[str, Any]:
     keys = ["schema_version", "identity", "record_discovery", "source_variables", "signals", "time_axes", "events", "provenance", "tasks", "record_defaults"]
     properties = {key: {} for key in keys}
-    properties["schema_version"] = {"const": "0.1"}
+    properties["schema_version"] = {"const": "0.2"}
     return {"type": "object", "properties": properties, "required": keys, "additionalProperties": False}
 
 def _normalize_wire(value: dict[str, Any]) -> dict[str, Any]:

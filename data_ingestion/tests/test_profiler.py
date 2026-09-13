@@ -8,8 +8,13 @@ import unittest
 import numpy as np
 from scipy.io import savemat
 
-from dataset_profiler.datasets import KukaCollisionHints
+try:
+    import h5py
+except ImportError:  # pragma: no cover - exercised by the hdf5 extra
+    h5py = None
+
 from dataset_profiler.inspection import inspect_mat_file
+from dataset_profiler.io.hdf5 import inspect_hdf5_file, inspect_hdf5_structure
 from dataset_profiler.profiler import profile_dataset
 
 
@@ -62,6 +67,57 @@ class ProfilerTests(unittest.TestCase):
             variable = result.variables[0]
             self.assertEqual(variable.name, "metadata")
             self.assertIsNotNone(variable.nested_structure)
+
+    @unittest.skipIf(h5py is None, "hdf5 extra is not installed")
+    def test_hdf5_inspector_reports_structure_attributes_and_bounded_stats(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "signal.h5"
+            with h5py.File(path, "w") as handle:
+                handle.attrs["creator"] = "fixture"
+                group = handle.create_group("sensors")
+                group.attrs["location"] = "test"
+                values = np.array([[1.0, 2.0], [3.0, np.nan], [np.inf, 6.0]])
+                dataset = group.create_dataset("values", data=values)
+                dataset.attrs["units"] = np.array(["a", "b"], dtype="S1")
+
+            result = inspect_hdf5_file(path)
+            variable = result.variables[0]
+            self.assertEqual(variable.name, "sensors/values")
+            self.assertEqual(variable.shape, [3, 2])
+            self.assertEqual(variable.nan_count, 1)
+            self.assertEqual(variable.inf_count, 1)
+            self.assertEqual(len(variable.channel_stats), 2)
+            self.assertEqual(variable.nested_structure["structural_axes"]["sample_axis"], 0)
+            self.assertEqual(variable.nested_structure["hdf5_attributes"]["units"]["values"], ["a", "b"])
+            self.assertAlmostEqual(variable.nested_structure["numeric_statistics"]["mean"], 3.0)
+
+            structure = inspect_hdf5_structure(path)
+            self.assertEqual(structure.root_attributes, {"creator": "fixture"})
+            self.assertEqual(structure.groups[0]["path"], "sensors")
+
+    @unittest.skipIf(h5py is None, "hdf5 extra is not installed")
+    def test_profiles_recursive_hdf5_files_as_records(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative, dtype, length in (
+                ("machine-a/process-a/group-a/one.h5", np.float32, 5),
+                ("machine-b/process-b/group-b/two.h5", np.int64, 7),
+            ):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with h5py.File(path, "w") as handle:
+                    handle.create_dataset("measurements", data=np.arange(
+                        length * 3, dtype=dtype).reshape(length, 3))
+
+            profile = profile_dataset(root, "hdf5-fixture")
+            self.assertEqual(len(profile.files), 2)
+            self.assertEqual(len(profile.runs), 2)
+            self.assertEqual(profile.observed_structure["record_boundary"], "HDF5 file")
+            self.assertEqual(profile.discovery["hdf5_files"], 2)
+            self.assertEqual(profile.signals[0]["data_channel_count"], [3])
+            self.assertEqual(profile.signals[0]["channel_axis"], 1)
+            self.assertEqual(profile.signals[0]["sample_axis"], 0)
+            self.assertEqual(sorted(run.sequence_length for run in profile.runs), [5, 7])
 
 
 if __name__ == "__main__":

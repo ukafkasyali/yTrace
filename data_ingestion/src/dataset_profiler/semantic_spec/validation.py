@@ -15,6 +15,8 @@ from .models import (
     EvidenceStatus,
     IndexBase,
     IndexConversion,
+    SamplingRateClaim,
+    TimeAxisKind,
     VariableRole,
 )
 
@@ -39,7 +41,8 @@ class ValidationResult:
         return json.dumps(self.to_dict(), indent=indent, allow_nan=False) + "\n"
 
 
-def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec) -> ValidationResult:
+def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec,
+                          *, evidence_ids: set[str] | None = None) -> ValidationResult:
     """Return repair-oriented issues instead of raising for ordinary validation failures."""
     issues: list[ValidationIssue] = []
 
@@ -85,18 +88,40 @@ def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec) -> Validat
                 f"Run {run_id!r} does not exist in DatasetProfile.", source_run_id=run_id,
             )
 
+    run_rates = [run.sampling_rate_hz for run in profile.runs]
     axes = {axis.name: axis for axis in spec.time_axes}
+    strict_evidence_refs = spec.schema_version == "0.2"
     for index, axis in enumerate(spec.time_axes):
         path = f"time_axes[{index}]"
-        _check_reference(axis.source_variable, VariableRole.TIME, f"{path}.source_variable", declared, add)
-        if axis.source_variable not in observed_schema:
-            add("TIME_AXIS_NOT_OBSERVED", f"{path}.source_variable",
-                f"Time variable {axis.source_variable!r} was not observed.")
-        if axis.monotonic and any(run.timestamps_monotonic is not True for run in profile.runs):
-            add("TIME_AXIS_NOT_MONOTONIC", f"{path}.monotonic",
-                "The spec requires a monotonic time axis, but not every run verifies it.")
+        if axis.kind is TimeAxisKind.IMPLICIT_REGULAR:
+            if axis.source_variable is not None:
+                add("IMPLICIT_CLOCK_HAS_SOURCE", f"{path}.source_variable",
+                    "An implicit regular clock must not name a raw source variable.")
+            if axis.embedded_signal_row is not None:
+                add("IMPLICIT_CLOCK_HAS_EMBEDDED_ROW", f"{path}.embedded_signal_row",
+                    "An implicit regular clock cannot use an embedded timestamp row.")
+            if (isinstance(axis.sample_index_origin, bool)
+                    or not isinstance(axis.sample_index_origin, int)
+                    or axis.sample_index_origin < 0):
+                add("INVALID_SAMPLE_INDEX_ORIGIN", f"{path}.sample_index_origin",
+                    "An implicit regular clock requires a non-negative integer index origin.")
+            _validate_sampling_rate(axis.sampling_rate, run_rates=[run.sampling_rate_hz for run in profile.runs],
+                                    path=f"{path}.sampling_rate", add=add,
+                                    strict_evidence_refs=strict_evidence_refs,
+                                    evidence_ids=evidence_ids)
+            if axis.monotonic is not True:
+                add("IMPLICIT_CLOCK_NOT_MONOTONIC", f"{path}.monotonic",
+                    "A positive-rate implicit regular clock is structurally monotonic.")
+        else:
+            _check_reference(axis.source_variable, VariableRole.TIME,
+                             f"{path}.source_variable", declared, add)
+            if axis.source_variable not in observed_schema:
+                add("TIME_AXIS_NOT_OBSERVED", f"{path}.source_variable",
+                    f"Time variable {axis.source_variable!r} was not observed.")
+            if axis.monotonic and any(run.timestamps_monotonic is not True for run in profile.runs):
+                add("TIME_AXIS_NOT_MONOTONIC", f"{path}.monotonic",
+                    "The spec requires a monotonic time axis, but not every run verifies it.")
 
-    run_rates = [run.sampling_rate_hz for run in profile.runs]
     sequence_lengths = {run.sequence_length for run in profile.runs if run.sequence_length is not None}
     for index, signal in enumerate(spec.signals):
         path = f"signals[{index}]"
@@ -114,7 +139,9 @@ def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec) -> Validat
             add("CHANNEL_MAPPING_COUNT_MISMATCH", f"{path}.channels",
                 "Channel count, source indices, and target names must have equal lengths.")
         shapes = summary.get("observed_shapes", [])
-        row_counts = {shape[0] for shape in shapes if shape}
+        channel_axis = summary.get("channel_axis", 0)
+        row_counts = {shape[channel_axis] for shape in shapes
+                      if shape and channel_axis is not None and channel_axis < len(shape)}
         source_indices = signal.channels.source_indices
         if (len(set(source_indices)) != len(source_indices)
                 or any(index < 0 or any(index >= rows for rows in row_counts)
@@ -123,25 +150,43 @@ def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec) -> Validat
                 "Source channel indices must be unique and within every observed matrix shape.",
                 source_indices=source_indices, observed_row_counts=sorted(row_counts))
         observed_dtypes = summary.get("observed_dtypes", [])
-        if signal.dtype not in observed_dtypes:
+        if spec.schema_version == "0.2":
+            claimed_dtypes = list(signal.observed_dtypes)
+            if signal.dtype is not None:
+                add("INVALID_DTYPE_REPRESENTATION", f"{path}.dtype",
+                    "DatasetSpec v0.2 represents physical storage types in observed_dtypes.")
+            if len(set(claimed_dtypes)) != len(claimed_dtypes):
+                add("DUPLICATE_OBSERVED_DTYPE", f"{path}.observed_dtypes",
+                    "Observed dtype values must be unique.")
+            if set(claimed_dtypes) != set(observed_dtypes):
+                add("DTYPE_SET_MISMATCH", f"{path}.observed_dtypes",
+                    "Claimed physical dtypes do not match the profiled dtype set.",
+                    claimed=sorted(set(claimed_dtypes)), observed=sorted(set(observed_dtypes)))
+        elif signal.dtype not in observed_dtypes:
             add("DTYPE_MISMATCH", f"{path}.dtype",
                 f"Claimed dtype {signal.dtype!r} is not among observed dtypes {observed_dtypes!r}.")
         if signal.sampling.time_axis not in axes:
             add("UNKNOWN_TIME_AXIS", f"{path}.sampling.time_axis",
                 f"Time axis {signal.sampling.time_axis!r} is not declared.")
-        if signal.sampling.rate_hz is not None:
+        if spec.schema_version == "0.2" and signal.sampling.rate_hz is not None:
+            add("LEGACY_SAMPLING_RATE", f"{path}.sampling.rate_hz",
+                "DatasetSpec v0.2 stores sampling-rate provenance on the referenced time axis.")
+        elif signal.sampling.rate_hz is not None:
             bad_rates = [rate for rate in run_rates if rate is None or not isclose(
                 rate, signal.sampling.rate_hz, rel_tol=1e-9, abs_tol=1e-9)]
             if bad_rates:
                 add("SAMPLING_RATE_MISMATCH", f"{path}.sampling.rate_hz",
                     f"Claimed {signal.sampling.rate_hz} Hz does not match every run.",
                     claimed=signal.sampling.rate_hz, observed=run_rates)
-        signal_lengths = {shape[-1] for shape in shapes if shape}
+        sample_axis = summary.get("sample_axis", -1)
+        signal_lengths = {shape[sample_axis] for shape in shapes
+                          if shape and sample_axis is not None and abs(sample_axis) < len(shape)}
         if sequence_lengths and signal_lengths != sequence_lengths:
             add("SEQUENCE_LENGTH_MISMATCH", f"{path}.source_variable",
                 "Signal sample dimensions do not match profiled run sequence lengths.",
                 signal_lengths=sorted(signal_lengths), run_lengths=sorted(sequence_lengths))
-        _check_claim(signal.unit.resolution, f"{path}.unit.resolution", add)
+        _check_claim(signal.unit.resolution, f"{path}.unit.resolution", add,
+                     strict_evidence_refs=strict_evidence_refs, evidence_ids=evidence_ids)
         if signal.unit.resolution.status is EvidenceStatus.UNRESOLVED:
             if signal.unit.name is not None or signal.unit.symbol is not None:
                 add("INVALID_UNIT_CLAIM", f"{path}.unit",
@@ -161,7 +206,8 @@ def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec) -> Validat
                     add("UNIT_MISMATCH", f"{path}.unit.name",
                         "Claimed unit does not match the unit observed in DatasetProfile.",
                         claimed=signal.unit.name, observed=observed_unit)
-        _check_claim(signal.semantics, f"{path}.semantics", add)
+        _check_claim(signal.semantics, f"{path}.semantics", add,
+                     strict_evidence_refs=strict_evidence_refs, evidence_ids=evidence_ids)
 
     for index, event_mapping in enumerate(spec.events):
         path = f"events[{index}]"
@@ -202,7 +248,8 @@ def validate_dataset_spec(profile: DatasetProfile, spec: DatasetSpec) -> Validat
                             f"Event {event.event_id!r} timestamp disagrees with its converted index.",
                             source_run_id=run.source_run_id, converted_index=python_index,
                             expected=expected, observed=event.inferred_time_seconds)
-        _check_claim(event_mapping.semantics, f"{path}.semantics", add)
+        _check_claim(event_mapping.semantics, f"{path}.semantics", add,
+                     strict_evidence_refs=strict_evidence_refs, evidence_ids=evidence_ids)
 
     available = {
         "source_run_id": all(bool(run.source_run_id) for run in profile.runs),
@@ -229,7 +276,9 @@ def _check_reference(name: str, role: VariableRole, path: str,
             f"Source variable {name!r} is declared as {variable.role.value}, expected {role.value}.")
 
 
-def _check_claim(claim: EvidenceClaim, path: str, add: Any) -> None:
+def _check_claim(claim: EvidenceClaim, path: str, add: Any,
+                 *, strict_evidence_refs: bool = False,
+                 evidence_ids: set[str] | None = None) -> None:
     if claim.status in {EvidenceStatus.DOCUMENTED, EvidenceStatus.INFERRED}:
         if claim.confidence is None or not claim.evidence:
             add("MISSING_EVIDENCE_REFERENCE", path,
@@ -237,9 +286,55 @@ def _check_claim(claim: EvidenceClaim, path: str, add: Any) -> None:
         elif any(not reference.strip() for reference in claim.evidence):
             add("INVALID_EVIDENCE_CLAIM", path,
                 "Evidence references must be non-empty strings.")
+        elif strict_evidence_refs and claim.status is EvidenceStatus.DOCUMENTED and not any(
+                reference.startswith("ev_documentation_") for reference in claim.evidence):
+            add("INVALID_DOCUMENTATION_EVIDENCE", path,
+                "Documented claims require at least one documentation evidence ID.")
+        elif strict_evidence_refs and any(
+                not reference.startswith("ev_") for reference in claim.evidence):
+            add("INVALID_EVIDENCE_REFERENCE", path,
+                "Claims require evidence IDs returned by the bounded evidence session.")
+        elif evidence_ids is not None and any(
+                reference not in evidence_ids for reference in claim.evidence):
+            add("UNKNOWN_EVIDENCE_REFERENCE", path,
+                "Claim references were not returned by this bounded evidence run.")
     if claim.status is EvidenceStatus.UNRESOLVED and claim.confidence is not None:
         add("INVALID_EVIDENCE_CLAIM", path,
             "Unresolved claims must not declare confidence.")
+
+
+def _validate_sampling_rate(claim: SamplingRateClaim | None, *, run_rates: list[float | None],
+                            path: str, add: Any, strict_evidence_refs: bool,
+                            evidence_ids: set[str] | None) -> None:
+    if claim is None:
+        add("MISSING_SAMPLING_RATE", path,
+            "An implicit regular clock requires a sampling-rate claim.")
+        return
+    _check_claim(claim.resolution, f"{path}.resolution", add,
+                 strict_evidence_refs=strict_evidence_refs, evidence_ids=evidence_ids)
+    if claim.resolution.status is EvidenceStatus.UNRESOLVED:
+        if claim.value is not None:
+            add("INVALID_SAMPLING_RATE_CLAIM", f"{path}.value",
+                "An unresolved sampling rate must have a null value.")
+        return
+    if claim.value is None or claim.value <= 0:
+        add("INVALID_SAMPLING_RATE", f"{path}.value",
+            "A resolved sampling rate must be positive.")
+        return
+    if claim.unit.casefold() not in {"hz", "hertz"}:
+        add("INVALID_SAMPLING_RATE_UNIT", f"{path}.unit",
+            "Sampling rate must use Hz or hertz.")
+    observed = [rate for rate in run_rates if rate is not None]
+    contradictions = [rate for rate in observed
+                      if not isclose(rate, claim.value, rel_tol=1e-9, abs_tol=1e-9)]
+    if contradictions:
+        add("SAMPLING_RATE_CONTRADICTION", f"{path}.value",
+            "The claimed sampling rate contradicts deterministic observations.",
+            claimed=claim.value, observed=sorted(set(observed)))
+    if (claim.resolution.status is EvidenceStatus.OBSERVED
+            and (not observed or len(observed) != len(run_rates))):
+        add("SAMPLING_RATE_NOT_OBSERVED", f"{path}.resolution.status",
+            "An observed sampling-rate claim requires a rate for every profiled run.")
 
 
 def _normalized_text(value: str) -> str:

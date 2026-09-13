@@ -1,0 +1,191 @@
+Bosch CNC External Evidence
+===========================
+
+Purpose
+-------
+This file is a post-blind external-evidence manifest for the Bosch CNC onboarding experiment.
+
+It is NOT part of the original blind evidence set.
+It is NOT a verbatim copy of any external manual or paper.
+It records verified source locations and the claims they support so that the bounded
+documentation-evidence layer can expose them to the Semantic Agent.
+
+Retrieved: 2026-09-13
+
+
+1. Bosch CNC dataset repository
+-------------------------------
+
+Source:
+https://github.com/boschresearch/CNC_Machining
+
+Authority:
+Official Bosch Research dataset repository.
+
+Relevant supported claims:
+- The dataset contains real-world industrial vibration data from CNC milling machines.
+- Acceleration was measured with a tri-axial Bosch CISS sensor mounted inside the machine.
+- The accelerometer X, Y, and Z axes were recorded at 2 kHz.
+- Each HDF5 file contains a dataset named `vibration_data`.
+- `vibration_data` has three acceleration channels with channel order:
+    channel 0 -> X
+    channel 1 -> Y
+    channel 2 -> Z
+- Directory labels `good` and `bad` correspond to normal and anomalous vibration data.
+- The repository identifies machine number, process number, timeframe, and example number
+  through the directory / filename structure.
+
+Unit status:
+- The repository README does NOT state the physical unit of `vibration_data`.
+
+
+2. Bosch CNC dataset paper
+--------------------------
+
+Title:
+Smart Data Collection System for Brownfield CNC Milling Machines:
+A New Benchmark Dataset for Data-Driven Machine Monitoring
+
+Authors:
+Mohamed-Ali Tnani, Michael Feil, Klaus Diepold
+
+Publication:
+Procedia CIRP 107 (2022), 131-136
+
+DOI:
+https://doi.org/10.1016/j.procir.2022.04.022
+
+Publisher page:
+https://www.sciencedirect.com/science/article/pii/S2212827122002384
+
+Authority:
+Peer-reviewed publication associated with the dataset.
+
+Relevant supported claims:
+- The data-acquisition system uses Bosch CISS sensors.
+- The CISS sensors are mounted on CNC machining centers and provide tri-axial acceleration data.
+- Acceleration data is collected at a sampling rate of 2 kHz.
+- The acquisition system is designed around collection and storage of raw sensor data.
+
+Unit status:
+- In the material inspected for this evidence pass, the paper does not explicitly state
+  the physical unit used for the numerical acceleration samples stored in the released
+  HDF5 `vibration_data` arrays.
+
+
+3. Official Bosch CISS inertial-data API documentation
+------------------------------------------------------
+
+Source:
+https://docs.bosch-iot-suite.com/gateway-software/API/modules/com.prosyst.mbs.bluetooth.le.driver.service.provider.bcds.ciss/com/prosyst/mbs/services/bluetooth/le/provider/bcds/ciss/gatt/type/InertialData.html
+
+Authority:
+Official Bosch IoT Suite / Bosch Connected Devices CISS API documentation.
+
+Relevant supported claims:
+- The CISS inertial-data payload contains accelerometer X, Y, and Z values.
+- The documented unit for CISS accelerometer X/Y/Z values is `mg`.
+- The API exposes each accelerometer axis as an integer-valued measurement in mg.
+
+Interpretation:
+- This is authoritative evidence that the CISS interface represents acceleration
+  measurements in milligravity (`mg`).
+
+
+4. Bosch CNC official loader
+----------------------------
+
+Source:
+https://raw.githubusercontent.com/boschresearch/CNC_Machining/main/utils/data_loader_utils.py
+
+Authority:
+Loader code distributed in the official Bosch CNC dataset repository.
+
+Relevant supported claims:
+- HDF5 files are opened with h5py.
+- The loader reads `f['vibration_data'][:]` directly.
+- The returned `vibration_data` array is not rescaled, normalized, or unit-converted
+  by this loader.
+- The plotting utility uses a hard-coded sampling frequency of 2000 Hz.
+
+Important limitation:
+- This loader shows that no conversion occurs when the released HDF5 values are read.
+- It does NOT establish how the original CISS values were transformed, if at all,
+  before they were written into the released HDF5 files.
+
+
+5. Current evidence-chain assessment
+------------------------------------
+
+Claim A: Bosch CNC `vibration_data` is tri-axial acceleration from Bosch CISS sensors.
+Status: SUPPORTED / DOCUMENTED
+
+Evidence:
+- Official Bosch CNC repository.
+- Associated dataset paper.
+
+Claim B: The Bosch CISS accelerometer interface reports X/Y/Z acceleration in mg.
+Status: SUPPORTED / DOCUMENTED
+
+Evidence:
+- Official Bosch CISS inertial-data API documentation.
+
+Claim C: The released HDF5 `vibration_data` values are stored without any unit-changing
+transformation between the CISS interface and HDF5 creation.
+Status: NOT YET ESTABLISHED
+
+Evidence:
+- The official released-data loader performs no conversion on read.
+- However, the acquisition / HDF5-writing transformation path has not yet been shown
+  to preserve CISS values unchanged.
+
+Claim D: Therefore the physical unit of Bosch CNC `vibration_data` is mg.
+Status: NOT YET SAFE TO ASSERT AS DOCUMENTED
+
+Reason:
+- A+B are established.
+- The missing link is C: whether the values were scaled or converted before storage.
+
+The numerical data may be physically consistent with mg, but numerical plausibility
+must not be treated as documentation evidence.
+
+
+6. Recommended Semantic-Agent decision rule
+-------------------------------------------
+
+The agent should resolve the physical unit to `mg` only if additional authoritative
+evidence establishes that the released `vibration_data` values retain the CISS
+accelerometer scale without unit-changing preprocessing.
+
+Otherwise preserve:
+
+    resolution = unresolved
+    value = null
+
+Do not substitute:
+- dimensionless
+- g
+- mg
+- m/s^2
+
+merely to satisfy the downstream TimeF interface.
+
+
+7. Next evidence target
+-----------------------
+
+Search authoritative Bosch / dataset-author material for the missing acquisition-to-HDF5
+link, especially:
+
+- data-acquisition code,
+- HDF5 writer code,
+- edge data-collection software,
+- preprocessing / scaling descriptions,
+- statements that released data is raw CISS acceleration,
+- sensor logging format documentation,
+- supplementary material from the dataset paper.
+
+The decisive question is:
+
+"Are the numerical values stored in `vibration_data` the CISS accelerometer values in mg,
+or were they scaled / converted before HDF5 storage?"
