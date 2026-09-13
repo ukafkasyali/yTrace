@@ -15,6 +15,7 @@ describe('five-minute baseline presentation', () => {
   it('is accessible from the detailed evaluation page', () => {
     const html = renderToStaticMarkup(<EvaluationWorkspace />);
 
-    expect(html).toContain('Open 5-minute view');
+    expect(html).toContain('Presentation view');
+    expect(html).toContain('Full benchmark details');
   });
 });

@@ -2,7 +2,7 @@
 
 ## Preparation
 
-Follow `inference/README.md` to restore the private tunnel; do not restart training or change the served checkpoint. Start the frontend with `VITE_API_BASE_URL=/api`. Run `python3 -m inference.smoke` and check the expected checkpoint digest. Open the initial `[5.787,6.811)` second selection and run **Analyze interval** once before the presentation clock. Leave that result open. This recording is a development example, not the held-out accuracy demonstration.
+Follow `inference/README.md` to restore the private tunnel; do not restart training or change the served checkpoint. Configure `data_sourcing/.env` with the team's Tavily and OpenAI credentials, then start the integrated app with `./scripts/run-local.sh --live`. Run `python3 -m inference.smoke` and check the expected checkpoint digest. Complete one sourcing run to its review checkpoint before the presentation and keep its verified result available. Open the initial `[5.787,6.811)` second selection and run **Analyze interval** once before the presentation clock. Leave that result open. This recording is a development example, not the held-out accuracy demonstration.
 
 Have the audited comparison and the committed [pre-run Markdown handoff](demo/investigation-example.md) open beside the app. If the live service is unavailable, explicitly present the committed smoke result as a previously recorded run; never present it as fresh inference.
 
@@ -12,12 +12,12 @@ Timing, measured 13 September 2026 on the current CPU-only deployment (two smoke
 
 | Time | Action | Suggested narration |
 |---|---|---|
-| 0:00–0:18 | Start on the selected publisher event with the pre-run result ready | “After a recorded contact event, an engineer inspects seven traces and writes the incident handoff. y/trace turns that event into a reviewable hypothesis, measured cross-check and exact evidence. This compact fixture comes from open KUKA data.” |
-| 0:18–0:36 | Click **Replay interval · 0.5×** while the recorded robot moves | “The marker is a publisher annotation, not a model detection. The robot replays separately recorded joint angles; the body and global frame remain schematic.” |
-| 0:36–1:02 | Read the actual event class, strongest joint and onset, then point to **Cross-check** | “The model hypothesis and deterministic torque ranges stay separate. Here I read the actual output and the measured largest-range joint. Different rankings tell the engineer which signals to inspect before handoff.” |
-| 1:02–1:20 | Click **Inspect exact seven-channel input**, then return | “This is the model's complete input: seven raw 1 kHz channels, with the publisher label excluded. Our TimeNet connector loads the original source arrays without changing them.” |
+| 0:00–0:20 | Open **Data source** and show the pre-run verified result | “y/trace starts before training. An agent turns a dataset brief into requirements, searches with Tavily, verifies native evidence, and pauses for human approval. The approved revision becomes the input to our secure TimeNet ingestion path.” |
+| 0:20–0:36 | Return to Replay and click **Replay interval · 0.5×** | “Now we investigate one recording from that open source. The marker is a publisher annotation, not a model detection. The robot uses separately recorded joint angles; its body and world frame remain schematic.” |
+| 0:36–1:02 | Read the actual event class, strongest joint and onset, then point to **Cross-check** | “The model hypothesis and deterministic torque ranges stay separate. Different rankings tell the engineer which signals to inspect before handoff.” |
+| 1:02–1:20 | Click **Inspect exact seven-channel input**, then return | “This is the model's complete input: seven raw 1 kHz channels, with the publisher label excluded. Our TimeNet connector preserves the original arrays.” |
 | 1:20–1:34 | Click **Export incident handoff (.md)** | “This report carries the interval, measurements, model and input receipt to the next engineer.” |
-| 1:34–1:50 | Click **Find similar incidents across runs** and show the ranked cohort | “y/trace now retrieves comparable raw windows across recordings using deterministic torque features, then exports the cohort for review or labeling. Similarity is a lead, not a shared-cause claim.” |
+| 1:34–1:50 | Briefly show the saved source or ingestion receipt if asked | “Every source and imported asset keeps its revision, license, content hash, and validation status. The agent cannot silently approve its own data.” |
 | 1:50–2:00 | Open **Evaluation** | “On 512 held-out windows, simple features win classification. OpenTSLM contributes the readable handoff; its 77.93 percent usable-output rate stays visible as a limitation.” |
 
 Do not memorize a generated answer as a guaranteed future result. Read the actual response. The model and measured quantities can disagree; that is a reason to inspect evidence. The exact archived live response is in `demo/smoke-result.json`.
@@ -30,7 +30,7 @@ Do not memorize a generated answer as a guaranteed future result. Read the actua
 
 **Is a similar incident the same failure?** No. Retrieval uses only raw torque range, variability and largest sample-to-sample change for each joint. It excludes publisher labels and model answers. The ranked cohort reduces search work, but an engineer must still check motion phase, payload, operating conditions and physical cause.
 
-**What is agentic?** The investigation workflow composes deterministic measurement tools with a specialized trained model. Separately, on the Bosch CNC dataset, the semantic agent produced a validator-valid, evidence-backed dataset specification after one repair. It did not build a connector and is not part of the KUKA demo.
+**What is agentic?** The data pipeline uses LangGraph to plan bounded searches, Tavily to discover sources, and native APIs to verify revisions, licenses, files, schemas, and labels. It pauses for human approval before a separate worker acquires selected assets, inspects them, resolves semantic blockers, builds TimeF, reloads it through TimeNet, and records a validation receipt. The incident workflow then combines deterministic measurements with the trained OpenTSLM; it does not need another orchestration model.
 
 **What business value is demonstrated?** One recorded stop becomes a traceable handoff, and its signal profile retrieves related evidence across runs for review or labeling. Reduced debugging time is still a hypothesis with a defined pilot; no customer ROI or downtime reduction has been measured.
 

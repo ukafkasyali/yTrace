@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, RotateCcw, SlidersHorizontal, Waves } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, CircleStop, Download, MessageSquare, RotateCcw, SlidersHorizontal, Waves } from 'lucide-react';
 import { generatedRationale, predictionBrief, predictionCue, structuredPrediction, type PredictionCue } from './predictionBrief';
 import { reviewPrediction } from './predictionReview';
 import { downloadInvestigationJson, downloadInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
@@ -33,11 +33,13 @@ function AnswerText({ text }: { text: string }) {
 }
 export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data, datasetId, playhead, interval, services, registry, experimental, onEvidence, onModelWindow, onRobotPrediction, onCompare }: Props) {
   const [question, setQuestion] = useState('');
-  const [mode, setMode] = useState<'local' | 'assistant'>('assistant');
-  const [modelChoice, setModelChoice] = useState<'canary' | 'rationale'>('canary');
+  const [analysisSource, setAnalysisSource] = useState<'canary' | 'rationale' | 'local'>('canary');
+  const mode = analysisSource === 'local' ? 'local' : 'assistant';
+  const modelChoice = analysisSource === 'rationale' ? 'rationale' : 'canary';
   const selectedConnection = modelChoice === 'rationale' && experimental ? experimental : { services, registry };
   const selectedServices = selectedConnection.services;
-  const selectedRegistry = selectedConnection.registry;
+  const canaryLabel = checkpointLabel(registry.models.find(model => model.id === 'assistant')?.revision).split(' · ')[0];
+  const rationaleLabel = checkpointLabel(experimental?.registry.models.find(model => model.id === 'assistant')?.revision).split(' · ')[0];
   const availableThrough = data.recording.durationSeconds;
   const historical = interval.end <= availableThrough;
   const dataIssue = useMemo(() => modelWindowIssue(data, interval, historical ? interval.end : 0), [data, interval, historical]);
@@ -55,7 +57,9 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   });
   const [busy, setBusy] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const assistantAvailable = selectedServices.connected && !selectedRegistry.loading && !selectedRegistry.error && selectedRegistry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
+  const canaryAvailable = services.connected && !registry.loading && !registry.error && registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
+  const rationaleAvailable = Boolean(experimental?.services.connected && !experimental.registry.loading && !experimental.registry.error && experimental.registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language')));
+  const assistantAvailable = analysisSource === 'rationale' ? rationaleAvailable : canaryAvailable;
   const modeUnavailable = mode === 'assistant' && (!assistantAvailable || Boolean(windowIssue));
   const active = useRef<{ id: string; controller: AbortController; services: Services; queryId?: string; stopRequested?: boolean } | null>(null);
   const body = useRef<HTMLDivElement>(null);
@@ -148,8 +152,8 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     if (job.queryId) { try { await job.services.cancelQuery(job.queryId); } catch { completed.current = true; job.controller.abort(); update(job.id, { status: 'error', text: 'Server cancellation could not be confirmed.' }); } }
   }
   return <section className="assistant-panel" aria-label="Telemetry assistant">
-    <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div>{experimental ? <select className="assistant-model-select" aria-label="Inference model" value={modelChoice} disabled={busy} onChange={event => setModelChoice(event.target.value as 'canary' | 'rationale')}><option value="canary">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</option><option value="rationale" disabled={!experimental.registry.models.some(model => model.id === 'assistant' && model.available)}>{checkpointLabel(experimental.registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</option></select> : <span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span>}</header>
-    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={stopping || (!busy && (!assistantAvailable || Boolean(windowIssue)))} onClick={() => { if (busy) { void stop(); return; } setMode('assistant'); void submit(automaticPrompt, 'assistant'); }}>{stopping ? 'Stopping…' : busy ? 'Stop analysis' : 'Analyze interval'}</button></div>
+    <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><select className="assistant-model-select" aria-label="Analysis source" value={analysisSource} disabled={busy} onChange={event => setAnalysisSource(event.target.value as 'canary' | 'rationale' | 'local')}><option value="canary" disabled={!canaryAvailable}>{canaryLabel} + measurements</option>{experimental && <option value="rationale" disabled={!rationaleAvailable}>{rationaleLabel} + measurements</option>}<option value="local">Measurements only</option></select></header>
+    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={stopping || (!busy && modeUnavailable)} onClick={() => { if (busy) { void stop(); return; } void submit(automaticPrompt, mode); }}>{stopping ? 'Stopping…' : busy ? 'Stop analysis' : analysisSource === 'local' ? 'Measure interval' : 'Analyze interval'}</button></div>
     {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{rawError && <button className="text-button" onClick={onRetryRaw}>Retry raw window</button>}{!rawLoading && !rawError && fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Prepare a reviewable incident handoff.</h3><p>Analyze the incident, verify the prediction against exact signals, then export the handoff for a controls engineer.</p><p className="intro-limit">Recorded torque can guide investigation. It cannot verify a physical cause.</p></div>}
@@ -178,6 +182,6 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       })}
     </div>
     {exportStatus && <p className="report-status" role="status">{exportStatus}</p>}
-    <details className="custom-analysis"><summary>Ask a custom question</summary><form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label={stopping ? 'Stopping analysis' : 'Stop analysis'} disabled={stopping} onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form></details>
+    <details className="custom-analysis" open><summary>Ask a custom question</summary><form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom">{busy ? <button className="send-button" type="button" aria-label={stopping ? 'Stopping analysis' : 'Stop analysis'} disabled={stopping} onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form></details>
   </section>;
 }

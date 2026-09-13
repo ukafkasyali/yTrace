@@ -23,7 +23,7 @@ quote in a fetched native source.
 cd data_sourcing
 uv sync --all-groups
 uv run pytest
-uv run uvicorn data_sourcing.api:create_app --factory --reload
+uv run uvicorn data_sourcing.api:create_app --factory --reload --port 8001
 ```
 
 Copy `.env.example` to `.env` if live Tavily or LLM planning is required. Without those keys,
@@ -36,13 +36,13 @@ the bundled robot-collision fixture is used only when the brief explicitly conta
 Preview the editable contract without spending search credits:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/sourcing-requirement-previews \
+curl -X POST http://127.0.0.1:8001/api/sourcing-requirement-previews \
   -H 'Content-Type: application/json' \
   -d '{"brief":"Find CNC telemetry with labelled accidental head contact for observability.","customRequirements":["Contains at least 200 labelled contact events"]}'
 ```
 
 ```bash
-curl -i http://127.0.0.1:8000/api/sourcing-runs \
+curl -i http://127.0.0.1:8001/api/sourcing-runs \
   -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: robot-demo-1' \
   -d '{"brief":"Find 1 kHz robot collision and intentional contact time-series torque data from https://github.com/zhang-zengjie/robot-raw-collision-signals"}'
@@ -52,7 +52,7 @@ Poll the returned `statusUrl`. An evidence-complete run pauses at `AWAITING_APPR
 recommendation or another assessed candidate that passes every mandatory gate:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/sourcing-runs/RUN_ID/approvals \
+curl -X POST http://127.0.0.1:8001/api/sourcing-runs/RUN_ID/approvals \
   -H 'Content-Type: application/json' \
   -d '{"decision":"APPROVE","candidateId":"CANDIDATE_ID"}'
 ```
@@ -64,7 +64,7 @@ manifest and approved-library entry; approval still performs no download.
 Reject with specific feedback to run another bounded search in the same durable thread:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/sourcing-runs/RUN_ID/approvals \
+curl -X POST http://127.0.0.1:8001/api/sourcing-runs/RUN_ID/approvals \
   -H 'Content-Type: application/json' \
   -d '{"decision":"REJECT","candidateId":"CANDIDATE_ID","note":"Find an alternative"}'
 ```

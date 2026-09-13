@@ -10,7 +10,7 @@ being retained, the instrumentation caught a checkpoint-selection failure that v
 would have hidden.
 
 **Decision:** do not promote V6 from this audit. Keep the locked canary-v4 test comparison for the
-hackathon demo, and present V6 as evidence that Trace's training workflow observes behavior rather
+hackathon demo, and present V6 as evidence that y/trace's training workflow observes behavior rather
 than trusting a falling loss curve.
 
 ## What ran
