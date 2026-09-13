@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CAJEG10TFAM1KGNQYJ8287",
+  "strategy": "manual-commit",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/src/dataset_profiler/onboarding/backend.py",
+    "data_ingestion/tests/test_onboarding_frozen_evidence.py",
+    "data_ingestion/tests/test_onboarding_source_binding.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 15652,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2698370,
+    "output_tokens": 5206,
+    "api_call_count": 18
+  }
+}
