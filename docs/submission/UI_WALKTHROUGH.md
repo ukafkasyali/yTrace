@@ -13,11 +13,14 @@ not an additional accuracy benchmark.
 3. Under **Event investigation**, check the selected interval and **canary-v4**, then
    click **Analyze interval**. No model query runs automatically on page load.
 4. Read the compact generated prediction first and **Measured torque** beneath it.
-   They remain different sources. **Model & input details** retains the full model
-   response, raw generation, tool steps and the **1,024-sample input receipt**.
-5. Click **Inspect 7 input channels** to return to the answer's exact input window and place the replay cursor at its beginning.
-   **Export investigation** saves the answer, annotations, calculations and receipt.
-6. Press **Play replay**. Recorded articulation and plots advance, while the answer
+   They remain different sources. **Model & input details** retains the structured
+   prediction, tool steps and the **1,024-sample input receipt**. The raw generation
+   remains available only in **Download audit JSON**.
+5. Click **Inspect exact seven-channel input** to return to the answer's input window
+   and place the replay cursor at its end so the complete interval is visible.
+   **Export incident handoff (.md)** saves the supported prediction fields,
+   annotations, calculations and receipt.
+6. Press **Replay interval · 0.5×**. Recorded articulation and plots advance, while the answer
    and investigation interval stay fixed. **Select at cursor** explicitly changes
    the investigation to the last 1.024 seconds. Selecting a marker or dragging the
    plot also changes the interval. Earlier answers retain their own evidence.
@@ -98,7 +101,7 @@ at least the selected window end; it does not force the visual cursor to move.
 Exports now include `analysisHorizonSec` and `replayCursorSec` separately. No samples
 beyond the recorded source or outside raw coverage are introduced.
 
-For supported contact predictions, **Show onset in 3D** positions the robot at the
+For supported contact predictions, **Show generated onset cue in 3D** positions the robot at the
 model's generated onset and highlights its predicted strongest responding joint.
 The amber cue is visible within 125 ms of that generated onset for readability;
 this is a display tolerance, not measured impact duration or localization.

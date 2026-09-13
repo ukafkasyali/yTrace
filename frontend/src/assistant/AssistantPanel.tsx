@@ -3,7 +3,7 @@ import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, Rotate
 import { predictionBrief, predictionCue, structuredPrediction, type PredictionCue } from './predictionBrief';
 import { reviewPrediction } from './predictionReview';
 import { downloadInvestigationJson, downloadInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
-import { investigationStorageKey, persistInvestigation, restoreInvestigation } from './investigationSession';
+import { investigationContextFingerprint, investigationStorageKey, persistInvestigation, restoreInvestigation } from './investigationSession';
 import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelWindow';
 import { analyzeWindow } from '../lib/data';
 import { intervalLabel } from '../lib/format';
@@ -33,9 +33,10 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const fitHorizon = Math.min(Math.floor(availableThrough * 1000) / 1000, data.detail.endSeconds);
   const fittedWindow = useMemo(() => fitModelWindow(data, interval, fitHorizon), [data, interval, fitHorizon]);
   const [exportStatus, setExportStatus] = useState('');
-  const sessionKey = investigationStorageKey(datasetId, data.recording.id);
+  const sessionKey = investigationStorageKey(datasetId, data.recording.id, data.demoCase?.id ?? 'original');
+  const initialContextFingerprint = useMemo(() => investigationContextFingerprint(data, datasetId, interval), [data, datasetId, interval]);
   const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds);
+    const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds, initialContextFingerprint);
     return saved ? [{ ...saved, telemetry: data, restored: true }] : [];
   });
   const [busy, setBusy] = useState(false);
@@ -50,8 +51,9 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     const latest = [...messages].reverse().find(message => message.status === 'complete');
     if (!latest) return;
     const { telemetry: _telemetry, restored: _restored, ...persistable } = latest;
-    persistInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, persistable);
-  }, [messages, sessionKey, data.recording.id]);
+    const contextFingerprint = investigationContextFingerprint(latest.telemetry, datasetId, latest.interval);
+    persistInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, contextFingerprint, persistable);
+  }, [messages, sessionKey, data.recording.id, datasetId]);
   useEffect(() => () => { const job = active.current; job?.controller.abort(); if (job?.queryId) void services.cancelQuery(job.queryId).catch(() => undefined); active.current = null; }, [services]);
   function update(id: string, changes: Partial<Message> | ((m: Message) => Partial<Message>)) { setMessages(ms => ms.map(m => m.id === id ? { ...m, ...(typeof changes === 'function' ? changes(m) : changes) } : m)); }
   function evidenceFrom(e: Evidence): EvidenceLink[] {

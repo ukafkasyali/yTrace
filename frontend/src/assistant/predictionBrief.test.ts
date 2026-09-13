@@ -24,6 +24,17 @@ describe('compact generated interpretation', () => {
     for (const raw of [undefined, '', 'malformed', '{"contact":null,"event_type":"free"}', '{"contact":false,"event_type":"accidental"}', '{"contact":true,"event_type":"unknown"}']) expect(predictionBrief(raw)).toBeUndefined();
     expect(predictionBrief('{"contact":true,"event_type":"accidental","onset_ms":2048,"strongest_joint":"J8"}')).toBeUndefined();
   });
+  it('uses the same complete cross-field contract as the held-out scorer', () => {
+    expect(predictionBrief(contact(',"evidence_end_ms":1024'))).toEqual({ title: 'Accidental contact predicted', strongest: 'J4', onset: 298 });
+    for (const raw of [
+      contact(',"affected_joints":[]'),
+      contact(',"affected_joints":["J1"]'),
+      contact(',"affected_joints":["J4","J4"]'),
+      contact(',"evidence_start_ms":null'),
+      contact(',"evidence_end_ms":298'),
+      contact(',"extra":"unsupported"'),
+    ]) expect(predictionBrief(raw)).toBeUndefined();
+  });
   it('keeps typed prediction fields separate from generated evidence prose', () => {
     const raw = `Answer: ${contact()}\nEvidence: The manual event marker is at 298 ms.`;
     expect(structuredPrediction(raw)).toEqual({ contact: true, event_type: 'accidental', onset_ms: 298,

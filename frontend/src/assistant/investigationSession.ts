@@ -1,4 +1,6 @@
 import type { InvestigationAnswer } from './investigationReport';
+import { selectWindow } from '../lib/data';
+import type { DemoData, Interval } from '../types';
 
 export type PersistableInvestigation = InvestigationAnswer & {
   id: string;
@@ -8,8 +10,23 @@ export type PersistableInvestigation = InvestigationAnswer & {
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-export function investigationStorageKey(datasetId: string, recordingId: string): string {
-  return `trace:last-investigation:${datasetId}:${recordingId}`;
+export function investigationStorageKey(datasetId: string, recordingId: string, scope = 'original'): string {
+  return `trace:last-investigation:${datasetId}:${recordingId}:${scope.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+}
+
+/** Fast identity check for restoring a report against the exact selected telemetry. */
+export function investigationContextFingerprint(data: DemoData, datasetId: string, interval: Interval): string {
+  let hash = 14695981039346656037n;
+  const mixByte = (value: number) => { hash ^= BigInt(value); hash = BigInt.asUintN(64, hash * 1099511628211n); };
+  const mixText = (value: string) => { for (const byte of new TextEncoder().encode(value)) mixByte(byte); };
+  const bytes = new Uint8Array(8); const view = new DataView(bytes.buffer);
+  const mixNumber = (value: number) => { view.setFloat64(0, value, true); bytes.forEach(mixByte); };
+  const selected = selectWindow(data, interval);
+  [datasetId, data.recording.id, data.recording.sourceUrl, data.recording.archive, selected.resolution].forEach(mixText);
+  mixNumber(selected.sampleRateHz); mixNumber(interval.start); mixNumber(interval.end);
+  selected.times.forEach(mixNumber);
+  selected.channels.forEach(channel => { mixText(channel.id); mixText(channel.unit); channel.values.forEach(mixNumber); });
+  return `fnv1a64:${hash.toString(16).padStart(16, '0')}`;
 }
 
 function validInterval(value: unknown, durationSeconds: number): value is { start: number; end: number } {
@@ -36,13 +53,13 @@ function validMessage(value: unknown, durationSeconds: number): value is Persist
     && Array.isArray(message.evidence);
 }
 
-export function restoreInvestigation(storage: StorageLike | undefined, key: string, recordingId: string, durationSeconds: number): PersistableInvestigation | undefined {
+export function restoreInvestigation(storage: StorageLike | undefined, key: string, recordingId: string, durationSeconds: number, contextFingerprint: string): PersistableInvestigation | undefined {
   if (!storage) return;
   try {
     const raw = storage.getItem(key);
     if (!raw) return;
-    const saved = JSON.parse(raw) as { schemaVersion?: unknown; recordingId?: unknown; message?: unknown };
-    if (saved.schemaVersion !== 1 || saved.recordingId !== recordingId || !validMessage(saved.message, durationSeconds)) {
+    const saved = JSON.parse(raw) as { schemaVersion?: unknown; recordingId?: unknown; contextFingerprint?: unknown; message?: unknown };
+    if (saved.schemaVersion !== 2 || saved.recordingId !== recordingId || saved.contextFingerprint !== contextFingerprint || !validMessage(saved.message, durationSeconds)) {
       storage.removeItem(key);
       return;
     }
@@ -53,8 +70,8 @@ export function restoreInvestigation(storage: StorageLike | undefined, key: stri
   }
 }
 
-export function persistInvestigation(storage: StorageLike | undefined, key: string, recordingId: string, message: PersistableInvestigation): void {
+export function persistInvestigation(storage: StorageLike | undefined, key: string, recordingId: string, contextFingerprint: string, message: PersistableInvestigation): void {
   if (!storage || message.status !== 'complete') return;
-  try { storage.setItem(key, JSON.stringify({ schemaVersion: 1, recordingId, message })); }
+  try { storage.setItem(key, JSON.stringify({ schemaVersion: 2, recordingId, contextFingerprint, message })); }
   catch { /* a finished analysis remains usable when browser storage is unavailable */ }
 }
