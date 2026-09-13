@@ -1,0 +1,1 @@
+I selected one approved data source and started ingestion. The dataset size was around 9 GB. I can't see any progress in the UI. It just says acquiring approved assets
