@@ -7,6 +7,7 @@ import {
   isApprovedSourcePage,
   isAssetReceipts,
   isFinalReceipt,
+  isImportedRecordPage,
   isImportJob,
   isMappingProposals,
   isMappingSpec,
@@ -279,6 +280,11 @@ export function createServices(baseUrl?: string) {
     getImportReceipt: async (id: string) => {
       const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/receipt`);
       if (!isFinalReceipt(result)) throw new ProtocolError('The ingestion receipt does not match the contract.');
+      return result;
+    },
+    getImportedRecords: async (id: string, page = 1, pageSize = 20) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/records?${new URLSearchParams({ page: String(page), pageSize: String(pageSize) })}`);
+      if (!isImportedRecordPage(result)) throw new ProtocolError('The imported-record list does not match the contract.');
       return result;
     },
     previewSourcingRequirements: async (input: RequirementPreviewRequest) => {

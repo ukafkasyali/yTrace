@@ -236,6 +236,27 @@ describe('service contracts', () => {
     await expect(service.getImport('job')).rejects.toBeInstanceOf(ProtocolError);
   });
 
+  it('validates and requests paginated imported TimeF records', async () => {
+    const page = {
+      datasetId: 'kuka/collision-part1', datasetVersion: '1.0.0',
+      data: [{
+        recordId: 'batch-01/run-01', seriesCount: 14, valueCount: 140,
+        durationSeconds: 0.009, signals: ['joint_1'], annotationKeys: ['collision'],
+      }],
+      pagination: { page: 2, pageSize: 20, totalItems: 206, totalPages: 11 },
+    };
+    const fetch = vi.fn().mockResolvedValue(Response.json(page));
+    vi.stubGlobal('fetch', fetch);
+
+    const result = await createServices('/api').getImportedRecords('job/1', 2, 20);
+
+    expect(result.data[0].recordId).toBe('batch-01/run-01');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/ingestions/job%2F1/records?page=2&pageSize=20',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+  });
+
   it('confirms a version-bound mapping through the existing ingestion', async () => {
     const mapping = {
       schemaVersion: '1.0' as const, jobRevision: 3,

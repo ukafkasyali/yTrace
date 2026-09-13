@@ -105,6 +105,28 @@ export type FinalReceipt = {
   };
 };
 
+export type ImportedRecord = {
+  recordId: string;
+  seriesCount: number;
+  valueCount: number;
+  durationSeconds: number | null;
+  signals: string[];
+  annotationKeys: string[];
+};
+
+export type ImportedRecordPage = {
+  datasetId: string;
+  datasetVersion: string;
+  data: ImportedRecord[];
+  pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
+};
+
+export type ImportedDatasetSelection = {
+  ingestionId: string;
+  datasetId: string;
+  datasetVersion: string;
+};
+
 const sourceKinds = new Set<SourceKind>(['ZENODO', 'GITHUB', 'HUGGING_FACE']);
 const importStates = new Set<ImportState>([
   'queued', 'acquiring', 'inspecting', 'mapping', 'validating', 'importing',
@@ -242,4 +264,22 @@ export function isFinalReceipt(value: unknown): value is FinalReceipt {
     && ['recordCount', 'seriesCount', 'valueCount'].every(
       key => Number.isInteger(validation[key]) && Number(validation[key]) >= 0,
     ) && /^[a-f0-9]{64}$/.test(String(validation.readbackSha256));
+}
+
+export function isImportedRecordPage(value: unknown): value is ImportedRecordPage {
+  if (!isRecord(value) || typeof value.datasetId !== 'string'
+    || typeof value.datasetVersion !== 'string' || !Array.isArray(value.data)
+    || !isRecord(value.pagination)) return false;
+  const pagination = value.pagination;
+  const validPagination = ['page', 'pageSize', 'totalItems', 'totalPages'].every(
+    key => Number.isInteger(pagination[key]) && Number(pagination[key]) >= 0,
+  ) && Number(pagination.page) >= 1 && Number(pagination.pageSize) >= 1;
+  return validPagination && value.data.every(item => isRecord(item)
+    && typeof item.recordId === 'string'
+    && Number.isInteger(item.seriesCount) && Number(item.seriesCount) >= 0
+    && Number.isInteger(item.valueCount) && Number(item.valueCount) >= 0
+    && (item.durationSeconds === null
+      || (typeof item.durationSeconds === 'number' && Number.isFinite(item.durationSeconds)
+        && item.durationSeconds >= 0))
+    && isStringArray(item.signals) && isStringArray(item.annotationKeys));
 }
