@@ -170,10 +170,10 @@ Use this demo path and omit unrelated features unless a judge asks:
 2. Replay the recorded articulation into the publisher marker and identify the mark
    as an annotation.
 3. Reveal the OpenTSLM prediction beside deterministic torque measurements.
-4. Open its exact seven-channel evidence, then compare the incident with a reference.
+4. Open its exact seven-channel evidence. Keep reference comparison optional for jury questions.
 5. Export the Markdown investigation report.
 6. Open Evaluation briefly: the CNN wins direct prediction; OpenTSLM adds a readable,
-   evidence-linked output and currently has a 77.93% parse-validity weakness.
+   evidence-linked output and currently produces a usable complete summary on 77.93% of windows.
 
 Do not show the data-sourcing workspace in the core two-minute demo. It is bonus
 infrastructure, not the incident-forensics value proposition. Keep PR #19 isolated
@@ -257,7 +257,7 @@ change is deployed. Use separate `codex/` worktrees/branches for parallel editin
 Do not reset, stash, stage or commit another agent's changes. Each worker opens a
 focused draft PR; the coordinating task integrates and deploys in sequence.
 
-Latest inspected main: `9f3558f` (pipeline-backed in-app baseline comparison).
+Latest inspected main: `db68e6c` (pipeline-backed in-app baseline comparison and submission freeze).
 The inference service still serves canary-v4; new training files do not automatically
 replace that checkpoint. PR #19 is a broad draft sourcing/ingestion integration and
 is outside the submission freeze unless the coordinator explicitly reopens it.

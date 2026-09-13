@@ -17,7 +17,7 @@ observed in the private deployment, and what still needs evidence.
 | TSLM training and configuration | [Config](../../model_training/configs/opentslm_sp.yaml), [trainer](../../model_training/src/robot_observability/train_opentslm.py) | OpenTSLM SoftPrompt, Llama 3.2 1B and HAR warm start are recorded | Do not select further changes against the already-inspected test archive |
 | Held-out baseline comparison | [Audited report](evaluation/report/comparison.md), [results](evaluation/report/comparison.json), [source inventory](evaluation/source/inventory.json) | 512 identical windows from 67 held-out recording groups, checksums and uncertainty are reproducible | A new recording group is needed for a future confirmatory claim |
 | Working evidence-linked demo | [Demo script](DEMO.md), [smoke receipt](demo/smoke-result.json), [exported investigation](demo/investigation-example.json) | Private canary-v4 path was smoke-tested; export retains telemetry receipt, measurements and prediction separately | The three fixed examples are not a quality benchmark; raw coverage remains limited |
-| Checkpoint or adapter handoff | [Release procedure](../../inference/README.md), [handoff checklist](CHECKPOINT_HANDOFF.md) | Service reports canary-v4 checkpoint digest `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23` | Approved submission-channel delivery is still required; live backbone revision is `unknown` |
+| Checkpoint or adapter handoff | [Release procedure](../../inference/README.md), [handoff checklist](CHECKPOINT_HANDOFF.md) | Service reports canary-v4 checkpoint digest `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23`; the local backbone weight file matches the official immutable Hub blob by SHA-256 | Approved submission-channel delivery is still required; the live receipt still prints `backbone:unknown` for the local path |
 | Benefit for engineers | [Pilot protocol](PILOT.md), [facilitator runbook](PILOT_RUNBOOK.md) | Protocol, task materials and empty capture sheet are ready | No participants, timings, error rates, testimonials or ROI have been collected |
 
 ## What the evaluation actually says
@@ -30,7 +30,7 @@ The contribution is a reproducible temporal-language investigation workflow and 
 
 The Qwen result is limited by an output-contract failure: 508/512 responses supplied no boolean contact answer. Matching JSON keys alone concealed this. Report it as the observed behavior of this prompt/model configuration, not a general statement about vision-language models. Plain Llama was not benchmarked; the ready comparable model is Qwen. A future Llama experiment must specify numerical serialization, context budget and training regime.
 
-The archived checkpoint is `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23`. It remains private on the team's VM under the release process. The weights are not included in Git; arrange the challenge's checkpoint/adapter handoff using the approved submission channel. The observed service reported `backbone:unknown`, so backbone revision provenance remains incomplete.
+The archived checkpoint is `8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23`. It remains private on the team's VM under the release process. The weights are not included in Git; arrange the challenge's checkpoint/adapter handoff using the approved submission channel. The service receipt reports `backbone:unknown` because it loads a local path, but the handoff records the local weight-file hash and the byte-identical immutable Hub revision.
 
 ## Reproduce the comparison
 
@@ -45,12 +45,12 @@ The compressed JSONL files preserve original bytes and include generated respons
 
 These test results were already inspected by the team. Further tuning must use validation; a new untouched recording-group test is needed for a confirmatory claim after changes.
 
-## Team integration, checked 12 September 2026
+## Team integration, checked 13 September 2026
 
-- Main `126a8c6` includes PR #9's unified builder and PR #10's bounded documentation evidence. This work uses both existing dataset contracts and does not add another document-search backend.
-- Open [PR #3, Add LangGraph evidence-complete dataset scout](https://github.com/ukafkasyali/ysamet/pull/3) is mergeable. It owns dataset discovery, requirement preflight, review and the Data source UI. It remains a separate reviewed integration; no duplicate scout or broad runtime web-search agent was added here.
-- Training branch `b65bc22` contains the team's baseline and plot-evaluation improvements. The completed outputs were reused, rather than retraining or rewriting active training work. Its added fit-probe and benchmark orchestration code is not claimed to be merged by this submission work.
-- The new comparison module and investigation export avoid the scout's edited frontend files, except for an additive style rule. The final integration check records compatibility in [verification](VERIFICATION.md).
+- Main `db68e6c` contains the source workspace, held-out comparison page and frozen replay workflow used by this branch.
+- Open [PR #19, Integrate approved dataset sourcing with one-shot ingestion](https://github.com/ukafkasyali/ysamet/pull/19) is a broad draft. It remains outside the two-minute demo until its service startup, dependencies and end-to-end provider path receive focused review.
+- Saved feature, CNN, OpenTSLM and Qwen outputs are compared from their recorded artifacts. CNN remains evaluation-only because no CNN checkpoint or live endpoint is connected.
+- The final integration evidence and known limits are recorded in [verification](VERIFICATION.md).
 
 ## Boundaries
 
