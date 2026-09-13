@@ -39,6 +39,7 @@ export type ApprovedSourcePage = {
 };
 
 export type ImportState = 'queued' | 'acquiring' | 'inspecting' | 'mapping'
+  | 'onboarding_queued' | 'onboarding' | 'needs_human_resolution' | 'connector_ready'
   | 'validating' | 'importing' | 'ready' | 'unsupported_format' | 'needs_input' | 'failed';
 
 export type ImportJob = {
@@ -55,6 +56,38 @@ export type ImportJob = {
   message: string;
   createdAt: string;
   updatedAt: string;
+  onboardingJobId?: string | null;
+  onboardingStatus?: string | null;
+  onboardingStage?: string | null;
+  onboardingBlockers?: OnboardingBlocker[];
+};
+
+export type OnboardingBlocker = {
+  field_path: string;
+  semantic_status: string;
+  downstream_system: string;
+  downstream_requirement: string;
+  candidate: unknown;
+  evidence_refs: string[];
+  remaining_uncertainty: string | null;
+};
+
+export type OnboardingJobView = {
+  ingestion_id: string;
+  job_id: string;
+  status: 'PENDING' | 'RUNNING' | 'NEEDS_HUMAN_RESOLUTION' | 'COMPLETED' | 'FAILED';
+  stage: string;
+  blockers: OnboardingBlocker[];
+  artifacts: Record<string, { name: string; stage: string; media_type: string; sha256: string }>;
+  error: unknown;
+  result: unknown;
+};
+
+export type HumanResolution = {
+  field_path: string;
+  value: unknown;
+  approved_by: string;
+  rationale: string;
 };
 
 export type AssetReceipt = {
@@ -132,6 +165,7 @@ export type ImportedDatasetSelection = {
 const sourceKinds = new Set<SourceKind>(['ZENODO', 'GITHUB', 'HUGGING_FACE']);
 const importStates = new Set<ImportState>([
   'queued', 'acquiring', 'inspecting', 'mapping', 'validating', 'importing',
+  'onboarding_queued', 'onboarding', 'needs_human_resolution', 'connector_ready',
   'ready', 'unsupported_format', 'needs_input', 'failed',
 ]);
 
@@ -205,7 +239,29 @@ export function isImportJob(value: unknown): value is ImportJob {
     && (value.datasetLicenseId === null || typeof value.datasetLicenseId === 'string')
     && isStringArray(value.assetIds) && Number.isInteger(value.jobRevision)
     && importStates.has(value.state as ImportState) && typeof value.message === 'string'
-    && typeof value.createdAt === 'string' && typeof value.updatedAt === 'string';
+    && typeof value.createdAt === 'string' && typeof value.updatedAt === 'string'
+    && (value.onboardingJobId == null || typeof value.onboardingJobId === 'string')
+    && (value.onboardingStatus == null || typeof value.onboardingStatus === 'string')
+    && (value.onboardingStage == null || typeof value.onboardingStage === 'string')
+    && (value.onboardingBlockers === undefined || Array.isArray(value.onboardingBlockers));
+}
+
+function isOnboardingBlocker(value: unknown): value is OnboardingBlocker {
+  return isRecord(value) && typeof value.field_path === 'string'
+    && typeof value.semantic_status === 'string'
+    && typeof value.downstream_system === 'string'
+    && typeof value.downstream_requirement === 'string'
+    && Array.isArray(value.evidence_refs)
+    && value.evidence_refs.every(item => typeof item === 'string')
+    && (value.remaining_uncertainty === null || typeof value.remaining_uncertainty === 'string');
+}
+
+export function isOnboardingJobView(value: unknown): value is OnboardingJobView {
+  return isRecord(value) && typeof value.ingestion_id === 'string'
+    && typeof value.job_id === 'string'
+    && ['PENDING', 'RUNNING', 'NEEDS_HUMAN_RESOLUTION', 'COMPLETED', 'FAILED'].includes(String(value.status))
+    && typeof value.stage === 'string' && Array.isArray(value.blockers)
+    && value.blockers.every(isOnboardingBlocker) && isRecord(value.artifacts);
 }
 
 export function isAssetReceipts(value: unknown): value is AssetReceipt[] {

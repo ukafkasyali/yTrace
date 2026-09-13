@@ -32,6 +32,7 @@ from .mapping import (
     MappingSpec,
     MappingValidationError,
 )
+from .onboarding import HumanResolutionRequest, IngestionOnboardingCoordinator
 from .replay import (
     ImportedReplay,
     ImportedReplayService,
@@ -65,6 +66,7 @@ def _error(status: int, code: str, message: str, *, details=None) -> JSONRespons
 def create_app(
     service: IngestionService | None = None,
     catalog: ImportedDatasetCatalog | None = None,
+    onboarding: IngestionOnboardingCoordinator | None = None,
 ) -> FastAPI:
     owns_service = service is None
     ingestion = service or IngestionService(
@@ -85,6 +87,9 @@ def create_app(
     mappings = MappingService(ingestion.jobs)
     imported = catalog or ImportedDatasetCatalog(ingestion.data_dir / "timef")
     replay = ImportedReplayService(imported)
+    onboarding_service = onboarding or IngestionOnboardingCoordinator(
+        ingestion.data_dir, ingestion.jobs
+    )
 
     def validated_receipt(ingestion_id: str) -> FinalReceipt:
         receipt = ingestion.jobs.get_final_receipt(ingestion_id)
@@ -152,6 +157,19 @@ def create_app(
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
     ) -> IngestionJob:
         return ingestion.jobs.get(ingestion_id)
+
+    @app.get("/api/ingestions/{ingestion_id}/onboarding")
+    def get_ingestion_onboarding(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+    ) -> dict:
+        return onboarding_service.view(ingestion_id)
+
+    @app.post("/api/ingestions/{ingestion_id}/human-resolutions")
+    def resolve_ingestion_blocker(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+        body: HumanResolutionRequest,
+    ) -> dict:
+        return onboarding_service.resolve(ingestion_id, body)
 
     @app.get("/api/ingestions/{ingestion_id}/assets", response_model=list[AssetReceipt])
     def get_ingestion_assets(
@@ -271,6 +289,15 @@ def create_app(
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
         body: MappingSpec,
     ) -> ConfirmedMapping:
-        return mappings.confirm(ingestion_id, body)
+        structural = body.model_copy(
+            update={
+                "channels": [channel.model_copy(update={"unit": None}) for channel in body.channels]
+            }
+        )
+        confirmed = mappings.confirm(ingestion_id, structural, require_units=False)
+        # This compatibility endpoint resolves structural ambiguity only. The
+        # persisted orchestrator still owns connector/build/load/verification.
+        onboarding_service.start(ingestion_id)
+        return confirmed
 
     return app
