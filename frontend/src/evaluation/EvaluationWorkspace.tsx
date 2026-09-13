@@ -3,6 +3,7 @@ import { BarChart3, CheckCircle2, Info } from 'lucide-react';
 import comparison from '../../../docs/submission/evaluation/report/comparison.json';
 import cnnSummary from '../../../docs/submission/evaluation/source/cnn-recorded-summary.json';
 import rationaleFollowup from '../../../docs/submission/evaluation/source/opentslm-rationale-followup.json';
+import PresentationWorkspace from './PresentationWorkspace';
 
 type MethodKey = 'features' | 'cnn' | 'opentslm' | 'qwen';
 
@@ -154,10 +155,13 @@ function GroupedBarChart({ title, subtitle, maximum, metrics }: { title: string;
 
 export default function EvaluationWorkspace() {
   const [active, setActive] = useState<MethodKey>('features');
+  const [presenting, setPresenting] = useState(false);
   const method = methods[active];
 
+  if (presenting) return <PresentationWorkspace onExit={() => setPresenting(false)} />;
+
   return <section className="workspace-content evaluation-content" aria-labelledby="evaluation-title">
-    <header className="workspace-heading evaluation-heading"><div><h1 id="evaluation-title">Held-out baseline comparison</h1><p>{comparison.window_count} test windows · seed {comparison.selection_seed} · seven joints · 1,024 samples at 1 kHz.</p></div><BarChart3 size={22} aria-hidden="true" /></header>
+    <header className="workspace-heading evaluation-heading"><div><h1 id="evaluation-title">Held-out baseline comparison</h1><p>{comparison.window_count} test windows · seed {comparison.selection_seed} · seven joints · 1,024 samples at 1 kHz.</p></div><button className="btn" onClick={() => setPresenting(true)}><BarChart3 size={15} aria-hidden="true"/>Open 5-minute view</button></header>
 
     <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>Simple features win fixed classification.</strong><p>OpenTSLM returns class, timing and joint fields in one readable handoff, but only 77.93% of its full generations are usable. The CNN gives the best typical onset timing.</p></div></div>
 
