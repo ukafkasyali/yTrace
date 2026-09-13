@@ -144,7 +144,7 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
     setTimeout(() => URL.revokeObjectURL(url), 1000); setStatus('Incident cohort downloaded for review or labeling.');
   }
   return <section className="comparison-panel" aria-label="Incident comparison">
-    <header><h2>Find repeat patterns</h2><p>Trace ranks similar torque events across recordings. Open one to see what changed.</p></header>
+    <header><h2>Find repeat patterns</h2><p>y/trace ranks similar torque events across recordings. Open one to see what changed.</p></header>
     <div className="comparison-selection"><span>Selected · {data.recording.id}</span><strong>{intervalLabel(interval)}</strong></div>
     <section className="incident-cohort" aria-labelledby="incident-cohort-title">
       <div className="incident-cohort-heading"><h3 id="incident-cohort-title">Closest matches</h3>{matches.length > 0 && <button className="text-button" onClick={exportCohort}><Download size={13}/>Export cohort</button>}</div>

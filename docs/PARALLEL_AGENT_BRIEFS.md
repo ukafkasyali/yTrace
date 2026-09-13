@@ -1,4 +1,4 @@
-# Trace: parallel agent onboarding
+# y/trace: parallel agent onboarding
 
 Use a separate task and git worktree for each editing agent. Paste the shared
 introduction followed by **one** workstream prompt. The current coordinating task
@@ -8,7 +8,7 @@ writing this file does not launch agents.
 ## Shared introduction — paste into every task
 
 ```text
-You are contributing to Trace, the team's Aionic Labs × Agentic Systems Lab Temporal
+You are contributing to y/trace, the team's Aionic Labs × Agentic Systems Lab Temporal
 AI Challenge submission. Work autonomously within the assigned workstream. First
 read AGENTS.md and docs/PARALLEL_AGENT_BRIEFS.md. Run entire doctor, inspect git status,
 fetch origin/main, and inspect recent commits and open PRs. Keep Entire active.
@@ -133,7 +133,7 @@ repository presence, test verification, deployed behavior and demonstrated user 
 
 Sharpen a two-minute story: engineer faces a recorded contact event -> locates the
 interval -> compares generated interpretation with measured signals -> inspects
-responsible joints -> exports evidence. Explain what Trace contributes beyond a
+responsible joints -> exports evidence. Explain what y/trace contributes beyond a
 standalone classifier and what is still unproven. Keep the model-vs-feature-baseline
 comparison honest; use only the existing audited metrics, not an invented advantage.
 
@@ -152,7 +152,7 @@ walkthrough is being changed, so do not independently rewrite it.
 This can be given to another model. No model-specific capabilities are assumed.
 
 ```text
-Review Trace as a robotics engineer and a skeptical challenge judge. Read the shared
+Review y/trace as a robotics engineer and a skeptical challenge judge. Read the shared
 context, then actually use the current UI if computer use is available. Do not edit
 files, run inference in parallel with another tester, or redesign independently.
 The coordinator is actively changing the UI; state the commit/build you reviewed.

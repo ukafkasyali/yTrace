@@ -70,7 +70,7 @@ export default function App() {
     setDatasetId(selection.datasetId);
     setData(replayData);
   }
-  if (loading || !data) return <main className="loading-screen"><Waves size={28}/><h1>Trace</h1>{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => void load()}>Retry loading recording</button></> : <><p>Opening the KUKA recording…</p><div className="loading-lines"><i/><i/><i/></div></>}</main>;
+  if (loading || !data) return <main className="loading-screen"><Waves size={28}/><h1>y/trace</h1>{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => void load()}>Retry loading recording</button></> : <><p>Opening the KUKA recording…</p><div className="loading-lines"><i/><i/><i/></div></>}</main>;
   return <Workbench key={`${datasetId}:${data.recording.id}:${data.demoCase?.id ?? "default"}`} data={data} datasetId={datasetId} onOpenRecording={openRecording} onOpenImportedRecord={openImportedRecord} cases={cases} onOpenCase={openCase} caseLoading={caseLoading} caseError={caseError}/>;
 }
 

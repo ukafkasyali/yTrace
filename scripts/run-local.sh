@@ -109,7 +109,7 @@ done
 
 if port_is_busy 8000; then
   curl --fail --silent --show-error --output /dev/null "http://127.0.0.1:8000/api/health" 2>/dev/null ||
-    fail "port 8000 is in use but does not serve the Trace inference health endpoint"
+    fail "port 8000 is in use but does not serve the y/trace inference health endpoint"
   REUSE_INFERENCE=true
 else
   REUSE_INFERENCE=false
@@ -208,7 +208,7 @@ INGESTION_WORKER_PID="$!"
 PIDS+=("$INGESTION_WORKER_PID")
 
 if [[ "$REUSE_INFERENCE" == "true" ]]; then
-  printf 'Reusing the existing Trace inference service on port 8000.\n'
+  printf 'Reusing the existing y/trace inference service on port 8000.\n'
 else
   printf 'Starting fixture inference bridge without model loading...\n'
   (

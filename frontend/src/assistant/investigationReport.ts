@@ -145,7 +145,7 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
     : report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
   const reviewNotes = report.reviewNotes.map(item => `- ${markdownText(item)}`);
   return [
-    '# Trace incident investigation',
+    '# y/trace incident investigation',
     '',
     '> Retrospective robot telemetry report. Measurements, publisher annotations, and generated predictions are recorded as separate evidence sources.',
     '',

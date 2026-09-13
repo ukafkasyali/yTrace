@@ -311,7 +311,7 @@ def build_report(source: Path, repeats: int = 1000) -> dict:
 def markdown(report: dict) -> str:
     opentslm = report["models"]["opentslm"]
     lines = [
-        "# Trace: audited held-out comparison",
+        "# y/trace: audited held-out comparison",
         "",
         (
             f"{report['window_count']} identical windows from {report['recording_count']} held-out recordings. "
