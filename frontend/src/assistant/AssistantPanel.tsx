@@ -35,7 +35,9 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const [exportStatus, setExportStatus] = useState('');
   const sessionKey = investigationStorageKey(datasetId, data.recording.id, data.demoCase?.id ?? 'original');
   const initialContextFingerprint = useMemo(() => investigationContextFingerprint(data, datasetId, interval), [data, datasetId, interval]);
+  const deferredRestore = useRef(rawLoading === true);
   const [messages, setMessages] = useState<Message[]>(() => {
+    if (rawLoading) return [];
     const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds, initialContextFingerprint);
     return saved ? [{ ...saved, telemetry: data, restored: true }] : [];
   });
@@ -46,6 +48,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const active = useRef<{ id: string; controller: AbortController; queryId?: string; stopRequested?: boolean } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
+  useEffect(() => {
+    if (!deferredRestore.current || rawLoading || rawError) return;
+    deferredRestore.current = false;
+    const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds, initialContextFingerprint);
+    if (saved) setMessages(current => current.length ? current : [{ ...saved, telemetry: data, restored: true }]);
+  }, [rawLoading, rawError, sessionKey, data, initialContextFingerprint]);
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
   useEffect(() => {
     const latest = [...messages].reverse().find(message => message.status === 'complete');

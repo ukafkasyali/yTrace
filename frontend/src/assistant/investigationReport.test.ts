@@ -98,6 +98,18 @@ describe('investigation export', () => {
     expect(markdown).toContain('No valid structured prediction was returned.');
     expect(markdown).not.toContain('manual event marker');
   });
+  it('states when an unusable model output cannot be cross-checked', () => {
+    const report = buildInvestigationReport(data, 'dataset', { ...answer, modelOutput: 'Answer: {"contact":true}' });
+    expect(report.reviewNotes).toEqual(['No model/measurement cross-check was run because no usable structured prediction was returned.']);
+    expect(renderInvestigationMarkdown(report)).toContain('no usable structured prediction was returned');
+  });
+  it('marks a joint-ranking cross-check as inapplicable for free motion', () => {
+    const report = buildInvestigationReport(data, 'dataset', {
+      ...answer,
+      modelOutput: 'Answer: {"contact":false,"event_type":"free","onset_ms":null,"strongest_joint":null,"affected_joints":[],"evidence_start_ms":null,"evidence_end_ms":null}',
+    });
+    expect(report.reviewNotes).toEqual(['A joint-ranking cross-check is not applicable to a free-motion prediction.']);
+  });
   it('keeps the server measurement summary out of the generated interpretation section', () => {
     const report = buildInvestigationReport(data, 'dataset', {
       ...answer,

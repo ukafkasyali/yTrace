@@ -57,7 +57,13 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
   const receiptIssue = answer.mode === 'assistant'
     ? inputReceiptIssue(answer.inputTrace, data.recording.id, answer.interval)
     : undefined;
+  const prediction = answer.mode === 'assistant' ? structuredPrediction(answer.modelOutput) : undefined;
   const predictionReview = answer.mode === 'assistant' ? reviewPrediction(data, answer.interval, answer.modelOutput) : undefined;
+  const reviewNotes = predictionReview ? [predictionReview.note]
+    : answer.mode !== 'assistant' ? ['No model prediction was requested; deterministic measurements are reported without a model cross-check.']
+    : !prediction ? ['No model/measurement cross-check was run because no usable structured prediction was returned.']
+    : !prediction.strongest_joint ? ['A joint-ranking cross-check is not applicable to a free-motion prediction.']
+    : ['The predicted strongest joint matches the joint with the largest measured torque range. These are different quantities; inspect the signals before handoff.'];
   return {
     schemaVersion: 1, kind: 'trace_retrospective_investigation',
     recording: { datasetId, recordingId: data.recording.id, sourceUrl: data.recording.sourceUrl },
@@ -72,9 +78,9 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
       answer: scopedInterpretation(answer.text, answer.mode), source: answer.source, modelId: answer.modelId ?? null,
       modelRevision: answer.modelRevision ?? null, rawModelOutput: answer.modelOutput ?? null,
       rawModelOutputTrust: answer.modelOutput ? 'unverified_generated_text_not_annotation_or_measurement' : null,
-      structuredPrediction: answer.mode === 'assistant' ? structuredPrediction(answer.modelOutput) ?? null : null,
+      structuredPrediction: prediction ?? null,
       inputReceipt: answer.inputTrace ?? null, evidence: answer.evidence },
-    reviewNotes: predictionReview ? [predictionReview.note] : [],
+    reviewNotes,
     limitations: [
       'Recorded contact-event triage; no verified root cause, safety decision or repair recommendation.',
       'Publisher annotations, measured quantities and generated predictions are distinct evidence sources.',
@@ -137,7 +143,7 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
   const answer = report.interpretation.origin === 'generated_prediction'
     ? generatedPredictionMarkdown(report) ?? 'No valid structured prediction was returned.'
     : report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
-  const reviewNotes = report.reviewNotes.length ? report.reviewNotes.map(item => `- ${markdownText(item)}`) : ['- No model/measurement ranking difference was flagged by the current review checks.'];
+  const reviewNotes = report.reviewNotes.map(item => `- ${markdownText(item)}`);
   return [
     '# Trace incident investigation',
     '',

@@ -1,6 +1,6 @@
 import type { InvestigationAnswer } from './investigationReport';
 import { selectWindow } from '../lib/data';
-import type { DemoData, Interval } from '../types';
+import type { DemoData, EvidenceLink, Interval } from '../types';
 
 export type PersistableInvestigation = InvestigationAnswer & {
   id: string;
@@ -37,6 +37,20 @@ function validInterval(value: unknown, durationSeconds: number): value is { star
     && interval.start >= 0 && interval.end > interval.start && interval.end <= durationSeconds;
 }
 
+function validEvidenceLink(value: unknown, durationSeconds: number): value is EvidenceLink {
+  if (!value || typeof value !== 'object') return false;
+  const evidence = value as Partial<EvidenceLink>;
+  return typeof evidence.channelId === 'string' && evidence.channelId.length > 0
+    && typeof evidence.label === 'string' && evidence.label.length > 0
+    && validInterval(evidence.interval, durationSeconds)
+    && (evidence.channelIds === undefined || (
+      Array.isArray(evidence.channelIds)
+      && evidence.channelIds.length > 0
+      && evidence.channelIds.every(channelId => typeof channelId === 'string' && channelId.length > 0)
+      && new Set(evidence.channelIds).size === evidence.channelIds.length
+    ));
+}
+
 function validMessage(value: unknown, durationSeconds: number): value is PersistableInvestigation {
   if (!value || typeof value !== 'object') return false;
   const message = value as Partial<PersistableInvestigation>;
@@ -46,11 +60,19 @@ function validMessage(value: unknown, durationSeconds: number): value is Persist
     && typeof message.text === 'string'
     && typeof message.source === 'string'
     && (message.mode === 'assistant' || message.mode === 'local')
+    && (message.modelId === undefined || typeof message.modelId === 'string')
+    && (message.modelRevision === undefined || typeof message.modelRevision === 'string')
+    && (message.modelOutput === undefined || typeof message.modelOutput === 'string')
     && typeof message.playhead === 'number' && Number.isFinite(message.playhead)
+    && message.playhead >= 0 && message.playhead <= durationSeconds
+    && (message.replayCursor === undefined || (
+      typeof message.replayCursor === 'number' && Number.isFinite(message.replayCursor)
+      && message.replayCursor >= 0 && message.replayCursor <= message.playhead
+    ))
     && validInterval(message.interval, durationSeconds)
     && message.playhead >= message.interval.end
     && Array.isArray(message.tools) && message.tools.every(tool => typeof tool === 'string')
-    && Array.isArray(message.evidence);
+    && Array.isArray(message.evidence) && message.evidence.every(item => validEvidenceLink(item, durationSeconds));
 }
 
 export function restoreInvestigation(storage: StorageLike | undefined, key: string, recordingId: string, durationSeconds: number, contextFingerprint: string): PersistableInvestigation | undefined {

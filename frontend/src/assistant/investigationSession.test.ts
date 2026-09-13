@@ -49,6 +49,35 @@ describe('browser-session investigation snapshot', () => {
     expect(storage.getItem(key)).toBeNull();
   });
 
+  it('rejects malformed evidence and cursors outside the recording', () => {
+    const storage = memoryStorage();
+    const key = investigationStorageKey('dataset', 'recording');
+    for (const invalid of [
+      { ...message, evidence: [{}] },
+      { ...message, playhead: 171 },
+      { ...message, replayCursor: -1 },
+      { ...message, replayCursor: 7 },
+      { ...message, modelOutput: { contact: true } },
+      { ...message, evidence: [{ channelId: 'joint_1', channelIds: ['joint_1', 'joint_1'], label: 'Duplicate channels', interval: { start: 5.787, end: 6.811 } }] },
+    ]) {
+      storage.setItem(key, JSON.stringify({ schemaVersion: 2, recordingId: 'recording', contextFingerprint: 'context-a', message: invalid }));
+      expect(restoreInvestigation(storage, key, 'recording', 170, 'context-a')).toBeUndefined();
+      expect(storage.getItem(key)).toBeNull();
+    }
+  });
+
+  it('restores bounded evidence and an incident-start replay cursor', () => {
+    const storage = memoryStorage();
+    const key = investigationStorageKey('dataset', 'recording');
+    const valid = {
+      ...message,
+      replayCursor: 5.787,
+      evidence: [{ channelId: 'joint_1', channelIds: ['joint_1', 'joint_2'], label: 'Inspect 2 input channels', interval: { start: 5.787, end: 6.811 } }],
+    };
+    persistInvestigation(storage, key, 'recording', 'context-a', valid);
+    expect(restoreInvestigation(storage, key, 'recording', 170, 'context-a')).toEqual(valid);
+  });
+
   it('does not persist incomplete analysis', () => {
     const storage = memoryStorage();
     const key = investigationStorageKey('dataset', 'recording');

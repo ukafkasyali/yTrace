@@ -159,14 +159,14 @@ export default function EvaluationWorkspace() {
 
     <dl className="evaluation-summary evaluation-summary-four">
       <div><dt>Best semantics macro-F1</dt><dd>0.9880</dd><small>Signal features</small></div>
-      <div><dt>Best median onset</dt><dd>18 ms</dd><small>1D CNN</small></div>
-      <div><dt>Best onset P90</dt><dd>140 ms</dd><small>OpenTSLM · answered contacts</small></div>
+      <div><dt>Best median onset error</dt><dd>18 ms</dd><small>1D CNN</small></div>
+      <div><dt>Best onset P90 error</dt><dd>140 ms</dd><small>OpenTSLM · finite in-window onset predictions</small></div>
       <div><dt>OpenTSLM usable summaries</dt><dd>77.93%</dd><small>{answeredWindows} of {comparison.window_count}</small></div>
     </dl>
 
     <section className="evaluation-table-section" aria-labelledby="results-title">
       <div className="section-heading"><div><h2 id="results-title">Comparable headline results</h2><p>Every row uses 512 held-out windows and seed 20260912. See provenance below for the CNN boundary.</p></div></div>
-      <div className="table-scroll"><table className="data-table evaluation-table evaluation-headline-table"><thead><tr><th>Method</th><th>Semantics F1 ↑</th><th>Contact F1 ↑</th><th>Onset median ↓</th><th>Onset P90 ↓</th><th>Strongest joint ↑</th><th>Usable summary ↑</th></tr></thead><tbody>
+      <div className="table-scroll"><table className="data-table evaluation-table evaluation-headline-table"><thead><tr><th>Method</th><th>Semantics F1 ↑</th><th>Contact F1 ↑</th><th>Median onset error ↓</th><th>P90 onset error ↓</th><th>Strongest joint ↑</th><th>Usable summary ↑</th></tr></thead><tbody>
         {methodOrder.map(key => <tr key={key}><td><i className={`method-dot method-${key}`} />{methods[key].label}{key === 'cnn' && <small>recorded run</small>}</td><td>{results[key].semantics.toFixed(4)}</td><td>{results[key].contact.toFixed(4)}</td><td>{results[key].onsetMedian.toFixed(0)} ms</td><td>{results[key].onsetP90.toFixed(1)} ms</td><td>{results[key].strongestJoint.toFixed(4)}</td><td>{usableSummaryLabel(results[key].usableSummary)}</td></tr>)}
       </tbody></table></div>
       <p className="table-note">Usable summary requires the complete typed contract; parseable JSON alone is insufficient. The CNN value is unavailable without its row-level predictions. Read positive-contact F1 with coverage because abstentions can leave F1 high while making the full answer unusable.</p>
