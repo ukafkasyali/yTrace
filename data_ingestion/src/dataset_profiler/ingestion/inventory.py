@@ -5,6 +5,8 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
+from .formats.arrays import NumericArrayAdapter
+from .formats.tabular import FormatAdapterError, TabularAdapter
 from .jobs import ResourceFormat, ResourceProfile
 
 
@@ -19,10 +21,14 @@ class ResourceInventory:
         max_file_bytes: int = 25_000_000_000,
         max_probe_bytes: int = 65_536,
         max_columns: int = 10_000,
+        tabular: TabularAdapter | None = None,
+        arrays: NumericArrayAdapter | None = None,
     ):
         self.max_file_bytes = max_file_bytes
         self.max_probe_bytes = max_probe_bytes
         self.max_columns = max_columns
+        self.tabular = tabular or TabularAdapter(max_columns=max_columns)
+        self.arrays = arrays or NumericArrayAdapter()
 
     def inspect(
         self,
@@ -40,6 +46,12 @@ class ResourceInventory:
             raise InventoryError("Resource exceeds the configured inventory size limit")
         content_sha256 = self._sha256(source)
         format_, details = self._probe(source, logical_path, size)
+        if format_ is not ResourceFormat.UNSUPPORTED:
+            try:
+                details |= self._schema_details(source, format_)
+            except FormatAdapterError as exc:
+                format_ = ResourceFormat.UNSUPPORTED
+                details = {"reason": "FORMAT_SCHEMA_INVALID", "message": str(exc)}
         material = f"{ingestion_id}|{asset_id}|{logical_path}|{content_sha256}"
         return ResourceProfile(
             resource_id=f"res_{hashlib.sha256(material.encode()).hexdigest()[:24]}",
@@ -52,6 +64,34 @@ class ResourceInventory:
             details=details,
             inspected_at=datetime.now(UTC),
         )
+
+    def _schema_details(self, path: Path, format_: ResourceFormat) -> dict:
+        if format_ in {ResourceFormat.CSV, ResourceFormat.TSV, ResourceFormat.PARQUET}:
+            profile = self.tabular.inspect(path, format_)
+            return {
+                "rowCount": profile.row_count,
+                "rowGroups": profile.row_groups,
+                "columns": [
+                    {
+                        "name": column.name,
+                        "dtype": column.dtype,
+                        "nullable": column.nullable,
+                    }
+                    for column in profile.columns
+                ],
+            }
+        profile = self.arrays.inspect(path, format_)
+        return {
+            "arrays": [
+                {
+                    "name": array.name,
+                    "shape": list(array.shape),
+                    "dtype": array.dtype,
+                    "sizeBytes": array.size_bytes,
+                }
+                for array in profile.arrays
+            ]
+        }
 
     def _probe(
         self,
