@@ -88,7 +88,7 @@ const cnn = {
   onset_median_ae_ms: 18,
   onset_p90_ae_ms: 274,
   strongest_joint_accuracy: 0.7565,
-  json_object_rate: 1,
+  usable_summary_rate: 1,
 };
 
 const methodOrder: MethodKey[] = ['features', 'cnn', 'opentslm', 'qwen'];
@@ -102,7 +102,7 @@ const results = {
     onsetMedian: audited.features.onset_median_ae_ms,
     onsetP90: audited.features.onset_p90_ae_ms,
     strongestJoint: audited.features.strongest_joint_accuracy,
-    parseValidity: audited.features.json_object_rate,
+    usableSummary: audited.features.usable_summary_rate,
   },
   cnn: {
     semantics: cnn.semantics_macro_f1,
@@ -110,7 +110,7 @@ const results = {
     onsetMedian: cnn.onset_median_ae_ms,
     onsetP90: cnn.onset_p90_ae_ms,
     strongestJoint: cnn.strongest_joint_accuracy,
-    parseValidity: cnn.json_object_rate,
+    usableSummary: cnn.usable_summary_rate,
   },
   opentslm: {
     semantics: audited.opentslm.semantics_macro_f1,
@@ -118,7 +118,7 @@ const results = {
     onsetMedian: audited.opentslm.onset_median_ae_ms,
     onsetP90: audited.opentslm.onset_p90_ae_ms,
     strongestJoint: audited.opentslm.strongest_joint_accuracy,
-    parseValidity: audited.opentslm.json_object_rate,
+    usableSummary: audited.opentslm.usable_summary_rate,
   },
   qwen: {
     semantics: audited.qwen.semantics_macro_f1,
@@ -126,7 +126,7 @@ const results = {
     onsetMedian: audited.qwen.onset_median_ae_ms,
     onsetP90: audited.qwen.onset_p90_ae_ms,
     strongestJoint: audited.qwen.strongest_joint_accuracy,
-    parseValidity: audited.qwen.json_object_rate,
+    usableSummary: audited.qwen.usable_summary_rate,
   },
 };
 
@@ -160,21 +160,21 @@ export default function EvaluationWorkspace() {
   return <section className="workspace-content evaluation-content" aria-labelledby="evaluation-title">
     <header className="workspace-heading evaluation-heading"><div><h1 id="evaluation-title">Held-out baseline comparison</h1><p>{comparison.window_count} test windows · seed {comparison.selection_seed} · seven joints · 1,024 samples at 1 kHz.</p></div><BarChart3 size={22} aria-hidden="true" /></header>
 
-    <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>The transparent baseline wins classification; each learned model adds a different capability.</strong><p>The CNN gives the best typical onset timing. OpenTSLM has the best recorded onset P90 and produces operator-readable evidence, but its output reliability is the main weakness.</p></div></div>
+    <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>The transparent baseline wins classification; each learned model adds a different capability.</strong><p>The CNN gives the best typical onset timing. On answered contact windows, OpenTSLM has the lowest recorded onset P90; only 77.93% of its full generations are usable.</p></div></div>
 
     <dl className="evaluation-summary evaluation-summary-four">
       <div><dt>Best semantics macro-F1</dt><dd>0.9880</dd><small>Signal features</small></div>
       <div><dt>Best median onset</dt><dd>18 ms</dd><small>1D CNN</small></div>
-      <div><dt>Best onset P90</dt><dd>140 ms</dd><small>OpenTSLM</small></div>
-      <div><dt>OpenTSLM parse validity</dt><dd>77.93%</dd><small>{answeredWindows} of {comparison.window_count}</small></div>
+      <div><dt>Best onset P90</dt><dd>140 ms</dd><small>OpenTSLM · answered contacts</small></div>
+      <div><dt>OpenTSLM usable summaries</dt><dd>77.93%</dd><small>{answeredWindows} of {comparison.window_count}</small></div>
     </dl>
 
     <section className="evaluation-table-section" aria-labelledby="results-title">
       <div className="section-heading"><div><h2 id="results-title">Comparable headline results</h2><p>Every row uses 512 held-out windows and seed 20260912. See provenance below for the CNN boundary.</p></div></div>
-      <div className="table-scroll"><table className="data-table evaluation-table evaluation-headline-table"><thead><tr><th>Method</th><th>Semantics F1 ↑</th><th>Contact F1 ↑</th><th>Onset median ↓</th><th>Onset P90 ↓</th><th>Strongest joint ↑</th><th>Parse validity ↑</th></tr></thead><tbody>
-        {methodOrder.map(key => <tr key={key}><td><i className={`method-dot method-${key}`} />{methods[key].label}{key === 'cnn' && <small>recorded run</small>}</td><td>{results[key].semantics.toFixed(4)}</td><td>{results[key].contact.toFixed(4)}</td><td>{results[key].onsetMedian.toFixed(0)} ms</td><td>{results[key].onsetP90.toFixed(1)} ms</td><td>{results[key].strongestJoint.toFixed(4)}</td><td>{results[key].parseValidity.toFixed(4)}</td></tr>)}
+      <div className="table-scroll"><table className="data-table evaluation-table evaluation-headline-table"><thead><tr><th>Method</th><th>Semantics F1 ↑</th><th>Contact F1 ↑</th><th>Onset median ↓</th><th>Onset P90 ↓</th><th>Strongest joint ↑</th><th>Usable summary ↑</th></tr></thead><tbody>
+        {methodOrder.map(key => <tr key={key}><td><i className={`method-dot method-${key}`} />{methods[key].label}{key === 'cnn' && <small>recorded run</small>}</td><td>{results[key].semantics.toFixed(4)}</td><td>{results[key].contact.toFixed(4)}</td><td>{results[key].onsetMedian.toFixed(0)} ms</td><td>{results[key].onsetP90.toFixed(1)} ms</td><td>{results[key].strongestJoint.toFixed(4)}</td><td>{results[key].usableSummary.toFixed(4)}</td></tr>)}
       </tbody></table></div>
-      <p className="table-note">Contact F1 is the positive-contact score. Read it with parse validity: abstentions can leave positive F1 high while making the full answer unusable.</p>
+      <p className="table-note">Usable summary requires the complete typed contract; parseable JSON alone is insufficient. Read positive-contact F1 with this coverage because abstentions can leave F1 high while making the full answer unusable.</p>
     </section>
 
     <div className="evaluation-chart-grid">
