@@ -16,7 +16,7 @@
     "onset_median_ae_ms": 18,
     "onset_p90_ae_ms": 274,
     "strongest_joint_accuracy": 0.7565,
-    "usable_summary_rate": 1.0
+    "strict_parse_validity": 1.0
   },
-  "limitation": "The run summary and checkpoint identity are recorded on the source branch, but row-level predictions are absent from the current checksum-audited bundle."
+  "limitation": "The run summary and checkpoint identity are recorded on the source branch, but row-level predictions are absent from the current checksum-audited bundle. Strict parse validity was recorded as 1.0; the stricter complete usable-summary rate cannot be recomputed."
 }

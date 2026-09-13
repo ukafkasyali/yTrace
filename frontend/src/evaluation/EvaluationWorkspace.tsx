@@ -87,6 +87,7 @@ const cnn = cnnSummary.metrics;
 
 const methodOrder: MethodKey[] = ['features', 'cnn', 'opentslm', 'qwen'];
 const percent = (value: number) => value * 100;
+const usableSummaryLabel = (value: number | null) => value === null ? '—' : value.toFixed(4);
 const answeredWindows = Math.round(audited.opentslm.usable_summary_rate * comparison.window_count);
 
 const results = {
@@ -104,7 +105,7 @@ const results = {
     onsetMedian: cnn.onset_median_ae_ms,
     onsetP90: cnn.onset_p90_ae_ms,
     strongestJoint: cnn.strongest_joint_accuracy,
-    usableSummary: cnn.usable_summary_rate,
+    usableSummary: null,
   },
   opentslm: {
     semantics: audited.opentslm.semantics_macro_f1,
@@ -166,9 +167,9 @@ export default function EvaluationWorkspace() {
     <section className="evaluation-table-section" aria-labelledby="results-title">
       <div className="section-heading"><div><h2 id="results-title">Comparable headline results</h2><p>Every row uses 512 held-out windows and seed 20260912. See provenance below for the CNN boundary.</p></div></div>
       <div className="table-scroll"><table className="data-table evaluation-table evaluation-headline-table"><thead><tr><th>Method</th><th>Semantics F1 ↑</th><th>Contact F1 ↑</th><th>Onset median ↓</th><th>Onset P90 ↓</th><th>Strongest joint ↑</th><th>Usable summary ↑</th></tr></thead><tbody>
-        {methodOrder.map(key => <tr key={key}><td><i className={`method-dot method-${key}`} />{methods[key].label}{key === 'cnn' && <small>recorded run</small>}</td><td>{results[key].semantics.toFixed(4)}</td><td>{results[key].contact.toFixed(4)}</td><td>{results[key].onsetMedian.toFixed(0)} ms</td><td>{results[key].onsetP90.toFixed(1)} ms</td><td>{results[key].strongestJoint.toFixed(4)}</td><td>{results[key].usableSummary.toFixed(4)}</td></tr>)}
+        {methodOrder.map(key => <tr key={key}><td><i className={`method-dot method-${key}`} />{methods[key].label}{key === 'cnn' && <small>recorded run</small>}</td><td>{results[key].semantics.toFixed(4)}</td><td>{results[key].contact.toFixed(4)}</td><td>{results[key].onsetMedian.toFixed(0)} ms</td><td>{results[key].onsetP90.toFixed(1)} ms</td><td>{results[key].strongestJoint.toFixed(4)}</td><td>{usableSummaryLabel(results[key].usableSummary)}</td></tr>)}
       </tbody></table></div>
-      <p className="table-note">Usable summary requires the complete typed contract; parseable JSON alone is insufficient. Read positive-contact F1 with this coverage because abstentions can leave F1 high while making the full answer unusable.</p>
+      <p className="table-note">Usable summary requires the complete typed contract; parseable JSON alone is insufficient. The CNN value is unavailable without its row-level predictions. Read positive-contact F1 with coverage because abstentions can leave F1 high while making the full answer unusable.</p>
     </section>
 
     <div className="evaluation-chart-grid">
