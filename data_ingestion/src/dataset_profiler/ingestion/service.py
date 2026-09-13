@@ -142,7 +142,8 @@ class IngestionService:
         data_dir: Path,
         resolver: ApprovedSourceResolver,
     ):
-        self.jobs = IngestionJobStore(data_dir / "ingestions.sqlite3")
+        self.data_dir = data_dir.resolve()
+        self.jobs = IngestionJobStore(self.data_dir / "ingestions.sqlite3")
         self.resolver = resolver
 
     def close(self) -> None:

@@ -7,11 +7,16 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi import Path as ApiPath
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from .catalog import (
+    ImportedDatasetCatalog,
+    ImportedDatasetUnavailable,
+    ImportedRecordPage,
+)
 from .jobs import (
     AssetReceipt,
     FinalReceipt,
@@ -51,7 +56,10 @@ def _error(status: int, code: str, message: str, *, details=None) -> JSONRespons
     )
 
 
-def create_app(service: IngestionService | None = None) -> FastAPI:
+def create_app(
+    service: IngestionService | None = None,
+    catalog: ImportedDatasetCatalog | None = None,
+) -> FastAPI:
     owns_service = service is None
     ingestion = service or IngestionService(
         data_dir=Path(os.environ.get("INGESTION_DATA_DIR", "var/ingestion")),
@@ -69,6 +77,7 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
     app = FastAPI(title="Approved Dataset Ingestion", version="0.1.0", lifespan=lifespan)
     app.state.ingestion = ingestion
     mappings = MappingService(ingestion.jobs)
+    imported = catalog or ImportedDatasetCatalog(ingestion.data_dir / "timef")
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -99,6 +108,12 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
     @app.exception_handler(MappingValidationError)
     async def invalid_mapping(_: Request, exc: MappingValidationError) -> JSONResponse:
         return _error(422, "INVALID_MAPPING", str(exc))
+
+    @app.exception_handler(ImportedDatasetUnavailable)
+    async def imported_dataset_unavailable(
+        _: Request, exc: ImportedDatasetUnavailable
+    ) -> JSONResponse:
+        return _error(422, "IMPORTED_DATASET_UNAVAILABLE", str(exc))
 
     @app.exception_handler(Exception)
     async def unhandled_error(_: Request, exc: Exception) -> JSONResponse:
@@ -145,6 +160,25 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
     ) -> FinalReceipt | None:
         return ingestion.jobs.get_final_receipt(ingestion_id)
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/records",
+        response_model=ImportedRecordPage,
+    )
+    def get_ingestion_records(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+        page: Annotated[int, Query(ge=1)] = 1,
+        page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+    ) -> ImportedRecordPage:
+        receipt = ingestion.jobs.get_final_receipt(ingestion_id)
+        if receipt is None:
+            raise ImportedDatasetUnavailable("Ingestion has no validated dataset receipt")
+        return imported.list_records(
+            receipt.output["datasetId"],
+            receipt.output["datasetVersion"],
+            page=page,
+            page_size=page_size,
+        )
 
     @app.get(
         "/api/ingestions/{ingestion_id}/mapping-proposals",

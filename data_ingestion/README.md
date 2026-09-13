@@ -128,6 +128,11 @@ records, channels, units, timestamps, and values before setting `ready`. The pub
 hashes and records the mapping, output version, and read-back validation hash without absolute paths
 or raw arrays. Interrupted imports revalidate the same content-addressed output.
 
+After validation, `GET /api/ingestions/{ingestionId}/records?page=1&pageSize=20` reads bounded,
+paginated record summaries from that ingestion's TimeF registry. It exposes record identity, series
+and value counts, regular-axis duration, signal names, and annotation keys without loading or
+returning raw arrays. An ingestion without a final validation receipt cannot browse records.
+
 The exact Zenodo identities `21927431.r4` and `21941203.r4`, with their verified CC-BY-4.0 dataset
 licence, dispatch to the existing KUKA Part I and Part II connectors before generic mapping. A
 provider, revision, or licence mismatch fails closed. The dispatcher accepts either the legacy

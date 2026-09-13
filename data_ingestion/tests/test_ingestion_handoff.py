@@ -30,7 +30,13 @@ from dataset_profiler.ingestion import (
     parse_manifest,
 )
 from dataset_profiler.ingestion.api import create_app
+from dataset_profiler.ingestion.catalog import (
+    ImportedRecordPage,
+    ImportedRecordPagination,
+    ImportedRecordSummary,
+)
 from dataset_profiler.ingestion.contracts import ManifestAsset, SourceKind
+from dataset_profiler.ingestion.jobs import FinalReceipt
 from dataset_profiler.ingestion.service import (
     ApprovedSourceResolutionError,
     HttpApprovedSourceResolver,
@@ -679,6 +685,75 @@ class IngestionApiTests(unittest.TestCase):
 
                 self.assertEqual(response.status_code, 422)
                 self.assertEqual(response.json()["error"]["code"], "INVALID_REQUEST")
+            service.close()
+
+    def test_validated_ingestion_exposes_paginated_record_summaries(self) -> None:
+        class FakeCatalog:
+            request = None
+
+            def list_records(self, dataset_id, dataset_version, *, page, page_size):
+                self.request = (dataset_id, dataset_version, page, page_size)
+                return ImportedRecordPage(
+                    dataset_id=dataset_id,
+                    dataset_version=dataset_version,
+                    data=[
+                        ImportedRecordSummary(
+                            record_id="batch-01/run-01",
+                            series_count=14,
+                            value_count=140,
+                            duration_seconds=0.009,
+                            signals=["joint_1", "joint_2"],
+                            annotation_keys=["collision"],
+                        )
+                    ],
+                    pagination=ImportedRecordPagination(
+                        page=page,
+                        page_size=page_size,
+                        total_items=206,
+                        total_pages=206,
+                    ),
+                )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            payload = json.loads(CONTRACT_FIXTURE.read_text(encoding="utf-8"))
+            service = IngestionService(Path(temporary), FakeResolver(payload))
+            job, _ = service.create(
+                CreateIngestion(approved_source_id="src_0123456789abcdef01234567")
+            )
+            receipt = FinalReceipt.model_validate(
+                {
+                    "receiptSha256": "a" * 64,
+                    "ingestionId": job.ingestion_id,
+                    "approvedSourceId": job.approved_source_id,
+                    "manifestSha256": job.manifest_sha256,
+                    "sourceUrl": job.source_url,
+                    "sourceKind": job.source_kind,
+                    "sourceRevision": job.source_revision,
+                    "datasetLicenseId": job.dataset_license_id,
+                    "assets": [],
+                    "resource": {},
+                    "mappingSha256": "b" * 64,
+                    "mapping": {},
+                    "output": {
+                        "datasetId": "kuka/collision-part1",
+                        "datasetVersion": "1.0.0",
+                    },
+                    "validation": {},
+                }
+            )
+            service.jobs.record_final_receipt(receipt)
+            catalog = FakeCatalog()
+            with TestClient(create_app(service, catalog=catalog)) as client:
+                response = client.get(
+                    f"/api/ingestions/{job.ingestion_id}/records?page=2&pageSize=1"
+                )
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                catalog.request, ("kuka/collision-part1", "1.0.0", 2, 1)
+            )
+            self.assertEqual(response.json()["data"][0]["recordId"], "batch-01/run-01")
+            self.assertEqual(response.json()["pagination"]["totalItems"], 206)
             service.close()
 
 
