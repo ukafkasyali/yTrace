@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CP32PJ53WB9NH03438XH38",
+  "strategy": "manual-commit",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/FRONTEND_INTEGRATION.md",
+    "frontend/src/services/index.test.ts",
+    "frontend/src/services/index.ts",
+    "frontend/src/services/ingestion.ts",
+    "frontend/src/sourcing/ApprovedSourceLibrary.tsx",
+    "frontend/src/sourcing/ImportedDatasetBrowser.test.tsx",
+    "frontend/src/sourcing/ImportedDatasetBrowser.tsx",
+    "frontend/src/styles.css",
+    "frontend/src/workspaces/DataWorkspace.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 23933,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2739785,
+    "output_tokens": 8881,
+    "api_call_count": 18
+  }
+}
