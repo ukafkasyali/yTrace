@@ -1,152 +1,186 @@
 # y/trace
 
-y/trace is a replay-only robot observability workbench for investigating recorded contact incidents. It combines real KUKA telemetry, deterministic measurements, and a trained OpenTSLM interpretation in one reviewable handoff.
+**Second place out of 11 teams at the Zurich Temporal AI Challenge and selected for the Munich finals.**
 
-An agentic data pipeline can search for open telemetry, verify native source evidence, pin an approved revision, acquire selected assets, inspect their structure, and convert compatible records into TimeNet. y/trace then lets an engineer replay an event, inspect the responsible signals, compare a reference window, and export the investigation as Markdown.
+y/trace is a replay workbench for investigating recorded robot contact events. It combines real KUKA telemetry, deterministic signal measurements, recorded robot articulation, and a trained OpenTSLM interpretation in one reviewable incident report.
 
-Built for the Aionic Labs × Agentic Systems Lab Temporal AI Challenge in Zurich.
+Built by team **y/agent** during the Aionic Labs × Agentic Systems Lab Temporal AI Challenge.
 
-## What y/trace demonstrates
+---
 
-```text
-Find and verify open telemetry
-        ↓
-Approve an immutable source revision
-        ↓
-Acquire, inspect, and convert it to TimeNet
-        ↓
-Replay a recorded incident
-        ↓
-Run measurements + OpenTSLM
-        ↓
-Inspect linked signal evidence
-        ↓
-Export a reviewable incident report
-```
+## Why this exists
+
+After a robot stops, an engineer may need to inspect several synchronized torque traces, locate the incident, decide whether contact was accidental or intentional, identify the joints that reacted, and hand the evidence to another engineer.
+
+y/trace turns that manual chart review into one traceable workflow:
+
+~~~text
+Replay the recording
+  -> select an incident window
+  -> run deterministic measurements and OpenTSLM
+  -> inspect the exact seven-channel evidence
+  -> compare another window
+  -> export a Markdown handoff
+~~~
 
 The product keeps three evidence sources separate:
 
-- **Publisher annotations** mark events supplied with the dataset.
-- **Measurements** are deterministic calculations over the selected telemetry.
-- **OpenTSLM interpretations** are generated predictions linked to their exact input window.
+- **Publisher annotations** are event markers supplied with the dataset.
+- **Measurements** are deterministic calculations over the selected signals.
+- **OpenTSLM interpretations** are generated predictions tied to an exact input window.
 
-y/trace does not claim live collision prevention, verified root cause, exact contact location, or reconstructed world pose.
+## What works
 
-## Run the complete local demo
-
-Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), Node.js, npm, and curl.
-
-From the repository root:
-
-```bash
-./scripts/run-local.sh --cached --open
-```
-
-This starts the dataset scout, ingestion API and worker, fixture inference bridge, and frontend at `http://127.0.0.1:5173`. Cached mode uses the checked-in KUKA sourcing evidence and consumes no API credits.
-
-For live agentic discovery, copy `data_sourcing/.env.example` to `data_sourcing/.env`, configure Tavily and OpenAI, then run:
-
-```bash
-./scripts/run-local.sh --live --open
-```
-
-The launcher reuses a healthy inference service already listening on port 8000. Without one, it starts the fixture bridge so the rest of the product remains testable. The trained checkpoint stays on the private Nebius VM and is never committed to Git.
-
-## Two-minute demo path
-
-1. Open **Data source** and show how a brief becomes verified requirements and an approved source revision.
-2. Return to the accidental-collision recording and replay into the publisher marker.
-3. Analyze the fixed `[5.787, 6.811)` second raw window.
-4. Reveal the OpenTSLM event prediction beside deterministic torque measurements.
-5. Open the exact seven-channel signal evidence and export the Markdown investigation report.
-6. Open **Evaluation** briefly and state the result honestly: dedicated baselines classify better, while OpenTSLM produces a readable evidence-linked investigation object.
-
-The [full demo script](docs/submission/DEMO.md) includes timing, fallback behavior, and jury questions.
+| Capability | Status | Implementation |
+|---|---|---|
+| Recorded incident replay | Working | Real KUKA torque recordings with shared time navigation |
+| Robot articulation | Working | Recorded PosMsr joint angles rendered with a schematic Three.js kinematic chain |
+| Temporal interpretation | Working | OpenTSLM predicts event semantics, onset, and affected joints from seven numeric series |
+| Evidence inspection | Working | Every model request is linked to seven channels and 1,024 contiguous samples |
+| Deterministic analysis | Working | Torque range, sampled peaks, variability, and cross-window comparisons |
+| Investigation export | Working | Human-readable Markdown plus a machine-readable audit export |
+| Held-out evaluation | Reproducible | Signal features, 1D CNN, OpenTSLM, and Qwen3-VL compared on the same recording groups |
+| Dataset sourcing | Working | LangGraph scout with Tavily discovery, native-source verification, and human approval |
+| Dataset ingestion | Working | Revision-pinned acquisition, safe inspection, semantic mapping, and TimeNet validation |
 
 ## Architecture
 
+~~~text
+Natural-language dataset brief
+            |
+       LangGraph scout
+            |
+  Native-source verification
+            |
+      Human approval
+            |
+ Safe acquisition and inspection
+            |
+      TimeNet / TimeF
+            |
+      Recorded telemetry
+            |
+  +---------+-----------+
+  |                     |
+Measurements        OpenTSLM
+  |                     |
+  +---- Evidence-linked investigation
+                         |
+                  Markdown handoff
+~~~
+
 | Module | Responsibility |
 |---|---|
-| [`frontend/`](frontend/README.md) | React replay workbench, recorded articulation, evidence navigation, comparison, and report export |
-| [`data_sourcing/`](data_sourcing/README.md) | LangGraph dataset scout with Tavily discovery, native-source verification, approval, and durable manifests |
-| [`data_ingestion/`](data_ingestion/README.md) | Safe acquisition, structural inspection, semantic mapping, TimeNet conversion, and validation receipts |
-| [`model_training/`](model_training/README.md) | Leakage-safe window preparation, baselines, OpenTSLM training, and evaluation |
-| [`inference/`](inference/README.md) | Private checkpoint service, strict 7 × 1,024 input contract, release validation, and smoke tests |
-| [`docs/submission/`](docs/submission/README.md) | Submission evidence, demo material, benchmark artifacts, limitations, and checkpoint handoff |
+| [frontend](frontend/README.md) | React workbench, replay, recorded articulation, signal evidence, comparison, and exports |
+| [data_sourcing](data_sourcing/README.md) | Evidence-complete dataset discovery, verification, ranking, and approval |
+| [data_ingestion](data_ingestion/README.md) | Safe acquisition, structural inspection, semantic mapping, and TimeNet conversion |
+| [model_training](model_training/README.md) | Leakage-safe data preparation, baselines, OpenTSLM training, and evaluation |
+| [inference](inference/README.md) | Strict model input validation, private checkpoint serving, and release checks |
 
-Local ports are fixed so the frontend can proxy every service:
+## Tech stack
 
-| Port | Service |
+| Layer | Technology |
 |---|---|
-| `5173` | Integrated frontend launcher |
-| `5174` | Optional manual frontend session |
-| `8000` | OpenTSLM inference bridge |
-| `8001` | Dataset sourcing API |
-| `8002` | Dataset ingestion API |
-| `8003` | Optional isolated rationale-v6 inference bridge |
+| Frontend | React 19, TypeScript, Vite, Three.js |
+| APIs | Python, FastAPI, Pydantic, Uvicorn |
+| Agentic sourcing | LangGraph, Tavily, OpenAI Structured Outputs |
+| Temporal data | TimeNet, TimeF, NumPy, SciPy, PyArrow |
+| Models | OpenTSLM SoftPrompt, Llama 3.2 1B, LoRA, PyTorch |
+| Baselines | scikit-learn, 1D CNN, Qwen3-VL |
+| Persistence | SQLite checkpoints and content-addressed ingestion artifacts |
+| Testing | Vitest, pytest, unittest, Ruff |
 
-## Data and model contract
+## Model and data contract
 
-The primary open dataset contains accidental-collision and intentional-contact recordings from a KUKA LWR4+ robot. The published [collision recordings](https://zenodo.org/records/21927431) and [intentional-contact recordings](https://zenodo.org/records/21941203) are available under CC BY 4.0. Each model example contains seven synchronized external-joint-torque channels sampled at 1 kHz for 1.024 seconds. Recording folders are split before window generation to prevent leakage across train, validation, and test.
+The primary dataset contains accidental-collision and intentional-contact experiments recorded on a KUKA LWR4+ robot. The published [collision data](https://zenodo.org/records/21927431) and [intentional-contact data](https://zenodo.org/records/21941203) are available under CC BY 4.0.
 
-The deployed model is OpenTSLM SoftPrompt with a Llama 3.2 1B backbone and HAR warm start. Every request must contain the seven canonical channels and exactly 1,024 contiguous raw samples. Publisher markers are never passed to the model.
+Each model example contains:
 
-The bundled frontend keeps a 100 Hz overview of the complete demo recording and raw 1 kHz samples only for `[4, 9)` seconds. Additional service-backed examples include raw excerpts for collision, intentional-contact, and annotation-free motion.
+- seven external-joint-torque channels
+- 1,024 contiguous samples per channel
+- 1 kHz sampling
+- a 1.024 second half-open interval
+- normalization statistics calculated from training recordings only
 
-See the [dataset card](model_training/docs/dataset.md), [mapping decisions](HUMAN_MAPPING_DECISIONS.md), and [frontend integration contract](docs/FRONTEND_INTEGRATION.md).
+Recording folders are split before window generation to prevent the same recording from appearing in both training and evaluation.
+
+The deployed model is OpenTSLM SoftPrompt with a Llama 3.2 1B backbone, HAR warm start, and LoRA adapters. Publisher markers are never passed to the model.
 
 ## Held-out evaluation
 
-All reported methods use 512 windows from 67 held-out recording groups with seed `20260912`.
+Every method below uses the same 512 windows from 67 held-out recording groups.
 
-| Method | Semantics macro-F1 | Median onset error | Strongest-joint accuracy | Usable complete answer |
+| Method | Semantics macro-F1 | Contact F1 | Median onset error | Strongest-joint accuracy |
 |---|---:|---:|---:|---:|
-| Signal features | **0.9880** | 21 ms | **0.8413** | 97.07% |
-| 1D CNN | 0.9751 | **18 ms** | 0.7565 | Not available |
-| OpenTSLM canary-v4 | 0.8845 | 54 ms | 0.7528 | 77.93% |
-| Qwen3-VL zero-shot plots | 0.6951 | 42 ms | 0.4244 | 0.78% |
+| Signal features | **0.9880** | **0.9908** | 21 ms | **0.8413** |
+| 1D CNN | 0.9751 | 0.9777 | **18 ms** | 0.7565 |
+| OpenTSLM canary-v4 | 0.8845 | 0.9871 | 54 ms | 0.7528 |
+| Qwen3-VL zero-shot plots | 0.6951 | 0.0291 | 42 ms | 0.4244 |
 
-OpenTSLM does not beat the dedicated feature or CNN baselines on fixed classification. Its contribution is a single readable output containing event semantics, timing, affected joints, and evidence text. Its main measured weakness is structured-output reliability, especially on free-motion windows.
+The dedicated feature and CNN baselines are better fixed-task classifiers. OpenTSLM contributes a readable investigation object that combines event semantics, timing, joint attribution, and evidence text. Canary-v4 produced a usable complete answer on 77.93% of the held-out windows, so output reliability remains its clearest limitation.
 
-The [audited comparison](docs/submission/evaluation/report/comparison.md) includes the exact predictions, targets, checksums, uncertainty estimates, and reproduction command. The Qwen baseline receives a rendered seven-panel plot, while OpenTSLM receives numeric series, so representation and training are both confounded.
+The [audited comparison](docs/submission/evaluation/report/comparison.md) includes the original predictions, targets, split identities, checksums, and uncertainty estimates.
 
-Recompute the comparison without a GPU or model download:
+Reproduce the report without a GPU or model download:
 
-```bash
+~~~bash
 PYTHONPATH=model_training/src python3 -m robot_observability.comparison \
   --source docs/submission/evaluation/source \
-  --output /tmp/trace-comparison
-```
+  --output /tmp/ytrace-comparison
+~~~
+
+## Run locally
+
+Requirements:
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/)
+- Node.js and npm
+- curl
+
+~~~bash
+git clone https://github.com/ukafkasyali/ysamet.git
+cd ysamet
+./scripts/run-local.sh --cached --open
+~~~
+
+The cached path starts the sourcing API, ingestion API and worker, fixture inference bridge, and frontend at [http://127.0.0.1:5173](http://127.0.0.1:5173). It uses checked-in KUKA sourcing evidence and consumes no API credits.
+
+For live dataset discovery:
+
+~~~bash
+cp data_sourcing/.env.example data_sourcing/.env
+# Add Tavily and OpenAI credentials
+./scripts/run-local.sh --live --open
+~~~
+
+If a healthy OpenTSLM service is already listening on port 8000, the launcher uses it. Otherwise, it starts a fixture bridge so the replay, sourcing, ingestion, and evidence workflow remain testable without model weights.
 
 ## Verification
 
-```bash
+~~~bash
 cd frontend && npm test && npm run build
 cd ../data_sourcing && .venv/bin/pytest -q
 cd ../data_ingestion && PYTHONPATH=src python -m pytest tests -q
 cd .. && python3 -m unittest discover -s inference -p 'test_*.py' -v
-```
+~~~
 
-The TimeNet evidence pack contains fresh build, load, and raw-array validation receipts for one original recording from each published KUKA part. The browser export and live canary path were also smoke-tested. These checks establish the software path, not production safety or model generalization.
+The repository also retains the [TimeNet validation receipts](docs/submission/timenet/README.md), [dataset card](model_training/docs/dataset.md), [Qwen baseline contract](docs/submission/QWEN_BASELINE.md), and [checkpoint release procedure](inference/README.md).
 
-## Submission package
+## Boundaries
 
-- [Submission index](docs/submission/README.md)
-- [Two-minute demo](docs/submission/DEMO.md)
-- [UI walkthrough](docs/submission/UI_WALKTHROUGH.md)
-- [Audited evaluation](docs/submission/evaluation/report/comparison.md)
-- [TimeNet verification](docs/submission/timenet/README.md)
-- [Checkpoint handoff](docs/submission/CHECKPOINT_HANDOFF.md)
-- [Engineer pilot protocol](docs/submission/PILOT.md)
-- [Final verification](docs/submission/VERIFICATION.md)
+y/trace is retrospective observability software. It does not claim:
 
-## Current limitations
+- live collision prevention or robot control
+- a verified physical root cause
+- an exact contact location
+- production safety certification
+- world-pose reconstruction from torque
 
-- The immediate user benefit, faster incident reporting, is still a hypothesis until the prepared pilot is run.
-- The dataset covers one robot platform and contains experimental confounds between event classes and interaction tools.
-- OpenTSLM produces a usable complete answer on 77.93% of held-out windows.
-- The 3D body geometry and world frame are schematic. Recorded joint angles provide articulation context only.
-- Similar signal profiles do not prove a shared physical cause.
-- The checkpoint remains private and must be delivered through the challenge's approved submission channel.
+The 3D view uses separately recorded joint angles. Its body geometry and global frame are schematic. Similar signal patterns help organize evidence, but they do not prove a shared physical cause.
 
-All claims, metrics, and limitations in this README point to versioned repository artifacts. No API token, model weight, private dataset, or generated success result belongs in Git.
+## Team
+
+Built by **Samet Degirmenci, Baris Can, Atakan Topaloglu, Ugur Kafkasyali, and Ece Akdeniz**.
+
+Team y/agent placed second in the Zurich qualifier and advanced to the Munich finals.
