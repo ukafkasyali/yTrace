@@ -336,15 +336,15 @@ input,textarea{caret-color:var(--accent)}
 }
 
 /* Event time is explicit; the robot remains measured context, not a contact reconstruction. */
-.robot-event-cue { min-height: 62px; padding: 9px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; border-bottom: 1px solid var(--line); background: #1b2225; }
-.robot-event-cue strong { font-size: 12px; font-weight: 600; }
-.robot-event-cue span { font-size: 11px; color: #b6c2c5; line-height: 1.4; max-width: 70ch; }
-.robot-event-cue.at-onset { background: #342d22; }
-.robot-event-cue.at-onset strong { color: #f0d4a5; }
-.robot-event-cue.at-onset span { color: #deceb8; }
+.robot-event-cue { min-height: 40px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); border-left: 2px solid transparent; background: #181d1f; }
+.robot-event-cue strong { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.robot-event-cue span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #9fabad; }
+.robot-event-cue.at-onset { border-left-color: var(--accent); background: linear-gradient(90deg, rgba(157,216,192,.08), transparent 42%); }
+.robot-event-cue.at-onset strong { color: var(--accent); }
+.robot-event-cue.at-onset span { color: #b8c6c1; }
 .robot-prediction-action { margin: 4px 0 12px; }
 .visual-tabs .replay-interval { margin-left: auto; }
-@media(max-width:850px) { .robot-event-cue { min-height: 72px; padding: 8px 10px; } }
+@media(max-width:850px) { .robot-event-cue { min-height: 48px; padding: 7px 10px; align-items: flex-start; justify-content: center; flex-direction: column; gap: 2px; } }
 
 /* The data page follows one sourcing path and keeps replay-only controls out of view. */
 .view-data .main-workspace,.view-evaluation .main-workspace{overflow:hidden}
