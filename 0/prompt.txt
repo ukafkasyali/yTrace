@@ -1,0 +1,13 @@
+how long do you think the full training will take for v6? Estimate, if its less than 5-6 hours, train for longer.
+
+---
+
+ok 3.5-4 hours is good. Id its at that, leave it at it 3.5-4 hours we can take. Commit all.
+
+---
+
+It has been 200 iterations and I still see only the validation loss in wandb in validation section. I dont see other metrics or ouptut/prompt examples, is this normal
+
+---
+
+run finished, give me a brief analysis of the results, and create an analysis script that analyzes the failure modes of the methodology

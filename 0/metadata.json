@@ -1,0 +1,46 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CV10JMF8A5JDCN5H4W27CD",
+  "session_id": "01a09636-4732-7010-81b0-79958f5daa26",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:34:42.162207436Z",
+  "branch": "codex/v6-failure-analysis",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "model_training/README.md",
+    "model_training/scripts/analyze_failure_modes.py",
+    "model_training/tests/test_failure_mode_analysis.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "3f0f7cc6e1bd",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 1789520,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 129911168,
+    "output_tokens": 486519,
+    "api_call_count": 1112
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T07:34:40.865773227Z",
+    "agent_lines": 765,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 765,
+    "total_lines_changed": 765,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
