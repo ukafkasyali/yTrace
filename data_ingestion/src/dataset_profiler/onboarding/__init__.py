@@ -9,6 +9,11 @@ from .backend import (
     StageCommandError,
     TimeNetCommandAdapter,
 )
+from .connector_agent import (
+    ConnectorAgentConfig,
+    ConnectorAgentError,
+    ConnectorCodingAgent,
+)
 from .models import (
     ArtifactRef,
     JobBlocker,
@@ -29,6 +34,9 @@ from .presets import bosch_reference_backend
 __all__ = [
     "ArtifactRef",
     "CommandSpec",
+    "ConnectorAgentConfig",
+    "ConnectorAgentError",
+    "ConnectorCodingAgent",
     "JobBlocker",
     "JobFailure",
     "JobStage",

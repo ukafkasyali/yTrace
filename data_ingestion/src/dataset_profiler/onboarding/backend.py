@@ -16,6 +16,7 @@ from ..semantic_agent import generate_dataset_spec
 from ..semantic_agent.profile_io import read_dataset_profile
 from ..semantic_agent.repair import run_repairs, trace_evidence_ids
 from ..semantic_spec import DatasetSpec, DownstreamRequirement, validate_dataset_spec
+from .connector_agent import ConnectorCodingAgent
 from .models import OnboardingJob
 
 
@@ -130,6 +131,9 @@ class TimeNetCommandAdapter:
             "source_path": str(Path(job.source.local_path or "").resolve()),
             "dataset_id": job.source.dataset_id,
             "handoff_path": str(handoff_path or ""),
+            "timenet_worktree": str(
+                (job_dir / "connector" / "timenet-worktree").resolve()
+            ),
         }
         argv = tuple(part.format_map(replacements) for part in command.argv)
         environment = os.environ.copy()
@@ -141,7 +145,7 @@ class TimeNetCommandAdapter:
         )
         completed = subprocess.run(
             argv,
-            cwd=command.cwd,
+            cwd=command.cwd.format_map(replacements),
             env=environment,
             text=True,
             capture_output=True,
@@ -150,7 +154,7 @@ class TimeNetCommandAdapter:
         receipt = {
             "passed": completed.returncode == 0,
             "argv": list(argv),
-            "cwd": command.cwd,
+            "cwd": command.cwd.format_map(replacements),
             "returncode": completed.returncode,
             "stdout": completed.stdout,
             "stderr": completed.stderr,
@@ -186,6 +190,7 @@ class LocalOnboardingBackend:
         semantic_client: Any | None,
         requirements: tuple[DownstreamRequirement, ...],
         timenet: TimeNetCommandAdapter,
+        connector_agent: ConnectorCodingAgent | None = None,
         downstream_context: dict[str, Any] | None = None,
         seed_profile: str | Path | None = None,
         seed_semantic_spec: str | Path | None = None,
@@ -195,6 +200,7 @@ class LocalOnboardingBackend:
         self.semantic_client = semantic_client
         self.requirements = requirements
         self.timenet = timenet
+        self.connector_agent = connector_agent
         self.downstream_context = downstream_context
         self.seed_profile = Path(seed_profile).resolve() if seed_profile else None
         self.seed_semantic_spec = (
@@ -306,6 +312,8 @@ class LocalOnboardingBackend:
         self, job: OnboardingJob, handoff_path: Path, job_dir: Path
     ) -> dict[str, Any]:
         """Delegate connector implementation to the configured TimeNet environment."""
+        if self.connector_agent is not None:
+            return self.connector_agent.implement(job, handoff_path, job_dir)
         return self.timenet.run(
             "connector_implementation",
             job=job,

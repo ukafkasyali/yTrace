@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import json
 from pathlib import Path
 
 from ..semantic_spec import ImplementationOverrideArtifact
 from .backend import CommandSpec, LocalOnboardingBackend, TimeNetCommandAdapter
+from .connector_agent import ConnectorAgentConfig, ConnectorCodingAgent
 
 
 def bosch_reference_backend(
     timenet_repo: str | Path | None = None,
+    artifact_root: str | Path | None = None,
 ) -> LocalOnboardingBackend:
-    """Return the verified Bosch semantic-to-native-TimeNet workflow configuration."""
+    """Return the Bosch semantic-to-agent-written-TimeNet workflow configuration."""
     project_root = Path(__file__).resolve().parents[4]
     ingestion_root = project_root / "data_ingestion"
     configured_timenet = (
@@ -21,21 +24,27 @@ def bosch_reference_backend(
         else project_root.parent / "TimeNet"
     )
     timenet_root = configured_timenet.resolve()
+    artifacts = (
+        Path(artifact_root).expanduser().resolve()
+        if artifact_root
+        else ingestion_root / "outputs"
+    )
     python = timenet_root / ".venv/bin/python"
     build = timenet_root / ".venv/bin/timenet-build"
-    connector_dir = (
-        timenet_root / "packages/timenet-connectors/src/timenet_connectors/datasets/"
+    connector_relative = (
+        "packages/timenet-connectors/src/timenet_connectors/datasets/"
         "boschresearch/cnc_machining"
     )
-    for required in (python, build, connector_dir / "connector.py"):
+    lock = ingestion_root / "timenet.lock"
+    pinned_revision = json.loads(lock.read_text(encoding="utf-8"))["commit"]
+    for required in (python, build):
         if not required.exists():
             raise FileNotFoundError(
                 f"Bosch workflow dependency does not exist: {required}"
             )
     helper = ingestion_root / "scripts/bosch_onboarding_stage.py"
     override_path = (
-        ingestion_root
-        / "outputs/bosch_cnc_connector_handoff/implementation_overrides.json"
+        artifacts / "bosch_cnc_connector_handoff/implementation_overrides.json"
     )
     approved = ImplementationOverrideArtifact.read_json(override_path)
     # These four implementation-candidate references came from a later human
@@ -46,28 +55,22 @@ def bosch_reference_backend(
         for requirement in approved.requirements
     )
     adapter = TimeNetCommandAdapter(
-        implementation=CommandSpec(
-            argv=(
-                str(python),
-                str(helper),
-                "implementation",
-                "--handoff",
-                "{handoff_path}",
-                "--output",
-                "{job_dir}/connector/native_connector_result.json",
-            ),
-            cwd=str(timenet_root),
-            result_path="{job_dir}/connector/native_connector_result.json",
-        ),
+        implementation=None,
         testing=CommandSpec(
             argv=(
                 str(python),
                 "-m",
                 "pytest",
-                str(connector_dir / "tests/test_connector.py"),
+                f"{{timenet_worktree}}/{connector_relative}/tests/test_connector.py",
                 "-q",
             ),
-            cwd=str(timenet_root),
+            cwd="{timenet_worktree}",
+            environment={
+                "PYTHONPATH": (
+                    "{timenet_worktree}/packages/timenet/src:"
+                    "{timenet_worktree}/packages/timenet-connectors/src"
+                )
+            },
         ),
         building=CommandSpec(
             argv=(
@@ -79,10 +82,14 @@ def bosch_reference_backend(
                 "{job_dir}/build/registry",
                 "--no-isolation",
             ),
-            cwd=str(timenet_root),
+            cwd="{timenet_worktree}",
             environment={
                 "TIMENET_BOSCH_CNC_SOURCE_DIR": "{source_path}",
                 "TIMENET_HOME": "{job_dir}/build/timenet-home",
+                "PYTHONPATH": (
+                    "{timenet_worktree}/packages/timenet/src:"
+                    "{timenet_worktree}/packages/timenet-connectors/src"
+                ),
             },
         ),
         loading=CommandSpec(
@@ -95,7 +102,13 @@ def bosch_reference_backend(
                 "--output",
                 "{job_dir}/build/timenet_load.json",
             ),
-            cwd=str(timenet_root),
+            cwd="{timenet_worktree}",
+            environment={
+                "PYTHONPATH": (
+                    "{timenet_worktree}/packages/timenet/src:"
+                    "{timenet_worktree}/packages/timenet-connectors/src"
+                )
+            },
             result_path="{job_dir}/build/timenet_load.json",
         ),
         verifying=CommandSpec(
@@ -110,7 +123,13 @@ def bosch_reference_backend(
                 "--output",
                 "{job_dir}/verification/raw_timef_comparison.json",
             ),
-            cwd=str(timenet_root),
+            cwd="{timenet_worktree}",
+            environment={
+                "PYTHONPATH": (
+                    "{timenet_worktree}/packages/timenet/src:"
+                    "{timenet_worktree}/packages/timenet-connectors/src"
+                )
+            },
             result_path="{job_dir}/verification/raw_timef_comparison.json",
         ),
     )
@@ -120,10 +139,28 @@ def bosch_reference_backend(
         requirements=requirements,
         downstream_context=approved.downstream_context,
         timenet=adapter,
-        seed_profile=ingestion_root / "outputs/bosch_cnc_profile.json",
-        seed_semantic_spec=ingestion_root
-        / "outputs/bosch_cnc_v02_final/final_spec.json",
+        connector_agent=ConnectorCodingAgent(
+            ConnectorAgentConfig(
+                timenet_repository=timenet_root,
+                pinned_revision=pinned_revision,
+                dataset_id=approved.downstream_context["dataset_id"],
+                focused_test_command=(
+                    "env",
+                    (
+                        "PYTHONPATH={timenet_worktree}/packages/timenet/src:"
+                        "{timenet_worktree}/packages/timenet-connectors/src"
+                    ),
+                    str(python),
+                    "-m",
+                    "pytest",
+                    f"{{timenet_worktree}}/{connector_relative}/tests/test_connector.py",
+                    "-q",
+                ),
+            )
+        ),
+        seed_profile=artifacts / "bosch_cnc_profile.json",
+        seed_semantic_spec=artifacts / "bosch_cnc_v02_final/final_spec.json",
         seed_semantic_trace=(
-            ingestion_root / "outputs/bosch_cnc_v02_final/kuka_part1_agent_trace.json"
+            artifacts / "bosch_cnc_v02_final/kuka_part1_agent_trace.json"
         ),
     )
