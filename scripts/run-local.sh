@@ -4,6 +4,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCOUT_DIR="$ROOT_DIR/data_sourcing"
+INGESTION_DIR="$ROOT_DIR/data_ingestion"
 FRONTEND_DIR="$ROOT_DIR/frontend"
 MODE="cached"
 INSTALL_MODE="missing"
@@ -14,14 +15,14 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/run-local.sh [options]
 
-Start the dataset-scout API and frontend for local testing.
+Start the dataset-scout API, ingestion API and worker, fixture inference bridge, and frontend.
 
 Options:
   --cached        Use the checked-in collision dataset fixture (default; no API credits)
   --live          Use Tavily and OpenAI credentials from data_sourcing/.env
   --install       Reinstall/sync dependencies before starting
   --skip-install  Do not install dependencies, even when they appear to be missing
-  --open          Open http://127.0.0.1:5173 after both services are ready
+  --open          Open http://127.0.0.1:5173 after all services are ready
   -h, --help      Show this help
 
 Examples:
@@ -106,7 +107,15 @@ for command_name in uv node npm curl; do
   command -v "$command_name" >/dev/null 2>&1 || fail "$command_name is required"
 done
 
+if port_is_busy 8000; then
+  curl --fail --silent --show-error --output /dev/null "http://127.0.0.1:8000/api/health" 2>/dev/null ||
+    fail "port 8000 is in use but does not serve the Trace inference health endpoint"
+  REUSE_INFERENCE=true
+else
+  REUSE_INFERENCE=false
+fi
 port_is_busy 8001 && fail "port 8001 is already in use (dataset scout)"
+port_is_busy 8002 && fail "port 8002 is already in use (dataset ingestion)"
 port_is_busy 5173 && fail "port 5173 is already in use (frontend)"
 
 if [[ "$INSTALL_MODE" == "always" ||
@@ -115,6 +124,17 @@ if [[ "$INSTALL_MODE" == "always" ||
   (cd "$SCOUT_DIR" && uv sync --all-groups)
 elif [[ "$INSTALL_MODE" == "never" && ! -x "$SCOUT_DIR/.venv/bin/python" ]]; then
   fail "Python dependencies are missing; rerun without --skip-install"
+fi
+
+if [[ "$INSTALL_MODE" == "always" ||
+      ("$INSTALL_MODE" == "missing" && ! -x "$INGESTION_DIR/.venv/bin/dataset-ingestion-api") ]]; then
+  printf 'Installing ingestion dependencies...\n'
+  if [[ ! -x "$INGESTION_DIR/.venv/bin/python" ]]; then
+    uv venv "$INGESTION_DIR/.venv"
+  fi
+  uv pip install --python "$INGESTION_DIR/.venv/bin/python" --editable "$INGESTION_DIR"
+elif [[ "$INSTALL_MODE" == "never" && ! -x "$INGESTION_DIR/.venv/bin/dataset-ingestion-api" ]]; then
+  fail "ingestion dependencies are missing; rerun without --skip-install"
 fi
 
 if [[ "$INSTALL_MODE" == "always" ||
@@ -164,8 +184,41 @@ printf 'Starting dataset scout in %s mode...\n' "$MODE"
   exec uv run --offline uvicorn data_sourcing.api:create_app \
     --factory --host 127.0.0.1 --port 8001
 ) &
-PIDS+=("$!")
-wait_for_url "dataset scout" "http://127.0.0.1:8001/docs" "${PIDS[0]}"
+SCOUT_PID="$!"
+PIDS+=("$SCOUT_PID")
+wait_for_url "dataset scout" "http://127.0.0.1:8001/docs" "$SCOUT_PID"
+
+printf 'Starting dataset ingestion API and worker...\n'
+(
+  cd "$INGESTION_DIR"
+  export INGESTION_SOURCING_API_URL="http://127.0.0.1:8001"
+  export INGESTION_DATA_DIR="$INGESTION_DIR/var/ingestion"
+  exec "$INGESTION_DIR/.venv/bin/dataset-ingestion-api"
+) &
+INGESTION_API_PID="$!"
+PIDS+=("$INGESTION_API_PID")
+wait_for_url "dataset ingestion" "http://127.0.0.1:8002/docs" "$INGESTION_API_PID"
+(
+  cd "$INGESTION_DIR"
+  export INGESTION_SOURCING_API_URL="http://127.0.0.1:8001"
+  export INGESTION_DATA_DIR="$INGESTION_DIR/var/ingestion"
+  exec "$INGESTION_DIR/.venv/bin/dataset-ingestion-worker"
+) &
+INGESTION_WORKER_PID="$!"
+PIDS+=("$INGESTION_WORKER_PID")
+
+if [[ "$REUSE_INFERENCE" == "true" ]]; then
+  printf 'Reusing the existing Trace inference service on port 8000.\n'
+else
+  printf 'Starting fixture inference bridge without model loading...\n'
+  (
+    cd "$ROOT_DIR"
+    exec "$SCOUT_DIR/.venv/bin/python" -m inference.server --no-load-runtime
+  ) &
+  INFERENCE_PID="$!"
+  PIDS+=("$INFERENCE_PID")
+  wait_for_url "fixture inference bridge" "http://127.0.0.1:8000/api/health" "$INFERENCE_PID"
+fi
 
 printf 'Starting frontend...\n'
 (
@@ -173,8 +226,9 @@ printf 'Starting frontend...\n'
   export VITE_API_BASE_URL="/api"
   exec npm run dev -- --port 5173
 ) &
-PIDS+=("$!")
-wait_for_url "frontend" "http://127.0.0.1:5173" "${PIDS[1]}"
+FRONTEND_PID="$!"
+PIDS+=("$FRONTEND_PID")
+wait_for_url "frontend" "http://127.0.0.1:5173" "$FRONTEND_PID"
 
 printf '\nReady: http://127.0.0.1:5173\n'
 if [[ "$MODE" == "cached" ]]; then
@@ -182,8 +236,10 @@ if [[ "$MODE" == "cached" ]]; then
 else
   printf 'Mode: live Tavily + OpenAI. Searches may consume provider credits.\n'
 fi
-printf 'The inference service is not started; model-only UI controls may remain unavailable.\n'
-printf 'Press Ctrl-C to stop both services.\n\n'
+if [[ "$REUSE_INFERENCE" == "false" ]]; then
+  printf 'Fixture inference bridge active; model loading is disabled.\n'
+fi
+printf 'Press Ctrl-C to stop all local services.\n\n'
 
 if [[ "$OPEN_BROWSER" == "true" ]]; then
   open_url "http://127.0.0.1:5173"

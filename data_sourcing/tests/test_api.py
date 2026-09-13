@@ -58,7 +58,48 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         manifest = client.get(f"/api/sourcing-runs/{run_id}/manifest")
         assert manifest.status_code == 200
         assert manifest.json()["candidateId"] == candidate_id
+        assert manifest.json()["schemaVersion"] == "1.1"
+        assert manifest.json()["sourceKind"] in {"GITHUB", "ZENODO", "HUGGING_FACE"}
+        assert manifest.json()["sourceRevision"]
+        assert manifest.json()["datasetLicenseId"] == "cc-by-4.0"
+        assert manifest.json()["codeLicenseId"] in {None, "MIT"}
+        assert any(asset["role"] == "DATA" for asset in manifest.json()["assets"])
         assert "internal mechanical faults" in " ".join(manifest.json()["limitations"])
+
+        sources = client.get("/api/approved-sources")
+        assert sources.status_code == 200
+        assert sources.json()["pagination"]["totalItems"] == 1
+        source = sources.json()["data"][0]
+        assert source["sourceRevision"] == manifest.json()["sourceRevision"]
+        assert source["isAcquisitionReady"] is True
+        assert source["approvalCount"] == 1
+
+        detail = client.get(f"/api/approved-sources/{source['approvedSourceId']}")
+        assert detail.status_code == 200
+        assert detail.json()["approvals"][0]["sourcingRunId"] == run_id
+        catalog_manifest = client.get(
+            f"/api/approved-sources/{source['approvedSourceId']}/manifest"
+        )
+        assert catalog_manifest.json() == manifest.json()
+
+        filtered = client.get(
+            "/api/approved-sources",
+            params={"sourceKind": source["sourceKind"], "query": source["name"].split()[0]},
+        )
+        assert filtered.json()["pagination"]["totalItems"] == 1
+
+        missing = client.get("/api/approved-sources/src_000000000000000000000000")
+        assert missing.status_code == 404
+        assert missing.json()["error"]["code"] == "APPROVED_SOURCE_NOT_FOUND"
+
+        deleted = client.delete(f"/api/approved-sources/{source['approvedSourceId']}")
+        assert deleted.status_code == 204
+        assert client.get("/api/approved-sources").json()["pagination"]["totalItems"] == 0
+        assert client.get(f"/api/approved-sources/{source['approvedSourceId']}").status_code == 404
+        repeated_delete = client.delete(
+            f"/api/approved-sources/{source['approvedSourceId']}"
+        )
+        assert repeated_delete.status_code == 204
 
     run_dir = settings.runs_dir / run_id
     assert {path.name for path in run_dir.iterdir()} >= {

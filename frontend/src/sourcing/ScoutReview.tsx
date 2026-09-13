@@ -9,7 +9,7 @@ type Props = {
   run: SourcingRun;
   busy: string;
   onReview: (review: SourcingReview) => void;
-  onUseSource: (url: string) => void;
+  onUseSource: () => void;
 };
 
 function CandidateSummary({ candidate, profile, assessment, isRecommendation }: {
@@ -41,12 +41,12 @@ function CandidateSummary({ candidate, profile, assessment, isRecommendation }: 
   </article>;
 }
 
-function Manifest({ manifest, onUseSource }: { manifest: SourcingManifest; onUseSource: (url: string) => void }) {
+function Manifest({ manifest, onUseSource }: { manifest: SourcingManifest; onUseSource: () => void }) {
   return <div className="scout-manifest">
     <div><h3>{manifest.name}</h3><p className="candidate-role">Approved manifest</p></div>
     <dl className="scout-facts"><div><dt>Revision</dt><dd>{manifest.revision ?? 'Source default'}</dd></div><div><dt>Licence</dt><dd>{manifest.licenseId}</dd></div><div><dt>Evidence records</dt><dd>{manifest.evidenceIds.length}</dd></div><div><dt>Approved</dt><dd>{new Date(manifest.approvedAt).toLocaleString()}</dd></div></dl>
     {manifest.limitations.length > 0 && <div><strong>Known limitations</strong><ul>{manifest.limitations.map(item => <li key={item}>{item}</li>)}</ul></div>}
-    <button className="btn btn-primary" onClick={() => onUseSource(manifest.canonicalUrl)}>Prepare ingestion handoff</button>
+    <button className="btn btn-primary" onClick={onUseSource}>Open approved sources</button>
   </div>;
 }
 

@@ -13,7 +13,7 @@ const presets = [
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'The request failed.';
 type Intent = { signature: string; key: string };
 
-export default function DatasetScout({ services, onUseSource }: { services: Services; onUseSource: (url: string) => void }) {
+export default function DatasetScout({ services, onUseSource }: { services: Services; onUseSource: () => void }) {
   const [brief, setBrief] = useState(demoBrief);
   const [resumeId, setResumeId] = useState('');
   const [runId, setRunId] = useState('');
@@ -126,7 +126,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
         : <button className="btn btn-primary" type="button" disabled={!services.connected || Boolean(busy)} onClick={() => void previewRequirements()}><SearchCheck size={15} aria-hidden="true" />{busy === 'preview' ? 'Preparing…' : 'Review requirements'}</button>}
     </div>
     {error && <p className="error-message" role="alert">{error}</p>}
-    {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
-    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved manifest is ready for a separate deterministic ingestion step.</p>}
+    {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={() => { onUseSource(); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
+    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved source library refreshed. Select its assets there when you are ready to ingest.</p>}
   </section>;
 }

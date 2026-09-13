@@ -43,3 +43,7 @@ class Settings(BaseSettings):
     @property
     def idempotency_path(self) -> Path:
         return self.data_dir / "idempotency.sqlite3"
+
+    @property
+    def approved_sources_path(self) -> Path:
+        return self.data_dir / "approved_sources.sqlite3"

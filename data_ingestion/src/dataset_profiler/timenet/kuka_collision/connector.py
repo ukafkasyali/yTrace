@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 import os
 from pathlib import Path
@@ -73,6 +73,32 @@ class KukaPartConnector(BaseConnector[KukaRunRef]):
         if not runs:
             raise RuntimeError(f"no complete KUKA {self.PART_LABEL} runs found under {root}")
         return [self._run_ref(root, run_dir) for run_dir in runs]
+
+    def discover_subsets(
+        self, source_subsets: list[tuple[str, Path]]
+    ) -> list[KukaRunRef]:
+        """Discover runs from separately extracted archives with stable subset identities."""
+        refs: list[KukaRunRef] = []
+        seen: set[str] = set()
+        for subset, source_root in source_subsets:
+            if not subset or "/" in subset or "\\" in subset:
+                raise ValueError(f"invalid KUKA source subset {subset!r}")
+            for ref in self.discover(source_root):
+                source_run_id = f"{subset}/{ref.source_run_id}"
+                if source_run_id in seen:
+                    raise RuntimeError(f"duplicate KUKA source run {source_run_id}")
+                seen.add(source_run_id)
+                refs.append(
+                    replace(
+                        ref,
+                        source_run_id=source_run_id,
+                        source_files=tuple(
+                            f"{subset}/{source_file}" for source_file in ref.source_files
+                        ),
+                        source_subset=subset,
+                    )
+                )
+        return refs
 
     def download(self, cache_dir: Path) -> list[KukaRunRef]:  # noqa: ARG002
         configured = os.environ.get(self.ROOT_ENV)

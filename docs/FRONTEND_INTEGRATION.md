@@ -10,7 +10,8 @@ Vite and SSH returns the exact initial historical window. Model loading awaits
 Hugging Face access to the Llama backbone; no generated answer has passed yet.
 This first service exposes direct OpenTSLM-SP, the bundled dataset,
 and query streaming/cancellation. It does not provide assistant orchestration or
-ingestion. Vite proxies `/api` to `127.0.0.1:8000` when connected mode is enabled.
+ingestion. In local development, Vite proxies inference routes to `127.0.0.1:8000`, sourcing and
+approved-source routes to `127.0.0.1:8001`, and ingestion routes to `127.0.0.1:8002`.
 
 The completion payload adds an optional `inputTrace`: `window`, `playheadSec`,
 `samplesPerChannel`, `inputSha256`, `model`, `revision`, `normalization`, `padding`
@@ -45,7 +46,7 @@ The data-source workspace also consumes the evidence-complete dataset scout. In
 local development Vite routes `/api/sourcing-runs` to `127.0.0.1:8001` before its
 broader inference proxy. The UI polls the durable run, preserves `NEEDS_INPUT`,
 shows hard gates and both confidence measures, and requires a human decision.
-An approved manifest only fills the existing ingestion source URL; ingestion
+An approved manifest is retained in the approved-source library. Ingestion
 remains a separate explicit action.
 
 ## Shared data contract
@@ -106,8 +107,19 @@ The routes below are requested by the implemented service client with `/api` as 
 | `listModels()` | `GET /api/models` | model IDs, labels, availability and capabilities |
 | `startQuery(request)` | `POST /api/queries` | `{ queryId, streamUrl }` |
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
-| `startImport(sourceUrl)` | `POST /api/ingestions` | `{ ingestionId }` |
-| `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion progress and validation report |
+| `startImport(approvedSourceId, assetIds?)` | `POST /api/ingestions` | persisted ingestion job |
+| `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion state and validation report |
+| `getImportAssets(ingestionId)` | `GET /api/ingestions/:id/assets` | durable per-asset verification receipts used for byte progress |
+| `listApprovedSources(page, pageSize)` | `GET /api/approved-sources` | durable reviewed source revisions |
+| `getApprovedSource(approvedSourceId)` | `GET /api/approved-sources/:id` | source detail and approval history |
+| `getApprovedSourceManifest(approvedSourceId)` | `GET /api/approved-sources/:id/manifest` | exact assets and limitations |
+| `deleteApprovedSource(approvedSourceId)` | `DELETE /api/approved-sources/:id` | remove an unreferenced source from the approved library |
+| `getImportForSource(approvedSourceId)` | `GET /api/ingestions/by-source/:id` | existing job after reload |
+| `getMappingProposals(ingestionId)` | `GET /api/ingestions/:id/mapping-proposals` | bounded mapping candidates |
+| `confirmMapping(ingestionId, mapping)` | `PUT /api/ingestions/:id/mapping` | version-checked mapping resume |
+| `getImportReceipt(ingestionId)` | `GET /api/ingestions/:id/receipt` | validated TimeF receipt |
+| `getImportedRecords(ingestionId, page, pageSize)` | `GET /api/ingestions/:id/records` | bounded, paginated TimeF record summaries |
+| `getImportedReplay(ingestionId, recordKey)` | `GET /api/ingestions/:id/records/:recordKey/replay` | replay overview, publisher annotations and an initial raw detail window for a compatible imported record |
 | `startSourcingRun(input, idempotencyKey)` | `POST /api/sourcing-runs` | durable run ID and initial status |
 | `getSourcingRun(runId)` | `GET /api/sourcing-runs/:id` | requirements, evidence, gates and ranking |
 | `reviewSourcingRun(runId, decision)` | `POST /api/sourcing-runs/:id/approvals` | resumed run after human review |
@@ -154,7 +166,7 @@ Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP err
 
 ## Ingestion visibility and security
 
-Ingestion states: `queued → inspecting → mapping → validating → importing → ready`, with `needs_input`, `failed` and `cancelled` branches. `POST /ingestions` receives `{ sourceUrl }` and returns `{ ingestionId }`. Poll responses include `{ ingestionId, state, sourceUrl }` plus optional `sourceRevision`, `datasetId`, `datasetIds`, `progress`, `steps: { label, completed }[]`, `mappings: { source, channelId?, unit? }[]`, `warnings` and `message`. Only provide percentage progress when the backend can measure it. The UI polls jobs and displays reported states; it does not implement ingestion-job cancellation or interactive mapping edits yet.
+Ingestion states: `queued → acquiring → inspecting → mapping → validating → importing → ready`, with `needs_input`, `unsupported_format`, and `failed` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. The UI polls active jobs and their durable asset receipts, showing verified bytes and completed assets rather than estimating uncommitted stream bytes. It presents explicit channel-unit confirmation when mapping is required and displays the immutable validation receipt when ready. Opening that receipt loads a paginated record browser from the ingestion registry. A record is replay-compatible only when it contains the seven canonical synchronized external-joint-torque channels at 1 kHz. Selecting one replaces the active replay and routes later raw-window/event requests through receipt-bound ingestion endpoints; other records remain metadata-only. Imported records currently support replay and deterministic measurements, not OpenTSLM inference or recorded joint-position animation. It does not silently select the inference bridge's unrelated fixture catalog. It does not implement ingestion-job cancellation.
 
 An ingestion agent proposes mappings; deterministic validators check them. Unknown units or ambiguous channels produce `needs_input`, not invented metadata. Retrieval results identify their source documents separately from signal evidence. Server-side URL fetching must reject private/local network targets and enforce size/type limits.
 

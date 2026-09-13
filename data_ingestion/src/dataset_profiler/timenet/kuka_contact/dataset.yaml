@@ -4,7 +4,7 @@ dataset_id: kuka/contact-part2
 dataset_version: 1.0.0
 name: KUKA Robot Contact Signals Part II
 description: Raw experimental runs from Part II of the KUKA intentional-contact dataset.
-license: MIT
+license: CC-BY-4.0
 domains:
   - motion
 tags:

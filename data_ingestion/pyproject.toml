@@ -8,18 +8,26 @@ version = "0.1.0"
 description = "Deterministic profiling and auditing for time-series datasets"
 requires-python = ">=3.11"
 dependencies = [
+  "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
+  "h5py>=3.8",
+  "pydantic>=2.10,<3",
+  "pyarrow>=14,<26",
   "numpy>=1.24",
   "scipy>=1.10",
   "timenet[build] @ git+https://github.com/OpenTSLM/TimeNet.git@c39ca32b64ad0c89ea54093dbcb285c1a93eb006#subdirectory=packages/timenet",
+  "uvicorn>=0.35,<1",
+  "zstandard>=0.23,<1",
 ]
 
 [project.optional-dependencies]
-hdf5 = ["h5py>=3.8"]
 plot = ["matplotlib>=3.7"]
 dev = ["pytest>=7"]
 
 [project.scripts]
 dataset-profiler = "dataset_profiler.cli:main"
+dataset-ingestion-api = "dataset_profiler.ingestion.__main__:main"
+dataset-ingestion-worker = "dataset_profiler.ingestion.worker_main:main"
 onboard = "dataset_profiler.onboarding.cli:main"
 
 [tool.setuptools.packages.find]

@@ -608,12 +608,28 @@ def main():
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--data", type=Path)
     parser.add_argument("--raw-root", type=Path, help="trusted local KUKA source root; never expose it through the API")
+    parser.add_argument(
+        "--no-load-runtime",
+        action="store_true",
+        help="serve fixture data without loading or downloading a model",
+    )
     args = parser.parse_args()
     try:
         from .runtime import Runtime
     except ImportError:
         from runtime import Runtime
-    server = make_server(Runtime(), host=args.host, port=args.port, data_path=args.data, raw_root=args.raw_root, cnn_runtime=CnnRuntime())
+    runtime = Runtime()
+    if args.no_load_runtime:
+        runtime.error = "Model loading disabled for local fixture mode"
+    server = make_server(
+        runtime,
+        host=args.host,
+        port=args.port,
+        data_path=args.data,
+        raw_root=args.raw_root,
+        load_runtime=not args.no_load_runtime,
+        cnn_runtime=CnnRuntime(),
+    )
     print(f"Inference bridge listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()

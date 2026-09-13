@@ -10,7 +10,7 @@ import { markerWindow } from './recordings/markerAnalysis';
 import { useModelRegistry } from './services/useModelRegistry';
 import { useRawWindow } from './lib/useRawWindow';
 import { useReplay } from './replay/useReplay';
-import { ApiError, createServices, type Recording } from './services';
+import { ApiError, createServices, type ImportedDatasetSelection, type Recording } from './services';
 import SignalViewer from './signals/SignalViewer';
 import DataWorkspace from './workspaces/DataWorkspace';
 import EvaluationWorkspace from './evaluation/EvaluationWorkspace';
@@ -18,6 +18,13 @@ import type { DemoCase, DemoData, EvidenceLink, Interval, Marker } from './types
 
 const services = createServices(import.meta.env.VITE_API_BASE_URL);
 const SAMPLE_DATASET = 'zenodo-21927431';
+
+export function initialReplayInterval(data: DemoData): Interval {
+  if (data.demoCase) return data.demoCase.interval;
+  if (data.events.length) return markerWindow(data.events[0], data.recording.durationSeconds);
+  const start = Math.min(5.787, data.recording.durationSeconds / 3);
+  return { start, end: Math.min(start + 1.024, data.recording.durationSeconds) };
+}
 
 export default function App() {
   const [data, setData] = useState<DemoData | null>(null);
@@ -58,16 +65,23 @@ export default function App() {
     const next: DemoData = { recording: { id: recording.id, name: recording.name, durationSeconds: recording.durationSec, sampleRateHz: recording.channels[0].sampleRateHz, displaySampleRateHz: rate, sourceUrl: '', archive: 'Backend recording', channelCount: 7, eventCount: events.filter(e => e.origin === 'publisher_annotation').length }, channels, times, events: events.filter(e => e.origin === 'publisher_annotation').map(e => ({ id: e.id, timeSeconds: e.startSec, label: e.label, source: e.source, kind: 'publisher_annotation' as const })), detail: signals.resolution === 'raw' ? { startSeconds: 0, endSeconds: recording.durationSec, times, channels } : emptyDetail };
     setDatasetId(recording.datasetId); setData(next);
   }
+  async function openImportedRecord(selection: ImportedDatasetSelection, recordKey: string) {
+    const replayData = await services.getImportedReplay(selection.ingestionId, recordKey);
+    setDatasetId(selection.datasetId);
+    setData(replayData);
+  }
   if (loading || !data) return <main className="loading-screen"><Waves size={28}/><h1>Trace</h1>{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => void load()}>Retry loading recording</button></> : <><p>Opening the KUKA recording…</p><div className="loading-lines"><i/><i/><i/></div></>}</main>;
-  return <Workbench key={`${datasetId}:${data.recording.id}:${data.demoCase?.id ?? "default"}`} data={data} datasetId={datasetId} onOpenRecording={openRecording} cases={cases} onOpenCase={openCase} caseLoading={caseLoading} caseError={caseError}/>;
+  return <Workbench key={`${datasetId}:${data.recording.id}:${data.demoCase?.id ?? "default"}`} data={data} datasetId={datasetId} onOpenRecording={openRecording} onOpenImportedRecord={openImportedRecord} cases={cases} onOpenCase={openCase} caseLoading={caseLoading} caseError={caseError}/>;
 }
 
-function Workbench({ data: sourceData, datasetId, onOpenRecording, cases, onOpenCase, caseLoading, caseError }: { data: DemoData; datasetId: string; onOpenRecording: (recording: Recording) => Promise<void>; cases: DemoCase[]; onOpenCase: (id: string) => Promise<void>; caseLoading: boolean; caseError: string }) {
-  const replay = useReplay(sourceData.recording.durationSeconds, sourceData.demoCase?.interval.start ?? Math.min(5.787, sourceData.recording.durationSeconds/3));
-  const [visualMode, setVisualMode] = useState<'robot' | 'signals' | 'markers' | 'compare'>('robot');
+function Workbench({ data: sourceData, datasetId, onOpenRecording, onOpenImportedRecord, cases, onOpenCase, caseLoading, caseError }: { data: DemoData; datasetId: string; onOpenRecording: (recording: Recording) => Promise<void>; onOpenImportedRecord: (selection: ImportedDatasetSelection, recordKey: string) => Promise<void>; cases: DemoCase[]; onOpenCase: (id: string) => Promise<void>; caseLoading: boolean; caseError: string }) {
+  const initialInterval = initialReplayInterval(sourceData);
+  const importedRecording = sourceData.recording.id.startsWith('imported:');
+  const replay = useReplay(sourceData.recording.durationSeconds, initialInterval.start);
+  const [visualMode, setVisualMode] = useState<'robot' | 'signals' | 'markers' | 'compare'>(importedRecording ? 'signals' : 'robot');
   const [view, setView] = useState<'inspect' | 'data' | 'evaluation'>('inspect');
   const [mobile, setMobile] = useState<'signals' | 'assistant'>('signals');
-  const [interval, setInterval] = useState<Interval>(sourceData.demoCase?.interval ?? { start: Math.min(5.787, sourceData.recording.durationSeconds/3), end: Math.min(6.811, sourceData.recording.durationSeconds) });
+  const [interval, setInterval] = useState<Interval>(initialInterval);
   const rawWindow = useRawWindow(sourceData, datasetId, interval, services);
   const data = rawWindow.data;
   const [following, setFollowing] = useState(false);
@@ -95,7 +109,11 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, cases, onOpen
   const [draftEnd, setDraftEnd] = useState(interval.end.toFixed(3));
   const [selectionError, setSelectionError] = useState('');
   const registry = useModelRegistry(services);
-  const availability = !services.connected ? 'Models not connected' : registry.loading ? 'Checking models…' : registry.error ? 'Model service unavailable' : registry.models.some(m => m.id === 'opentslm' && m.available) ? 'OpenTSLM connected' : 'Model unavailable';
+  const activeRegistry = useMemo(() => importedRecording ? {
+    ...registry,
+    models: registry.models.map(model => ({ ...model, available: false, reason: 'Imported records currently support replay and measurements only.' })),
+  } : registry, [importedRecording, registry]);
+  const availability = importedRecording ? 'Imported replay · measurements only' : !services.connected ? 'Models not connected' : registry.loading ? 'Checking models…' : registry.error ? 'Model service unavailable' : registry.models.some(m => m.id === 'opentslm' && m.available) ? 'OpenTSLM connected' : 'Model unavailable';
   useEffect(() => { setDraftStart(interval.start.toFixed(3)); setDraftEnd(interval.end.toFixed(3)); }, [interval]);
   const previewChannels = useMemo(() => {
     if (highlighted.length && highlighted.length <= 2) return highlighted;
@@ -149,10 +167,10 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, cases, onOpen
     <header className="app-header"><a className="brand" href="#" onClick={e => { e.preventDefault(); setView('inspect'); }}><Activity size={23} strokeWidth={1.8}/><span>trace</span></a><div className="header-divider"/><span className="project-name">Recorded incident handoff</span><span className="replay-label"><RotateCcw size={11}/>Replay</span><div className="header-right"><span className="model-status"><CpuStatus/>{availability}</span><button className="btn btn-subtle" aria-pressed={view === 'evaluation'} onClick={() => { replay.pause(); setView('evaluation'); }}><BarChart3 size={14}/>Evaluation</button><button className="btn btn-subtle" aria-pressed={view === 'data'} onClick={() => { replay.pause(); setView('data'); }}><Database size={14}/>Data source</button></div></header>
     <div className="app-body">
       <main className="main-workspace">
-        {view === 'inspect' && (cases.length > 0 || caseError) && <div className="demo-cases"><label>Recording <select aria-label="Example case" disabled={caseLoading} value={data.demoCase?.id ?? ''} onChange={e => void onOpenCase(e.target.value)}><option value="" disabled>KUKA · original recording</option>{cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><details className="case-source"><summary>Source · {data.recording.id}</summary><p>{data.demoCase?.note ?? 'Original KUKA recording. Publisher markers are annotations, not verified contact onset. Raw model input is available from 4 to 9 seconds.'}</p></details>{(caseLoading || caseError) && <span role={caseError ? 'alert' : 'status'}>{caseLoading ? 'Loading raw telemetry…' : caseError}</span>}</div>}
+        {view === 'inspect' && (cases.length > 0 || caseError) && <div className="demo-cases"><label>Recording <select aria-label="Example case" disabled={caseLoading} value={data.demoCase?.id ?? 'current'} onChange={e => { if (e.target.value !== 'current') void onOpenCase(e.target.value); }}><option value="current">{data.recording.name}</option>{cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><details className="case-source"><summary>Source · {data.recording.id}</summary><p>{data.demoCase?.note ?? (importedRecording ? 'Imported, validated TimeF torque record. Publisher markers remain source annotations. Robot geometry is illustrative because this replay does not load recorded joint positions.' : 'Original KUKA recording. Publisher markers are annotations, not verified contact onset. Raw model input is available from 4 to 9 seconds.')}</p></details>{(caseLoading || caseError) && <span role={caseError ? 'alert' : 'status'}>{caseLoading ? 'Loading raw telemetry…' : caseError}</span>}</div>}
         {view === 'inspect' && <div className="mobile-switch"><button className={mobile === 'signals' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('signals'); setVisualMode('signals'); }}>Replay</button><button className={mobile === 'assistant' ? 'active' : ''} onClick={() => { setView('inspect'); setMobile('assistant'); }}>Investigation</button></div>}
         <div className={`inspect-grid mobile-${mobile}`} style={{ display: view === 'inspect' ? undefined : 'none' }}>
-          <div className="left-workspace"><AssistantPanel rawLoading={rawWindow.loading} rawError={rawWindow.error} onRetryRaw={rawWindow.retry} registry={registry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onCompare={openComparison} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
+          <div className="left-workspace"><AssistantPanel rawLoading={rawWindow.loading} rawError={rawWindow.error} onRetryRaw={rawWindow.retry} registry={activeRegistry} data={data} datasetId={datasetId} playhead={replay.playhead} interval={effectiveInterval} services={services} onEvidence={evidence} onCompare={openComparison} onRobotPrediction={showRobotPrediction} onModelWindow={select}/></div>
           <div className={`visual-workspace visual-${visualMode}`}>
             <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers', 'compare'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : mode === 'markers' ? 'Publisher markers' : 'Compare'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
             {visualMode === 'compare' && <ComparisonPanel key={`${interval.start}:${interval.end}`} data={data} interval={interval} cases={cases} services={services} onEvidence={e => { evidence(e); replay.seek(e.interval.end); }}/> }
@@ -160,7 +178,7 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, cases, onOpen
             {(visualMode === 'robot' || visualMode === 'signals') && <SignalViewer visibleChannelIds={visualMode === 'robot' ? previewChannels : undefined} prediction={visiblePrediction} data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>}
           </div>
         </div>
-        {view === 'data' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><DataWorkspace services={services} data={data} onOpenRecording={onOpenRecording}/></div>}
+        {view === 'data' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><DataWorkspace services={services} data={data} onOpenRecording={onOpenRecording} onOpenImportedRecord={onOpenImportedRecord}/></div>}
         {view === 'evaluation' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><EvaluationWorkspace /></div>}
       </main>
     </div>

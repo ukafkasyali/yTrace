@@ -11,7 +11,7 @@ React, TypeScript and Vite implement an isolated frontend module. No hosting tar
 Controls and test engineers preparing a handoff after a recorded contact event; Samet builds the hackathon dashboard. Uğur and Atakan own ingestion; Atakan, Uğur and Ece own model training.
 
 ## Product Purpose
-Turn a recorded contact interval into a reviewable handoff: a trained OpenTSLM prediction, deterministic measurements, linked raw signals, provenance, and an export for the controls lead or vendor.
+Turn a recorded contact interval into a reviewable handoff: a trained OpenTSLM prediction, deterministic measurements, linked raw signals, provenance, and an export for the controls lead or vendor. Retrieve similar raw signal profiles across recordings so recurring evidence can be reviewed or labeled as a cohort.
 
 ## Operating Context
 EHL Zurich Temporal AI hackathon. The first source is Zenodo 21927431: KUKA LWR4+ torque recordings. No live robot control or validated maintenance recommendations.
