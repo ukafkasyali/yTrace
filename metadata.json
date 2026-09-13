@@ -1,0 +1,23 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CW0JY9GNTWCJMSA7ZJBPMN",
+  "strategy": "manual-commit",
+  "branch": "codex/merge-opentslm-hour-pass",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "frontend/src/evaluation/EvaluationWorkspace.tsx",
+    "frontend/src/evaluation/PresentationWorkspace.test.tsx",
+    "frontend/src/evaluation/PresentationWorkspace.tsx",
+    "frontend/src/styles.css",
+    "model_training/docs/baseline-presentation-5min.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ]
+}

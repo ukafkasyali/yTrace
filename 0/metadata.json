@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CW0JY9GNTWCJMSA7ZJBPMN",
+  "session_id": "01a097a6-3e92-7870-907b-8cdc34a7642a",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:51:55.74732Z",
+  "branch": "codex/merge-opentslm-hour-pass",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "frontend/src/evaluation/EvaluationWorkspace.tsx",
+    "frontend/src/evaluation/PresentationWorkspace.test.tsx",
+    "frontend/src/evaluation/PresentationWorkspace.tsx",
+    "frontend/src/styles.css",
+    "model_training/docs/baseline-presentation-5min.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "checkpoint_transcript_start": 2670,
+  "transcript_lines_at_start": 2670,
+  "compact_transcript_start": 340,
+  "session_metrics": {
+    "turn_count": 12
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T07:51:55.096029Z",
+    "agent_lines": 328,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 328,
+    "total_lines_changed": 329,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
