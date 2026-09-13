@@ -3,7 +3,7 @@ import math
 
 import pytest
 
-from robot_observability.comparison import percentile, schema_valid, score, validate_alignment
+from robot_observability.comparison import percentile, schema_valid, score, usable_summary_text, validate_alignment
 
 
 def target(contact=True):
@@ -53,6 +53,26 @@ def test_keys_alone_are_not_schema_validity():
     p = target()
     p["contact"] = None
     assert not schema_valid(p)
+
+
+def test_usable_summary_counts_exclude_partial_event_type_answers():
+    partial = {"event_type": "free"}
+    result = score([
+        {"target": target(False), "prediction": target(False)},
+        {"target": target(False), "prediction": partial},
+    ])
+    assert result["semantics_confusion"]["free"] == {"free": 2}
+    assert result["usable_semantics_confusion"]["free"] == {"free": 1, "abstain": 1}
+    text = usable_summary_text(result)
+    assert "1 of 2 windows" in text
+    assert "100.00% (1/1)" in text
+
+
+def test_usable_summary_text_handles_a_contact_only_subset():
+    result = score([{"target": target(), "prediction": target()}])
+    text = usable_summary_text(result)
+    assert "no free-motion windows" in text
+    assert "100.00% (1/1)" in text
     assert schema_valid(target())
     assert schema_valid(target(False))
     p = target(False)

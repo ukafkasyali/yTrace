@@ -174,7 +174,7 @@ def _inspect_dataset(
     )
     digest = hashlib.sha256()
     first_values: list[Any] = []
-    for values in _chunks(dataset):
+    for axis_zero_start, values in _chunks(dataset):
         contiguous = np.ascontiguousarray(values)
         digest.update(contiguous.tobytes(order="C"))
         if len(first_values) < first_value_count:
@@ -185,8 +185,14 @@ def _inspect_dataset(
         if numeric:
             overall.update(contiguous)
             if channel_axis is not None:
-                for index, moments in enumerate(channel_moments):
-                    moments.update(np.take(contiguous, index, axis=channel_axis))
+                if channel_axis == 0:
+                    for local_index, values_for_channel in enumerate(contiguous):
+                        channel_moments[axis_zero_start + local_index].update(
+                            values_for_channel
+                        )
+                else:
+                    for index, moments in enumerate(channel_moments):
+                        moments.update(np.take(contiguous, index, axis=channel_axis))
 
     metadata: dict[str, Any] = {
         "hdf5_attributes": _attributes(dataset.attrs),
@@ -223,16 +229,16 @@ def _inspect_dataset(
     )
 
 
-def _chunks(dataset: h5py.Dataset) -> Iterator[np.ndarray]:
+def _chunks(dataset: h5py.Dataset) -> Iterator[tuple[int, np.ndarray]]:
     if dataset.size == 0:
         return
     if dataset.ndim == 0:
-        yield np.asarray(dataset[()])
+        yield 0, np.asarray(dataset[()])
         return
     trailing = math.prod(dataset.shape[1:]) or 1
     rows = max(1, _TARGET_CHUNK_ELEMENTS // trailing)
     for start in range(0, dataset.shape[0], rows):
-        yield np.asarray(dataset[start : min(dataset.shape[0], start + rows)])
+        yield start, np.asarray(dataset[start : min(dataset.shape[0], start + rows)])
 
 
 def _sample_axis(shape: tuple[int, ...]) -> int | None:

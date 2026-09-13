@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from pathlib import Path
 from typing import Any
 
-from .models import ArtifactRef, JobStage, OnboardingJob
+from .models import (
+    ArtifactRef,
+    JobStage,
+    OnboardingJob,
+    file_sha256,
+    resolve_job_path,
+)
 
 
 class JobStore:
@@ -42,13 +47,19 @@ class JobStore:
         self.write_json(self.job_dir(job.job_id) / "job.json", job.to_dict())
 
     def load(self, job_id: str) -> OnboardingJob:
-        """Load one persisted job."""
+        """Load one persisted job and verify every registered artifact."""
+        directory = self.job_dir(job_id)
         raw = json.loads(
-            (self.job_dir(job_id) / "job.json").read_text(encoding="utf-8")
+            (directory / "job.json").read_text(encoding="utf-8")
         )
         if not isinstance(raw, dict):
             raise ValueError("job.json root must be an object")
-        return OnboardingJob.from_dict(raw)
+        job = OnboardingJob.from_dict(raw)
+        if job.job_id != job_id:
+            raise ValueError("persisted job_id does not match its directory")
+        for name in job.artifacts:
+            job.artifact_path(directory, name)
+        return job
 
     def write_artifact(
         self,
@@ -59,9 +70,9 @@ class JobStore:
         stage: JobStage,
     ) -> Path:
         """Write and register one JSON artifact."""
-        path = self.job_dir(job.job_id) / relative_path
+        path = resolve_job_path(self.job_dir(job.job_id), relative_path)
         self.write_json(path, value)
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        digest = file_sha256(path)
         job.artifacts[name] = ArtifactRef(
             name, relative_path, stage.value, sha256=digest
         )

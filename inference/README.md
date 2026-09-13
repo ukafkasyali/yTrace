@@ -1,10 +1,12 @@
 # Trace → OpenTSLM on Nebius
 
-Status (12 September 2026): deployed privately on the team's Nebius H100 VM in
+Status (13 September 2026): deployed privately on the team's Nebius H100 VM in
 `/home/samet/trace-inference`, using Python 3.12 and an isolated virtual environment.
 The KUKA OpenTSLM-SP adapter is loaded and the SSH tunnel, Vite proxy and real
 1,024-sample inference path pass. The service reports the exact checkpoint digest;
-it never silently switches to a newer training artifact.
+it never silently switches to a newer training artifact. The current process uses
+CPU because a teammate's training run owns the GPU; do not restart it on CUDA until
+the training owner confirms that GPU memory is available.
 
 A training endpoint does not serve predictions automatically: this separate process
 loads an exported checkpoint once, then handles on-demand requests from Trace.
@@ -23,7 +25,7 @@ that process only; the inference service does not automatically reload failed
 weights. From inside the VM:
 
 ```bash
-tmux respawn-pane -k -t trace-inference -c /home/samet/trace-inference 'exec env TRACE_MODEL_CONFIG=inference/kuka-sp-canary-v4.config.json TRACE_DEVICE=cuda inference/.venv/bin/python -m inference.server >> inference/server.log 2>&1'
+tmux respawn-pane -k -t trace-inference -c /home/samet/trace-inference 'exec env TRACE_MODEL_CONFIG=inference/kuka-sp-canary-v4.config.json TRACE_DEVICE=cpu OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 inference/.venv/bin/python -m inference.server >> inference/server.log 2>&1'
 curl http://127.0.0.1:8000/api/health
 ```
 
@@ -179,11 +181,11 @@ set `VITE_API_BASE_URL=/api` in `frontend/.env.local`, then restart Vite. For a
 deployed frontend, configure a same-origin reverse proxy; Vite's dev proxy is not
 included in a production build.
 
-Open Trace, keep the initial interval **[5.787, 6.811) seconds** with the playhead at
-8 seconds, and open **Models**. Run available models; only OpenTSLM is exposed by
-this service. Use **Refresh status** in Models after model loading finishes.
-The assistant's local numerical mode still works. Assistant orchestration, CNN,
-direct text LLM, ingestion and search are intentionally unavailable from this bridge.
+Open Trace and keep the initial interval **[5.787, 6.811) seconds**. The header must
+show **OpenTSLM connected**. Click **Analyze interval** and wait for the structured
+prediction, measurements, input receipt and handoff actions. Only OpenTSLM is exposed
+by this service; there is no live CNN selector or endpoint. The measurements-only
+mode remains available under **Ask a custom question**.
 
 With `--raw-root`, the backend catalog also lists the validated full recordings.
 Open one, choose any publisher marker, and run the resulting 1.024-second interval.
@@ -247,8 +249,8 @@ previous config until the smoke test passes so rollback is one restart.
 - Queries retrieve signals server-side by recording/window/channel IDs. Annotation
   labels never enter model input; each request remains fixed if playback changes.
 - This bundled fixture contains raw 1 kHz data only in **[4, 9) seconds**. Inference
-  rejects other ranges and windows over two seconds. It does not feed the reduced
-  100 Hz overview to the model. Full recording inference needs the ingestion/data
+  rejects other ranges and any window that is not exactly 1.024 seconds. It does
+  not feed the reduced 100 Hz overview to the model. Full recording inference needs the ingestion/data
   team to supply raw windows behind the same API.
 - No resampling: the selected channels are normalized individually and zero-padded
   to a multiple of four for the upstream encoder. The initial interval needs no
@@ -257,6 +259,8 @@ previous config until the smoke test passes so rollback is one restart.
   step; the slot stays occupied until the model call returns. A GPU operation already
   running cannot be forcibly interrupted by HTTP cancellation. The 120-second
   stopping criterion also acts between decoding steps, not as a process watchdog.
+  Trace keeps the control in **Stopping…** until the stream closes, preventing an
+  immediate retry from colliding with the occupied slot.
 - Evidence links identify **input telemetry**, not verified causal explanations.
   Checkpoint SHA256, configuration hash and resolved backbone revision accompany
   model identity; an input hash/sample count is included in the completion receipt.

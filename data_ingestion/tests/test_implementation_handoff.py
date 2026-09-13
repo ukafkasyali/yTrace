@@ -12,6 +12,7 @@ from dataset_profiler.semantic_spec import (
     ImplementationOverrideArtifact,
     build_connector_handoff,
     detect_blocking_unresolved_fields,
+    load_kuka_collision_part1_spec,
     semantic_spec_sha256,
     validate_dataset_spec,
 )
@@ -19,9 +20,7 @@ from dataset_profiler.semantic_spec.models import Confidence, EvidenceClaim, Evi
 
 
 _ROOT = Path(__file__).parents[1]
-_BOSCH_SPEC_PATH = _ROOT / "outputs/bosch_cnc_v02_final/final_spec.json"
-_BOSCH_PROFILE_PATH = _ROOT / "outputs/bosch_cnc_profile.json"
-_KUKA_SPEC_PATH = _ROOT / "outputs/kuka_part1_agent_validator_repair/final_spec.json"
+_BOSCH_FIXTURE_PATH = Path(__file__).with_name("fixtures") / "bosch_unresolved_spec.json"
 _KUKA_PROFILE_PATH = _ROOT / "outputs/dataset_profile.json"
 _CISS_ID = "ev_documentation_ciss_58517c77b913"
 _MG_ID = "ev_documentation_mg_bd382bd44290"
@@ -31,7 +30,8 @@ _EVIDENCE_IDS = {_CISS_ID, _MG_ID, _LOADER_ID, _TRANSFORMATION_ID}
 
 
 def _bosch_spec() -> DatasetSpec:
-    return DatasetSpec.read_json(_BOSCH_SPEC_PATH)
+    """Build the unresolved Bosch contract without depending on ignored run outputs."""
+    return DatasetSpec.read_json(_BOSCH_FIXTURE_PATH)
 
 
 def _requirement(field_path: str = "signals[0].unit") -> DownstreamRequirement:
@@ -190,16 +190,15 @@ def test_bosch_timef_unit_uses_unambiguous_pint_name():
     assert str(ureg.Unit("mg")) == "milligram"
 
 
-def test_original_bosch_spec_remains_valid_and_unresolved():
+def test_bosch_handoff_fixture_remains_unresolved():
     spec = _bosch_spec()
-    profile = read_dataset_profile(_BOSCH_PROFILE_PATH)
 
-    assert validate_dataset_spec(profile, spec).valid
     assert spec.signals[0].unit.resolution.status is EvidenceStatus.UNRESOLVED
+    assert detect_blocking_unresolved_fields(spec, (_requirement(),))
 
 
 def test_kuka_regression_validation_is_unchanged():
-    spec = DatasetSpec.read_json(_KUKA_SPEC_PATH)
+    spec = load_kuka_collision_part1_spec()
     profile = read_dataset_profile(_KUKA_PROFILE_PATH)
 
     assert validate_dataset_spec(profile, spec).valid

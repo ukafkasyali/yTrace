@@ -33,16 +33,28 @@ HDF5/MATLAB v7.3 support is provided by the `hdf5` extra. Plotting uses the `plo
 Run the dependency-light test suite from this directory:
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -v
+PYTHONPATH=src python -m pytest tests -q
 ```
+
+Install the `dev` extra first when `pytest` is not already available. The suite
+contains both unittest classes and pytest-style functions, so unittest discovery
+alone does not run every check.
 
 The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dataset_profile.json), and the observed facts, interpretations, and unresolved questions are documented in [docs/KUKA_BATCH_01_INSPECTION.md](docs/KUKA_BATCH_01_INSPECTION.md).
 
 ## Job-oriented onboarding
 
+**Experimental; no completed end-to-end Bosch job is archived in this repository.**
 `dataset_profiler.onboarding` wraps the existing profiler, semantic agent, validator/repair loop,
 human implementation handoff, and native TimeNet workflow in a persisted state machine. Structured
-state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs.
+state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs. The state
+machine is unit-tested, while the Bosch preset additionally requires a separate TimeNet checkout,
+its existing Bosch connector, the source dataset, and locally generated semantic artifacts.
+When frozen profiling evidence is reused, every source file is checked against its recorded size
+and SHA-256, and extra supported data files are rejected. Frozen semantic claims may use only
+evidence IDs returned by their saved bounded trace. Persisted job artifacts are constrained to the
+job directory and verified on resume. The native Bosch stage rejects a human unit override that its
+fixed connector cannot honor.
 
 ```python
 from dataset_profiler.onboarding import (
@@ -66,8 +78,9 @@ An unresolved implementation requirement pauses with
 `status == "needs_human_resolution"`. Resume the same job with
 `service.resolve_blocker(...)` followed by `service.continue_job(job.id)`. The thin `onboard`
 command exposes the same create/status/run/resolve/continue operations. The Bosch preset reuses the
-audited semantic artifacts and native TimeNet connector, then runs connector tests, `timenet-build`,
-`TimeNet.load()`, and a full raw-to-TimeF comparison.
+audited semantic artifacts and native TimeNet connector. It is configured to run connector tests,
+`timenet-build`, `TimeNet.load()`, and a full raw-to-TimeF comparison; do not claim those stages
+completed until a persisted successful job and its receipts exist.
 
 ## Declarative semantic specs
 

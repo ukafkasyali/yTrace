@@ -114,6 +114,6 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
     </div>
     {error && <p className="error-message" role="alert">{error}</p>}
     {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
-    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved source is ready for the ingestion handoff below.</p>}
+    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved manifest is ready for a separate deterministic ingestion step.</p>}
   </section>;
 }

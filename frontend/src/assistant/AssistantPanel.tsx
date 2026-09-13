@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, RotateCcw, SlidersHorizontal, Waves } from 'lucide-react';
-import { predictionBrief, predictionCue, type PredictionCue } from './predictionBrief';
+import { predictionBrief, predictionCue, structuredPrediction, type PredictionCue } from './predictionBrief';
+import { reviewPrediction } from './predictionReview';
 import { downloadInvestigationJson, downloadInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
+import { investigationContextFingerprint, investigationStorageKey, persistInvestigation, restoreInvestigation } from './investigationSession';
 import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelWindow';
 import { analyzeWindow } from '../lib/data';
 import { intervalLabel } from '../lib/format';
@@ -9,7 +11,7 @@ import type { DemoData, EvidenceLink, Interval } from '../types';
 import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 
-type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
+type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled'; restored?: boolean };
 type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
@@ -31,14 +33,35 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const fitHorizon = Math.min(Math.floor(availableThrough * 1000) / 1000, data.detail.endSeconds);
   const fittedWindow = useMemo(() => fitModelWindow(data, interval, fitHorizon), [data, interval, fitHorizon]);
   const [exportStatus, setExportStatus] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const sessionKey = investigationStorageKey(datasetId, data.recording.id, data.demoCase?.id ?? 'original');
+  const initialContextFingerprint = useMemo(() => investigationContextFingerprint(data, datasetId, interval), [data, datasetId, interval]);
+  const deferredRestore = useRef(rawLoading === true);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (rawLoading) return [];
+    const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds, initialContextFingerprint);
+    return saved ? [{ ...saved, telemetry: data, restored: true }] : [];
+  });
   const [busy, setBusy] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const assistantAvailable = services.connected && !registry.loading && !registry.error && registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
   const modeUnavailable = mode === 'assistant' && (!assistantAvailable || Boolean(windowIssue));
-  const active = useRef<{ id: string; controller: AbortController; queryId?: string } | null>(null);
+  const active = useRef<{ id: string; controller: AbortController; queryId?: string; stopRequested?: boolean } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
+  useEffect(() => {
+    if (!deferredRestore.current || rawLoading || rawError) return;
+    deferredRestore.current = false;
+    const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds, initialContextFingerprint);
+    if (saved) setMessages(current => current.length ? current : [{ ...saved, telemetry: data, restored: true }]);
+  }, [rawLoading, rawError, sessionKey, data, initialContextFingerprint]);
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
+  useEffect(() => {
+    const latest = [...messages].reverse().find(message => message.status === 'complete');
+    if (!latest) return;
+    const { telemetry: _telemetry, restored: _restored, ...persistable } = latest;
+    const contextFingerprint = investigationContextFingerprint(latest.telemetry, datasetId, latest.interval);
+    persistInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, contextFingerprint, persistable);
+  }, [messages, sessionKey, data.recording.id, datasetId]);
   useEffect(() => () => { const job = active.current; job?.controller.abort(); if (job?.queryId) void services.cancelQuery(job.queryId).catch(() => undefined); active.current = null; }, [services]);
   function update(id: string, changes: Partial<Message> | ((m: Message) => Partial<Message>)) { setMessages(ms => ms.map(m => m.id === id ? { ...m, ...(typeof changes === 'function' ? changes(m) : changes) } : m)); }
   function evidenceFrom(e: Evidence): EvidenceLink[] {
@@ -52,7 +75,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     if (runMode === 'assistant' && modelWindowIssue(data, snapshot, horizon)) return;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
-    setMessages(ms => [...ms, { id, telemetry: data, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
+    setMessages(ms => [...ms.filter(message => !message.restored), { id, telemetry: data, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
     setQuestion('');
     setBusy(true);
     try {
@@ -62,8 +85,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       } else {
         const request = { mode: 'assistant' as const, question: prompt, playheadSec: horizon, window: { datasetId, recordingId: data.recording.id, startSec: snapshot.start, endSec: snapshot.end, channelIds: data.channels.map(c => c.id) } };
         const job = await services.startQuery(request, controller.signal);
-        if (active.current?.id !== id) { await services.cancelQuery(job.queryId); return; }
+        if (active.current?.id !== id || controller.signal.aborted) { await services.cancelQuery(job.queryId); return; }
         active.current.queryId = job.queryId;
+        if (active.current.stopRequested) {
+          try { await services.cancelQuery(job.queryId); }
+          catch { completed.current = true; throw new Error('Server cancellation could not be confirmed.'); }
+        }
         await services.streamQuery(job.streamUrl, event => {
           if (active.current?.id !== id || event.queryId !== job.queryId) return;
           const p = event.payload;
@@ -77,7 +104,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       }
     } catch (error) {
       update(id, m => ({ status: controller.signal.aborted ? 'cancelled' : 'error', text: `${m.text}${m.text ? '\n\n' : ''}${controller.signal.aborted ? 'Stopped. This answer is incomplete.' : error instanceof Error ? error.message : 'The request failed.'}` }));
-    } finally { if (active.current?.id === id) { active.current = null; setBusy(false); } }
+    } finally { if (active.current?.id === id) { if (active.current.stopRequested && !completed.current) update(id, { status: 'cancelled', text: 'Stopped. This answer is incomplete.' }); active.current = null; setBusy(false); setStopping(false); } }
   }
   function exportReport(message: Message) {
     try { downloadInvestigationMarkdown(message.telemetry, datasetId, message); setExportStatus('Readable investigation report downloaded as Markdown.'); }
@@ -89,39 +116,42 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   }
   async function stop() {
     const job = active.current; if (!job) return;
-    job.controller.abort();
-    if (job.queryId) { try { await services.cancelQuery(job.queryId); } catch { update(job.id, { status: 'error', text: 'The browser stopped listening, but server cancellation could not be confirmed.' }); } }
+    job.stopRequested = true; setStopping(true);
+    if (job.queryId) { try { await services.cancelQuery(job.queryId); } catch { completed.current = true; job.controller.abort(); update(job.id, { status: 'error', text: 'Server cancellation could not be confirmed.' }); } }
   }
   return <section className="assistant-panel" aria-label="Telemetry assistant">
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span></header>
-    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={busy || !assistantAvailable || Boolean(windowIssue)} onClick={() => { setMode('assistant'); void submit('Analyze this robot telemetry window.', 'assistant'); }}>{busy ? 'Analyzing…' : 'Analyze interval'}</button></div>
-    <button className="text-button compare-current" onClick={() => onCompare(interval)}>Compare with reference <ArrowUpRight size={12}/></button>
+    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={stopping || (!busy && (!assistantAvailable || Boolean(windowIssue)))} onClick={() => { if (busy) { void stop(); return; } setMode('assistant'); void submit('Analyze this robot telemetry window.', 'assistant'); }}>{stopping ? 'Stopping…' : busy ? 'Stop analysis' : 'Analyze interval'}</button></div>
     {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{rawError && <button className="text-button" onClick={onRetryRaw}>Retry raw window</button>}{!rawLoading && !rawError && fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
-      {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Turn a contact event into an investigation.</h3><p>Analyze the selected interval to compare a model interpretation with measured joint signals. Then inspect the evidence and save your findings.</p><p className="intro-limit">Recorded telemetry can suggest what to investigate. It cannot verify a physical cause.</p></div>}
+      {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Prepare a reviewable incident handoff.</h3><p>Analyze the incident, verify the prediction against exact signals, then export the handoff for a controls engineer.</p><p className="intro-limit">Recorded torque can guide investigation. It cannot verify a physical cause.</p></div>}
       {messages.map(m => {
         const brief = predictionBrief(m.modelOutput);
         const cue = m.status === 'complete' ? predictionCue(m.modelOutput, m.interval) : undefined;
+        const review = m.status === 'complete' ? reviewPrediction(m.telemetry, m.interval, m.modelOutput) : undefined;
         const measuredText = m.text.split(/\n\s*\n/).find(block => block.startsWith('Measured in this selected window'))?.split('\n').slice(1).join(' ');
         return <article className="conversation-turn" key={m.id}>
           <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>
           <div className="assistant-answer"><div>
+            {m.restored && <div className="answer-source">Restored from this browser session.</div>}
             {m.status !== 'complete' && <div className="answer-source">{m.status === 'running' ? 'Reading the selected telemetry…' : m.status}</div>}
             <div className={m.status === 'error' ? 'error-message' : ''}>
-              {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
+              {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}{review && <section className="review-note"><h3>Cross-check</h3><p>{review.note}</p></section>}</> : m.status === 'complete' && m.mode === 'assistant' ? <><section className="prediction-summary"><h3>No usable structured prediction</h3><p className="prediction-caution">The generation did not meet the complete seven-field contract used by Evaluation. Inspect the raw audit output before retrying.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
-            {m.evidence.length > 0 && <div className="evidence-links">{m.evidence.map((e, i) => <button key={i} onClick={() => onEvidence(e)}><SlidersHorizontal size={12}/>{e.label}<ArrowUpRight size={11}/></button>)}</div>}
-            {cue && <button className="text-button robot-prediction-action" onClick={() => onRobotPrediction(cue)}>Show predicted time cue in 3D <ArrowUpRight size={12}/></button>}
-            {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p>{brief && <AnswerText text={m.text}/>}<details><summary>Raw model generation · unverified</summary><p>Generated text can disagree with publisher annotations. Review those annotations separately.</p><pre>{m.modelOutput}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}<button className="text-button" onClick={() => exportEvidence(m)}><Download size={12}/>Download audit JSON</button></details>}
-            {m.status === 'complete' && <button className="text-button" onClick={() => onCompare(m.interval)}>Compare this answer’s window <ArrowUpRight size={12}/></button>}
-            {m.status === 'complete' && <button className="text-button report-export" onClick={() => exportReport(m)}><Download size={13}/>Export report (.md)</button>}
+            {m.status === 'complete' && <section className="investigation-next" aria-label="Verify and hand off"><h3>Verify and hand off</h3><ol className="investigation-actions">
+              {cue && <li><button onClick={() => onRobotPrediction(cue)}><span>1</span><strong>Show generated onset cue in 3D</strong><ArrowUpRight size={12}/></button></li>}
+              {m.evidence.map((e, i) => <li key={i}><button onClick={() => onEvidence(e)}><span>{cue ? 2 : 1}</span><strong>Inspect exact seven-channel input</strong><SlidersHorizontal size={12}/></button></li>)}
+              <li><button onClick={() => onCompare(m.interval)}><span>{cue ? 3 : m.evidence.length ? 2 : 1}</span><strong>Compare with a reference window · optional</strong><ArrowUpRight size={12}/></button></li>
+              <li><button onClick={() => exportReport(m)}><span>{cue ? 4 : m.evidence.length ? 3 : 2}</span><strong>Export incident handoff (.md)</strong><Download size={13}/></button></li>
+            </ol></section>}
+            {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p><details><summary>Structured model prediction</summary><p>Only supported prediction fields are shown here. Generated evidence prose is retained only in the audit JSON and is not treated as an annotation or measurement.</p><pre>{JSON.stringify(structuredPrediction(m.modelOutput) ?? { status: 'No valid structured prediction was returned.' }, null, 2)}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}<button className="text-button" onClick={() => exportEvidence(m)}><Download size={12}/>Download audit JSON</button></details>}
             {(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}
           </div></div>
         </article>;
       })}
     </div>
     {exportStatus && <p className="report-status" role="status">{exportStatus}</p>}
-    {mode === 'assistant' && !assistantAvailable && <p className="status-note" role="status">Model unavailable. Choose Measurements only to inspect torque ranges, peaks and variability.</p>}
-    <form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label="Stop analysis" onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form>
+    {mode === 'assistant' && !assistantAvailable && <p className="status-note" role="status">Model unavailable. Open custom analysis and choose Measurements only.</p>}
+    <details className="custom-analysis"><summary>Ask a custom question</summary><form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label={stopping ? 'Stopping analysis' : 'Stop analysis'} disabled={stopping} onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form></details>
   </section>;
 }

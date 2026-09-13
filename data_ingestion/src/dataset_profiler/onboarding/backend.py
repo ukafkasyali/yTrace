@@ -203,11 +203,17 @@ class LocalOnboardingBackend:
         self.seed_semantic_trace = (
             Path(seed_semantic_trace).resolve() if seed_semantic_trace else None
         )
+        if self.seed_semantic_spec and not self.seed_semantic_trace:
+            raise ValueError(
+                "a frozen semantic spec requires its bounded evidence trace"
+            )
 
     def profile(self, job: OnboardingJob) -> dict[str, Any]:
         """Run the existing deterministic profiler or reuse an explicit frozen artifact."""
         if self.seed_profile:
-            return _read_object(self.seed_profile)
+            profile = _read_object(self.seed_profile)
+            _verify_frozen_profile_source(profile, job.source.local_path)
+            return profile
         return profile_dataset(
             job.source.local_path or "", job.source.dataset_id
         ).to_dict()
@@ -218,15 +224,15 @@ class LocalOnboardingBackend:
         """Run the existing bounded semantic agent or reuse an explicit frozen run."""
         if self.seed_semantic_spec:
             spec = _read_object(self.seed_semantic_spec)
-            trace = (
-                _read_object(self.seed_semantic_trace)
-                if self.seed_semantic_trace
-                else {
-                    "reused_artifact": str(self.seed_semantic_spec),
-                    "tool_calls": [],
-                }
-            )
-            evidence_ids = _all_spec_evidence_ids(DatasetSpec.from_dict(spec))
+            trace = _read_object(self.seed_semantic_trace)
+            evidence_ids = trace_evidence_ids(trace)
+            claimed_evidence = _all_spec_evidence_ids(DatasetSpec.from_dict(spec))
+            absent = sorted(claimed_evidence - evidence_ids)
+            if absent:
+                raise ValueError(
+                    "frozen semantic spec references evidence absent from its trace: "
+                    + ", ".join(absent)
+                )
             return SemanticResult(spec, trace, tuple(sorted(evidence_ids)), reused=True)
         if self.semantic_client is None:
             raise RuntimeError(
@@ -313,6 +319,7 @@ class LocalOnboardingBackend:
 
     def build(self, job: OnboardingJob, job_dir: Path) -> dict[str, Any]:
         """Run timenet-build in the native repository environment."""
+        self._verify_current_source(job, job_dir)
         return self.timenet.run("building", job=job, job_dir=job_dir)
 
     def load(self, job: OnboardingJob, job_dir: Path) -> dict[str, Any]:
@@ -321,7 +328,17 @@ class LocalOnboardingBackend:
 
     def verify(self, job: OnboardingJob, job_dir: Path) -> dict[str, Any]:
         """Run the configured raw-to-TimeF fidelity verifier."""
+        self._verify_current_source(job, job_dir)
         return self.timenet.run("verifying", job=job, job_dir=job_dir)
+
+    def _verify_current_source(self, job: OnboardingJob, job_dir: Path) -> None:
+        """Recheck frozen evidence before a downstream stage reads the live source."""
+        if not self.seed_profile:
+            return
+        persisted_profile = _read_object(
+            job.artifact_path(job_dir, "dataset_profile")
+        )
+        _verify_frozen_profile_source(persisted_profile, job.source.local_path)
 
 
 def _documentation(source: Any) -> list[DocumentationSource]:
@@ -348,16 +365,80 @@ def _all_spec_evidence_ids(spec: DatasetSpec) -> set[str]:
     def walk(value: Any) -> None:
         if isinstance(value, dict):
             for key, child in value.items():
-                if key == "evidence" and isinstance(child, list):
+                if key == "evidence" and isinstance(child, (list, tuple)):
                     result.update(item for item in child if isinstance(item, str))
                 else:
                     walk(child)
-        elif isinstance(value, list):
+        elif isinstance(value, (list, tuple)):
             for child in value:
                 walk(child)
 
     walk(raw)
     return result
+
+
+def _verify_frozen_profile_source(
+    profile: dict[str, Any], source_path: str | None
+) -> None:
+    """Bind a reused profile to the exact source files it originally inspected."""
+    if not source_path:
+        raise ValueError("a local source path is required for a frozen profile")
+    root = Path(source_path).resolve()
+    if not root.is_dir():
+        raise ValueError(f"source directory does not exist: {root}")
+    files = profile.get("files")
+    if not isinstance(files, list) or not files:
+        raise ValueError("frozen profile has no source file inventory")
+    recorded_paths: set[str] = set()
+    for item in files:
+        if not isinstance(item, dict):
+            raise ValueError("frozen profile file inventory contains an invalid entry")
+        relative_path = item.get("relative_path")
+        expected = item.get("sha256")
+        if not isinstance(relative_path, str) or not relative_path:
+            raise ValueError("frozen profile file entry has no relative_path")
+        recorded_paths.add(relative_path)
+        if (
+            not isinstance(expected, str)
+            or len(expected) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in expected.casefold()
+            )
+        ):
+            raise ValueError(
+                f"frozen profile file {relative_path!r} has no valid SHA-256"
+            )
+        candidate = (root / relative_path).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as error:
+            raise ValueError(
+                f"frozen profile file {relative_path!r} escapes the source directory"
+            ) from error
+        if not candidate.is_file():
+            raise ValueError(f"profiled source file is missing: {relative_path}")
+        recorded_size = item.get("size_bytes")
+        if isinstance(recorded_size, int) and candidate.stat().st_size != recorded_size:
+            raise ValueError(f"profiled source file size changed: {relative_path}")
+        digest = hashlib.sha256()
+        with candidate.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected.casefold():
+            raise ValueError(f"profiled source file content changed: {relative_path}")
+    discovered_paths = {
+        path.relative_to(root).as_posix()
+        for suffix in ("*.mat", "*.h5", "*.hdf5")
+        for path in root.rglob(suffix)
+        if path.is_file()
+    }
+    extra_paths = sorted(discovered_paths - recorded_paths)
+    if extra_paths:
+        raise ValueError(
+            "source contains supported data files absent from the frozen profile: "
+            + ", ".join(extra_paths)
+        )
 
 
 def file_sha256(path: str | Path) -> str:

@@ -112,6 +112,7 @@ def score(items: list[dict]) -> dict:
     if not n:
         raise ValueError("Cannot score an empty evaluation")
     confusion = {c: Counter() for c in CLASSES}
+    usable_confusion = {c: Counter() for c in CLASSES}
     contact_confusion = {"false": Counter(), "true": Counter()}
     valid = parsed = contact_valid = contact_correct = joint_correct = 0
     errors = []
@@ -120,11 +121,13 @@ def score(items: list[dict]) -> dict:
     for row in items:
         target, p = row["target"], row.get("prediction")
         parsed += isinstance(p, dict)
-        valid += schema_valid(p)
+        is_usable = schema_valid(p)
+        valid += is_usable
         p = p if isinstance(p, dict) else {}
         pred_class = p.get("event_type")
         pred_class = pred_class if isinstance(pred_class, str) and pred_class in CLASSES else "abstain"
         confusion[target["event_type"]][pred_class] += 1
+        usable_confusion[target["event_type"]][pred_class if is_usable else "abstain"] += 1
         contact = p.get("contact")
         is_bool = type(contact) is bool
         contact_valid += is_bool
@@ -168,6 +171,7 @@ def score(items: list[dict]) -> dict:
         "semantics_accuracy": sum(confusion[c][c] for c in CLASSES) / n,
         "semantics_per_class_f1": f1,
         "semantics_confusion": {c: dict(confusion[c]) for c in CLASSES},
+        "usable_semantics_confusion": {c: dict(usable_confusion[c]) for c in CLASSES},
         "contact_answer_coverage": contact_valid / n,
         "contact_accuracy": contact_correct / n,
         "contact_macro_f1": statistics.mean(contact_f1.values()),
@@ -181,6 +185,33 @@ def score(items: list[dict]) -> dict:
         "onset_p90_ae_ms": percentile(errors, 0.9),
         "onset_within_50ms_all_contacts": sum(e <= 50 for e in errors) / event_n if event_n else None,
     }
+
+
+def usable_summary_text(opentslm: dict) -> str:
+    confusion = opentslm["usable_semantics_confusion"]
+    unusable = sum(row.get("abstain", 0) for row in confusion.values())
+    answered = opentslm["n"] - unusable
+    correct_answered = sum(row.get(label, 0) for label, row in confusion.items())
+    free_windows = sum(confusion.get("free", {}).values())
+    free_unusable = confusion.get("free", {}).get("abstain", 0)
+    free_clause = (
+        f"That includes {free_unusable} of {free_windows} free-motion windows "
+        f"({free_unusable / free_windows:.1%})."
+        if free_windows
+        else "The evaluated subset contains no free-motion windows."
+    )
+    answered_clause = (
+        f"On the {answered} answered windows, semantics accuracy is "
+        f"{correct_answered / answered:.2%} ({correct_answered}/{answered})."
+        if answered
+        else "No window received a usable structured answer, so conditional semantics accuracy is unavailable."
+    )
+    return (
+        f"OpenTSLM returned no usable structured answer for {unusable} of {opentslm['n']} windows. "
+        f"{free_clause} {answered_clause} This conditional figure is descriptive, not a paired comparison: "
+        "the model selects which windows receive an answer, while the baseline answers every window. "
+        "Any reliability fix must be selected on validation."
+    )
 
 
 def validate_alignment(predictions: dict[str, list[dict]], records: list[dict], splits: dict) -> list[str]:
@@ -278,6 +309,7 @@ def build_report(source: Path, repeats: int = 1000) -> dict:
 
 
 def markdown(report: dict) -> str:
+    opentslm = report["models"]["opentslm"]
     lines = [
         "# Trace: audited held-out comparison",
         "",
@@ -332,6 +364,8 @@ def markdown(report: dict) -> str:
             "and successful localization within 50 ms. OpenTSLM has higher onset coverage and slightly lower "
             "conditional mean onset error, but a worse median. These results do not establish OpenTSLM superiority."
         ),
+        "",
+        usable_summary_text(opentslm),
         "",
         (
             "OpenTSLM was fine-tuned; Qwen3-VL 4B was zero-shot on plots. This comparison changes training "
