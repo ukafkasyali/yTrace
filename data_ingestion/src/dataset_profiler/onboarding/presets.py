@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from ..semantic_spec import ImplementationOverrideArtifact
@@ -37,6 +38,13 @@ def bosch_reference_backend(
         / "outputs/bosch_cnc_connector_handoff/implementation_overrides.json"
     )
     approved = ImplementationOverrideArtifact.read_json(override_path)
+    # These four implementation-candidate references came from a later human
+    # evidence review, not the persisted semantic-agent trace. Keep the candidate
+    # and uncertainty, but do not present unbound IDs as job evidence.
+    requirements = tuple(
+        replace(requirement, supporting_evidence_refs=())
+        for requirement in approved.requirements
+    )
     adapter = TimeNetCommandAdapter(
         implementation=CommandSpec(
             argv=(
@@ -106,7 +114,7 @@ def bosch_reference_backend(
     return LocalOnboardingBackend(
         workflow_id="bosch-cnc-reference-v1",
         semantic_client=None,
-        requirements=approved.requirements,
+        requirements=requirements,
         downstream_context=approved.downstream_context,
         timenet=adapter,
         seed_profile=ingestion_root / "outputs/bosch_cnc_profile.json",
