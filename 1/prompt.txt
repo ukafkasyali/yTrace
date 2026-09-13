@@ -1,0 +1,9 @@
+Pull the most recent code, which has the interactive robot visualization and api calls to the latest model enabled, and build it so I can interact with it live. Tell me which model it uses
+
+---
+
+ok, I think the api requests are not completing successfully, is that a problem on our side?
+
+---
+
+find ways to improve the ui latency

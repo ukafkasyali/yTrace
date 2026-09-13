@@ -3,13 +3,20 @@
   "checkpoint_id": "01M2CY8PP9XRQCW369Z2F84ECC",
   "strategy": "manual-commit",
   "branch": "codex/v6-failure-analysis",
-  "checkpoints_count": 1,
+  "checkpoints_count": 3,
   "files_touched": [
     "docs/submission/README.md",
     "docs/submission/evaluation/source/inventory.json",
     "docs/submission/evaluation/source/opentslm-v6-validation-audit.json",
     "docs/submission/evaluation/v6-validation/README.md",
+    "docs/submission/evaluation/v6-validation/report/checkpoint_trajectory.csv",
+    "docs/submission/evaluation/v6-validation/report/failure_analysis.json",
+    "docs/submission/evaluation/v6-validation/report/failure_analysis.md",
+    "docs/submission/evaluation/v6-validation/source/generation_epoch_step_003823.jsonl.gz",
+    "docs/submission/evaluation/v6-validation/source/metrics.jsonl.gz",
     "docs/submission/evaluation/v6-validation/source/receipt.json",
+    "docs/submission/evaluation/v6-validation/source/run_manifest.json",
+    "docs/submission/evaluation/v6-validation/source/status.json",
     "docs/submission/evaluation/v6-validation/training-observability.svg",
     "model_training/scripts/analyze_failure_modes.py",
     "model_training/src/robot_observability/comparison.py",
@@ -23,13 +30,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 162,
+    "input_tokens": 2205,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 192768,
-    "output_tokens": 142,
-    "api_call_count": 1
+    "cache_read_tokens": 754048,
+    "output_tokens": 685,
+    "api_call_count": 6
   }
 }

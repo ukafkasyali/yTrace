@@ -1,0 +1,82 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CY8PP9XRQCW369Z2F84ECC",
+  "session_id": "01a099a2-2571-7822-a023-3e0bfca918d9",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T08:31:18.466139791Z",
+  "branch": "codex/v6-failure-analysis",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "docs/submission/evaluation/v6-validation/report/checkpoint_trajectory.csv",
+    "docs/submission/evaluation/v6-validation/report/failure_analysis.json",
+    "docs/submission/evaluation/v6-validation/report/failure_analysis.md",
+    "docs/submission/evaluation/v6-validation/source/generation_epoch_step_003823.jsonl.gz",
+    "docs/submission/evaluation/v6-validation/source/metrics.jsonl.gz",
+    "docs/submission/evaluation/v6-validation/source/run_manifest.json",
+    "docs/submission/evaluation/v6-validation/source/status.json",
+    "model_training/scripts/analyze_failure_modes.py",
+    "model_training/tests/test_failure_mode_analysis.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "645e4edf58be",
+  "checkpoint_transcript_start": 1000,
+  "transcript_lines_at_start": 1000,
+  "compact_transcript_start": 126,
+  "token_usage": {
+    "input_tokens": 2043,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 561280,
+    "output_tokens": 543,
+    "api_call_count": 5
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T08:31:18.239418189Z",
+    "agent_lines": 1683,
+    "agent_removed": 0,
+    "human_added": 565,
+    "human_modified": 29,
+    "human_removed": 0,
+    "total_committed": 2275,
+    "total_lines_changed": 2286,
+    "agent_percentage": 73.62204724409449,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 33,
+      "user_lines_removed": 4,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 33
+      },
+      "user_removed_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 4
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 147,
+      "user_lines_removed": 3,
+      "agent_lines_added": 1744,
+      "agent_lines_removed": 4,
+      "user_added_per_file": {
+        "docs/submission/evaluation/source/opentslm-v6-validation-audit.json": 91,
+        "model_training/scripts/analyze_failure_modes.py": 1,
+        "model_training/src/robot_observability/comparison.py": 39,
+        "model_training/tests/test_comparison.py": 16
+      },
+      "user_removed_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 1,
+        "model_training/src/robot_observability/comparison.py": 1,
+        "model_training/tests/test_comparison.py": 1
+      }
+    }
+  ]
+}
