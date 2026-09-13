@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C12K3854X3RVH9RDRHE0WF",
+  "session_id": "01a097ce-ab6b-7eb2-9319-23ba02becc14",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T00:01:06.934151Z",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/src/dataset_profiler/ingestion/jobs.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "c105995a1029",
+  "checkpoint_transcript_start": 2313,
+  "transcript_lines_at_start": 2313,
+  "compact_transcript_start": 294,
+  "token_usage": {
+    "input_tokens": 4557,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 798996,
+    "output_tokens": 2226,
+    "api_call_count": 4
+  },
+  "session_metrics": {
+    "turn_count": 6
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T00:01:06.620252Z",
+    "agent_lines": 24,
+    "agent_removed": 4,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 24,
+    "total_lines_changed": 28,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
