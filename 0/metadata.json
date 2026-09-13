@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CN3JPKQR1R0E62Y9NYDQWS",
+  "session_id": "01a097ce-ab6b-7eb2-9319-23ba02becc14",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T05:51:10.169059Z",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/FRONTEND_INTEGRATION.md",
+    "frontend/src/sourcing/ApprovedSourceLibrary.test.tsx",
+    "frontend/src/sourcing/ApprovedSourceLibrary.tsx",
+    "frontend/src/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "271c58f13664",
+  "checkpoint_transcript_start": 135,
+  "transcript_lines_at_start": 135,
+  "compact_transcript_start": 17,
+  "token_usage": {
+    "input_tokens": 18374,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1713573,
+    "output_tokens": 4678,
+    "api_call_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T05:51:10.123666Z",
+    "agent_lines": 99,
+    "agent_removed": 6,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 99,
+    "total_lines_changed": 105,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
