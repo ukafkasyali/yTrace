@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, RotateCcw, SlidersHorizontal, Waves } from 'lucide-react';
 import { predictionBrief, predictionCue, structuredPrediction, type PredictionCue } from './predictionBrief';
+import { reviewPrediction } from './predictionReview';
 import { downloadInvestigationJson, downloadInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
 import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelWindow';
 import { analyzeWindow } from '../lib/data';
@@ -101,13 +102,14 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       {messages.map(m => {
         const brief = predictionBrief(m.modelOutput);
         const cue = m.status === 'complete' ? predictionCue(m.modelOutput, m.interval) : undefined;
+        const review = m.status === 'complete' ? reviewPrediction(m.telemetry, m.interval, m.modelOutput) : undefined;
         const measuredText = m.text.split(/\n\s*\n/).find(block => block.startsWith('Measured in this selected window'))?.split('\n').slice(1).join(' ');
         return <article className="conversation-turn" key={m.id}>
           <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>
           <div className="assistant-answer"><div>
             {m.status !== 'complete' && <div className="answer-source">{m.status === 'running' ? 'Reading the selected telemetry…' : m.status}</div>}
             <div className={m.status === 'error' ? 'error-message' : ''}>
-              {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
+              {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}{review && <section className="review-note"><h3>Review note</h3><p>{review.note}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
             {m.status === 'complete' && <section className="investigation-next" aria-label="Verify and hand off"><h3>Verify and hand off</h3><ol className="investigation-actions">
               {cue && <li><button onClick={() => onRobotPrediction(cue)}><span>1</span><strong>Show predicted moment in 3D</strong><ArrowUpRight size={12}/></button></li>}

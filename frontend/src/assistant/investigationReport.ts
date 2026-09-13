@@ -1,6 +1,7 @@
 import { selectWindow } from '../lib/data';
 import type { DemoData, EvidenceLink, Interval } from '../types';
 import { structuredPrediction } from './predictionBrief';
+import { reviewPrediction } from './predictionReview';
 
 export type InvestigationAnswer = {
   question: string; interval: Interval; playhead: number; replayCursor?: number; text: string;
@@ -50,6 +51,7 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
   const receiptIssue = answer.mode === 'assistant'
     ? inputReceiptIssue(answer.inputTrace, data.recording.id, answer.interval)
     : undefined;
+  const predictionReview = answer.mode === 'assistant' ? reviewPrediction(data, answer.interval, answer.modelOutput) : undefined;
   return {
     schemaVersion: 1, kind: 'trace_retrospective_investigation',
     recording: { datasetId, recordingId: data.recording.id, sourceUrl: data.recording.sourceUrl },
@@ -66,6 +68,7 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
       rawModelOutputTrust: answer.modelOutput ? 'unverified_generated_text_not_annotation_or_measurement' : null,
       structuredPrediction: answer.mode === 'assistant' ? structuredPrediction(answer.modelOutput) ?? null : null,
       inputReceipt: answer.inputTrace ?? null, evidence: answer.evidence },
+    reviewNotes: predictionReview ? [predictionReview.note] : [],
     limitations: [
       'Recorded contact-event triage; no verified root cause, safety decision or repair recommendation.',
       'Publisher annotations, measured quantities and generated predictions are distinct evidence sources.',
@@ -111,6 +114,7 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
     ? report.interpretation.inputReceipt as { samplesPerChannel?: unknown; inputSha256?: unknown }
     : undefined;
   const answer = report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
+  const reviewNotes = report.reviewNotes.length ? report.reviewNotes.map(item => `- ${markdownText(item)}`) : ['- No model/measurement disagreement was flagged by the current review checks.'];
   return [
     '# Trace incident investigation',
     '',
@@ -128,6 +132,10 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
     `**Origin:** ${markdownText(report.interpretation.origin)} · **Source:** ${markdownText(report.interpretation.source)}`,
     '',
     answer || 'No interpretation was returned.',
+    '',
+    '## Review before handoff',
+    '',
+    ...reviewNotes,
     '',
     '## Measured torque',
     '',

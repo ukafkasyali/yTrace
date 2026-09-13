@@ -75,6 +75,7 @@ describe('investigation export', () => {
     const markdown = renderInvestigationMarkdown(report);
     expect(markdown).toContain('# Trace incident investigation');
     expect(markdown).toContain('## Interpretation');
+    expect(markdown).toContain('## Review before handoff');
     expect(markdown).toContain('## Measured torque');
     expect(markdown).toContain('| Joint 1 | 5.000 Nm | -3.000 Nm | 1.001 s |');
     expect(markdown).toContain('## Publisher annotations');
