@@ -130,9 +130,11 @@ or raw arrays. Interrupted imports revalidate the same content-addressed output.
 
 The exact Zenodo identities `21927431.r4` and `21941203.r4`, with their verified CC-BY-4.0 dataset
 licence, dispatch to the existing KUKA Part I and Part II connectors before generic mapping. A
-provider, revision, or licence mismatch fails closed. These connectors retain seven torque and
-seven position series at 1 kHz and keep accidental-collision and intentional-contact publisher
-annotations distinct.
+provider, revision, or licence mismatch fails closed. The dispatcher accepts either the legacy
+combined part archive or the complete approved set of separately published batch archives; split
+archives retain stable `batch-XX/run` provenance and incomplete part selections fail closed. These
+connectors retain seven torque and seven position series at 1 kHz and keep accidental-collision and
+intentional-contact publisher annotations distinct.
 ## Job-oriented onboarding
 
 **Experimental; no completed end-to-end Bosch job is archived in this repository.**

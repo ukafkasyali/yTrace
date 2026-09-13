@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 from scipy.io import savemat
+from timenet.client import TimeNet
 
 from dataset_profiler.ingestion.dispatch import (
     SpecializedDispatcher,
@@ -84,6 +86,66 @@ class SpecializedDispatcherTests(unittest.TestCase):
         with self.assertRaises(SpecializedDispatchError):
             self.dispatcher.resolve(bad_license)
 
+    def test_separate_batch_archives_keep_unique_batch_provenance(self) -> None:
+        job = self._job(0, "https://zenodo.org/records/21927431", "21927431.r4")
+        source = replace(self.dispatcher.resolve(job), batch_count=2)
+        receipts = []
+        for batch in (1, 2):
+            digest = f"{batch + 10:064x}"
+            source_root = self.root / "cache" / "extracted" / digest[:2] / digest
+            self._write_run(source_root)
+            receipts.append(
+                AssetReceipt(
+                    ingestion_id=job.ingestion_id,
+                    asset_id=f"asset_{batch:016x}",
+                    provider_locator=(
+                        f"zenodo:21927431:collision-batch-{batch:02d}.tar.zst"
+                    ),
+                    expected_size_bytes=1,
+                    observed_size_bytes=1,
+                    content_sha256=digest,
+                    content_key=f"sha256/{digest[:2]}/{digest}",
+                    acquired_at=datetime.now(UTC),
+                )
+            )
+
+        result = self.dispatcher.build(job, source, receipts)
+
+        self.assertEqual(result.record_count, 2)
+        loaded = TimeNet(registry=self.root / "timef").load(
+            source.dataset_id, auto_build=False
+        )
+        source_ids = {
+            annotation.value
+            for record in loaded.records
+            for annotation in record.annotations
+            if annotation.key == "source_run_id"
+        }
+        self.assertEqual(
+            source_ids,
+            {"batch-01/03-15-12-53", "batch-02/03-15-12-53"},
+        )
+
+    def test_separate_batch_archives_require_the_complete_approved_part(self) -> None:
+        job = self._job(0, "https://zenodo.org/records/21927431", "21927431.r4")
+        source = replace(self.dispatcher.resolve(job), batch_count=2)
+        digest = f"{11:064x}"
+        source_root = self.root / "cache" / "extracted" / digest[:2] / digest
+        self._write_run(source_root)
+        receipt = AssetReceipt(
+            ingestion_id=job.ingestion_id,
+            asset_id="asset_0000000000000001",
+            provider_locator="zenodo:21927431:collision-batch-01.tar.zst",
+            expected_size_bytes=1,
+            observed_size_bytes=1,
+            content_sha256=digest,
+            content_key=f"sha256/{digest[:2]}/{digest}",
+            acquired_at=datetime.now(UTC),
+        )
+
+        with self.assertRaisesRegex(SpecializedDispatchError, "missing 02"):
+            self.dispatcher.build(job, source, [receipt])
+
     @staticmethod
     def _job(index: int, url: str, revision: str) -> IngestionJob:
         return IngestionJob(
@@ -103,8 +165,8 @@ class SpecializedDispatcherTests(unittest.TestCase):
         )
 
     @staticmethod
-    def _write_run(root: Path, batch: str) -> None:
-        run = root / batch / "03-15-12-53"
+    def _write_run(root: Path, batch: str | None = None) -> None:
+        run = root / batch / "03-15-12-53" if batch else root / "03-15-12-53"
         run.mkdir(parents=True)
         time_axis = np.arange(5, dtype=np.float64) / 1_000
         savemat(run / "JsmoExp.mat", {"rt_tout": time_axis[:, None]})
