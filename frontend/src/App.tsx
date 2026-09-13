@@ -94,9 +94,12 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, onOpenImporte
     if (replayStop !== undefined && replay.playhead >= replayStop) { replay.seek(replayStop); setReplayStop(undefined); }
   }, [replay.playhead, replayStop, replay.seek]);
   const visiblePrediction = robotPrediction && robotPrediction.interval.start === interval.start && robotPrediction.interval.end === interval.end ? robotPrediction : undefined;
-  function showRobotPrediction(prediction: PredictionCue) {
-    setReplayStop(undefined); setRobotPrediction(prediction); setInterval({ ...prediction.interval });
-    replay.seek(prediction.onsetSeconds); setFollowing(false); setHighlighted(prediction.channelId ? [prediction.channelId] : []);
+  function showRobotPrediction(prediction?: PredictionCue) {
+    setRobotPrediction(prediction);
+    if (!prediction) { setHighlighted([]); return; }
+    const postOnsetContext = Math.max(.08, (prediction.interval.end - prediction.interval.start) * .12);
+    setReplayStop(undefined); setInterval({ ...prediction.interval });
+    replay.seek(Math.min(prediction.interval.end, prediction.onsetSeconds + postOnsetContext)); setFollowing(false); setHighlighted(prediction.channelId ? [prediction.channelId] : []);
     setView('inspect'); setMobile('signals'); setVisualMode('robot');
   }
   function openComparison(window: Interval) {

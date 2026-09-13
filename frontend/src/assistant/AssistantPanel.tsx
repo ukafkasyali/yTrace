@@ -12,7 +12,7 @@ import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 
 type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled'; restored?: boolean };
-type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
+type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction?: PredictionCue) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
   return <div className="answer-brief">{blocks.map((block, index) => {
@@ -48,6 +48,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const active = useRef<{ id: string; controller: AbortController; queryId?: string; stopRequested?: boolean } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
+  const restoredCueApplied = useRef(false);
   useEffect(() => {
     if (!deferredRestore.current || rawLoading || rawError) return;
     deferredRestore.current = false;
@@ -55,6 +56,13 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     if (saved) setMessages(current => current.length ? current : [{ ...saved, telemetry: data, restored: true }]);
   }, [rawLoading, rawError, sessionKey, data, initialContextFingerprint]);
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
+  useEffect(() => {
+    if (restoredCueApplied.current) return;
+    const restored = [...messages].reverse().find(message => message.restored && message.status === 'complete');
+    if (!restored) return;
+    restoredCueApplied.current = true;
+    onRobotPrediction(predictionCue(restored.modelOutput, restored.interval));
+  }, [messages, onRobotPrediction]);
   useEffect(() => {
     const latest = [...messages].reverse().find(message => message.status === 'complete');
     if (!latest) return;
@@ -75,6 +83,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     if (runMode === 'assistant' && modelWindowIssue(data, snapshot, horizon)) return;
     const id = crypto.randomUUID(); const controller = new AbortController();
     active.current = { id, controller }; completed.current = false;
+    onRobotPrediction(undefined);
     setMessages(ms => [...ms.filter(message => !message.restored), { id, telemetry: data, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
     setQuestion('');
     setBusy(true);
@@ -102,7 +111,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
             const modelOutput = typeof p.modelOutput === 'string' ? p.modelOutput : undefined;
             update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) }));
             const cue = predictionCue(modelOutput, snapshot);
-            if (cue) onRobotPrediction(cue);
+            onRobotPrediction(cue);
           }
           if (event.type === 'query.error') { completed.current = true; update(id, m => ({ status: 'error', text: `${m.text}${m.text ? '\n\n' : ''}${p.message ?? 'Inference failed.'}` })); }
           if (event.type === 'query.cancelled') { completed.current = true; update(id, { status: 'cancelled' }); }

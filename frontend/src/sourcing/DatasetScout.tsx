@@ -49,7 +49,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
   }
 
   function choosePreset(nextBrief: string) {
-    setBrief(nextBrief); invalidatePreview();
+    setBrief(nextBrief); invalidatePreview(); setRun(null); setRunId(''); setSourceReady(false); setError('');
   }
 
   async function previewRequirements() {
@@ -106,7 +106,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
   return <section className="workspace-section dataset-scout" aria-labelledby="scout-title">
     <div className="section-heading"><div><h2 id="scout-title">Find and verify a dataset</h2><p>Search, check source evidence, then approve what enters the pipeline.</p></div><SearchCheck size={20} aria-hidden="true" /></div>
     {!services.connected && <p className="status-note">Configure the team API to run or resume dataset research.</p>}
-    <div className="scout-presets" aria-label="Dataset research presets">{presets.map(preset => <button className={brief === preset.brief ? 'active' : ''} type="button" key={preset.label} onClick={() => choosePreset(preset.brief)} disabled={!services.connected || Boolean(busy)}>{preset.label}</button>)}</div>
+    <div className="scout-presets" role="group" aria-label="Dataset research presets">{presets.map(preset => <button aria-pressed={brief === preset.brief} className={brief === preset.brief ? 'active' : ''} type="button" key={preset.label} onClick={() => choosePreset(preset.brief)} disabled={!services.connected || Boolean(busy)}>{preset.label}</button>)}</div>
     <label htmlFor="sourcing-brief">Research brief</label>
     <textarea id="sourcing-brief" rows={3} value={brief} onChange={event => { setBrief(event.target.value); invalidatePreview(); }} disabled={!services.connected || Boolean(busy)} />
     <details className="scout-advanced">

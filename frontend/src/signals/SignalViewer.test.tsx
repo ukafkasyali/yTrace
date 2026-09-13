@@ -29,4 +29,10 @@ describe('generated onset evidence cue', () => {
   it('does not draw a prediction ahead of the replay playhead', () => {
     expect(render(prediction, .25)).not.toContain('model-onset-cue');
   });
+
+  it('anchors the onset label inside the plot near the right edge', () => {
+    const edgePrediction = { ...prediction, onsetSeconds: .95 };
+    const markup = render(edgePrediction);
+    expect(markup).toContain('model-onset-cue at-right-edge');
+  });
 });
