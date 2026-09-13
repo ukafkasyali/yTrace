@@ -410,6 +410,9 @@ input,textarea{caret-color:var(--accent)}
 .evaluation-summary dd{margin:3px 0 0!important;font:500 23px 'IBM Plex Mono',monospace;color:var(--text)}
 .evaluation-summary small{color:var(--quiet);font-size:11px}
 .evaluation-summary.evaluation-summary-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.evaluation-followup{margin:0 0 30px;padding:22px 0 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.evaluation-followup .evaluation-summary{margin-bottom:12px!important}
+.evaluation-followup .table-note{max-width:960px}
 .evaluation-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:32px}
 .evaluation-chart{min-width:0}
 .chart-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}

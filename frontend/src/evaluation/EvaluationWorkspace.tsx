@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BarChart3, CheckCircle2, Info } from 'lucide-react';
 import comparison from '../../../docs/submission/evaluation/report/comparison.json';
 import cnnSummary from '../../../docs/submission/evaluation/source/cnn-recorded-summary.json';
+import rationaleFollowup from '../../../docs/submission/evaluation/source/opentslm-rationale-followup.json';
 
 type MethodKey = 'features' | 'cnn' | 'opentslm' | 'qwen';
 
@@ -61,8 +62,9 @@ const methods: Record<MethodKey, MethodDescription> = {
     reading: [
       'Semantics macro-F1 is 0.8845 and the best recorded onset P90 is 140 ms.',
       'A complete usable summary is returned for 77.93%: 399 of 512 windows meet the full typed contract.',
+      'The newer rationale run selected step 3,600, but its small validation diagnostics are shown separately below rather than mixed into this locked test row.',
     ],
-    limitation: 'Most missing answers are free-motion cases. Generated explanations remain predictions, even when the structured fields are correct.',
+    limitation: 'The table reports the older canary on the locked test set. The rationale follow-up is validation-only and generated explanations remain predictions.',
   },
   qwen: {
     label: 'Qwen3-VL zero-shot',
@@ -89,6 +91,8 @@ const methodOrder: MethodKey[] = ['features', 'cnn', 'opentslm', 'qwen'];
 const percent = (value: number) => value * 100;
 const usableSummaryLabel = (value: number | null) => value === null ? '—' : value.toFixed(4);
 const answeredWindows = Math.round(audited.opentslm.usable_summary_rate * comparison.window_count);
+const rationaleGeneration = rationaleFollowup.nearest_generation_panel;
+const rationaleEquivariance = rationaleFollowup.equivariance_panel;
 
 const results = {
   features: {
@@ -164,6 +168,17 @@ export default function EvaluationWorkspace() {
       <div><dt>OpenTSLM usable summaries</dt><dd>77.93%</dd><small>{answeredWindows} of {comparison.window_count}</small></div>
     </dl>
 
+    <section className="evaluation-followup" aria-labelledby="rationale-followup-title">
+      <div className="section-heading"><div><h2 id="rationale-followup-title">Latest OpenTSLM rationale follow-up</h2><p>Best validation checkpoint at step {rationaleFollowup.selected_step}; diagnostics are deliberately separate from the locked 512-window test comparison.</p></div></div>
+      <dl className="evaluation-summary evaluation-summary-four">
+        <div><dt>Validation JSON validity</dt><dd>{(rationaleGeneration.json_parse_validity * 100).toFixed(1)}%</dd><small>step {rationaleGeneration.step} · n={rationaleGeneration.sample_count}</small></div>
+        <div><dt>Base onset MAE</dt><dd>{rationaleEquivariance.base_onset_mae_ms.toFixed(1)} ms</dd><small>step {rationaleFollowup.selected_step} · n={rationaleEquivariance.sample_count}</small></div>
+        <div><dt>Shift response</dt><dd>{(rationaleEquivariance.shift_prediction_change_rate * 100).toFixed(0)}%</dd><small>{rationaleEquivariance.shift_ms} ms shift · predictions changed</small></div>
+        <div><dt>Channel permutation</dt><dd>{(rationaleEquivariance.channel_permutation_accuracy * 100).toFixed(1)}%</dd><small>expected swapped joint · n={rationaleEquivariance.sample_count}</small></div>
+      </dl>
+      <p className="table-note">The zero-signal panel changed 75% of predictions and reduced semantics macro-F1 to 0.133, supporting signal use. Rationale presence was 72.6%, so explanation availability and grounding remain separate from answer accuracy. These are small validation checks, not test-set gains.</p>
+    </section>
+
     <section className="evaluation-table-section" aria-labelledby="results-title">
       <div className="section-heading"><div><h2 id="results-title">Comparable headline results</h2><p>Every row uses 512 held-out windows and seed 20260912. See provenance below for the CNN boundary.</p></div></div>
       <div className="table-scroll"><table className="data-table evaluation-table evaluation-headline-table"><thead><tr><th>Method</th><th>Semantics F1 ↑</th><th>Contact F1 ↑</th><th>Median onset error ↓</th><th>P90 onset error ↓</th><th>Strongest joint ↑</th><th>Usable summary ↑</th></tr></thead><tbody>
@@ -204,6 +219,6 @@ export default function EvaluationWorkspace() {
       </article>
     </section>
 
-    <details className="evaluation-methodology"><summary>Evaluation contract and provenance</summary><p>Signal features, OpenTSLM, and Qwen are recomputed from checksum-verified archived predictions joined to the same 512 record IDs across 67 held-out recording groups. The CNN summary reports the same locked test size and seed, but its row-level predictions are not in that audited bundle, so it is visibly marked as a recorded run.</p><p>Recording sessions were split before window generation. Normalization and thresholds use training sessions only. Joint and evidence targets are deterministic signal-derived labels rather than physical contact-location truth.</p><p className="mono">Audited pipeline · records {comparison.record_ids_sha256.slice(0, 12)}… · checkpoint {comparison.checkpoint_sha256.slice(0, 12)}… · CNN source {cnnSummary.source_commit} · checkpoint {cnnSummary.checkpoint_sha256.slice(0, 12)}…</p></details>
+    <details className="evaluation-methodology"><summary>Evaluation contract and provenance</summary><p>Signal features, the OpenTSLM canary, and Qwen are recomputed from checksum-verified archived predictions joined to the same 512 record IDs across 67 held-out recording groups. The CNN summary reports the same locked test size and seed, but its row-level predictions are not in that audited bundle, so it is visibly marked as a recorded run.</p><p>The rationale follow-up is a separate validation diagnostic: its nearest generation panel has 84 intent-stratified samples, while its perturbation panel has 12 sessions. It is displayed to expose progress and grounding behavior, not as a replacement test score.</p><p>Recording sessions were split before window generation. Normalization and thresholds use training sessions only. Joint and evidence targets are deterministic signal-derived labels rather than physical contact-location truth.</p><p className="mono">Audited pipeline · records {comparison.record_ids_sha256.slice(0, 12)}… · canary checkpoint {comparison.checkpoint_sha256.slice(0, 12)}… · rationale checkpoint {rationaleFollowup.checkpoint_sha256.slice(0, 12)}… · CNN checkpoint {cnnSummary.checkpoint_sha256.slice(0, 12)}…</p></details>
   </section>;
 }
