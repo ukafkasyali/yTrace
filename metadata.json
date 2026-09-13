@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2D29BMQR6YCSEDW50BZTFTS",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/scripts/plot_collision_batch.py",
+    "data_ingestion/src/dataset_profiler/visualization/timeseries.py",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "docs/submission/demo/investigation-example.md",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/investigationReport.ts",
+    "frontend/src/comparison/ComparisonPanel.tsx",
+    "frontend/src/evaluation/EvaluationWorkspace.tsx",
+    "frontend/src/recordings/RecordingExplorer.tsx",
+    "frontend/src/robot/RobotPanel.tsx",
+    "frontend/src/signals/SignalViewer.tsx",
+    "frontend/src/sourcing/DecisionEvidence.test.tsx",
+    "frontend/src/sourcing/ScoutReview.tsx",
+    "frontend/src/workspaces/ModelWorkspace.tsx",
+    "model_training/src/robot_observability/comparison.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 74977,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4823579,
+    "output_tokens": 18447,
+    "api_call_count": 35
+  }
+}
