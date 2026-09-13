@@ -1,0 +1,70 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CY8PP9XRQCW369Z2F84ECC",
+  "session_id": "01a09636-4732-7010-81b0-79958f5daa26",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T08:31:17.490490272Z",
+  "branch": "codex/v6-failure-analysis",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/submission/README.md",
+    "docs/submission/evaluation/source/inventory.json",
+    "docs/submission/evaluation/source/opentslm-v6-validation-audit.json",
+    "docs/submission/evaluation/v6-validation/README.md",
+    "docs/submission/evaluation/v6-validation/source/receipt.json",
+    "docs/submission/evaluation/v6-validation/training-observability.svg",
+    "model_training/scripts/analyze_failure_modes.py",
+    "model_training/src/robot_observability/comparison.py",
+    "model_training/tests/test_comparison.py",
+    "model_training/tests/test_failure_mode_analysis.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "515a4859c510",
+  "checkpoint_transcript_start": 9230,
+  "transcript_lines_at_start": 9230,
+  "compact_transcript_start": 1208,
+  "token_usage": {
+    "input_tokens": 162,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 192768,
+    "output_tokens": 142,
+    "api_call_count": 1
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T08:31:16.760879047Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 561,
+    "human_modified": 15,
+    "human_removed": 0,
+    "total_committed": 561,
+    "total_lines_changed": 578,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1744,
+      "user_lines_removed": 4,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "docs/submission/evaluation/v6-validation/report/checkpoint_trajectory.csv": 17,
+        "docs/submission/evaluation/v6-validation/report/failure_analysis.json": 1357,
+        "docs/submission/evaluation/v6-validation/report/failure_analysis.md": 101,
+        "docs/submission/evaluation/v6-validation/source/run_manifest.json": 207,
+        "docs/submission/evaluation/v6-validation/source/status.json": 9,
+        "model_training/scripts/analyze_failure_modes.py": 44,
+        "model_training/tests/test_failure_mode_analysis.py": 9
+      },
+      "user_removed_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 4
+      }
+    }
+  ]
+}
