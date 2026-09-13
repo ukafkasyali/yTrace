@@ -35,6 +35,12 @@ function inputReceiptIssue(receipt: unknown, recordingId: string, interval: Inte
   return undefined;
 }
 
+function scopedInterpretation(text: string, mode: InvestigationAnswer['mode']): string {
+  if (mode !== 'assistant') return text;
+  const generatedBlock = text.match(/(?:^|\n)\s*OpenTSLM interpretation\s*\n([\s\S]*)$/i);
+  return generatedBlock?.[1].trim() || text;
+}
+
 export function buildInvestigationReport(data: DemoData, datasetId: string, answer: InvestigationAnswer) {
   if (answer.interval.end > answer.playhead) throw new Error('The investigation extends beyond its replay cursor.');
   const window = selectWindow(data, answer.interval);
@@ -63,7 +69,7 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
     publisherAnnotations: data.events.filter(e => e.timeSeconds >= answer.interval.start && e.timeSeconds < answer.interval.end),
     measurements: { origin: 'deterministic_calculation', method: 'sampled min, max, range and absolute peak', channels: measurements },
     interpretation: { origin: answer.mode === 'local' ? 'deterministic_calculation' : 'generated_prediction',
-      answer: answer.text, source: answer.source, modelId: answer.modelId ?? null,
+      answer: scopedInterpretation(answer.text, answer.mode), source: answer.source, modelId: answer.modelId ?? null,
       modelRevision: answer.modelRevision ?? null, rawModelOutput: answer.modelOutput ?? null,
       rawModelOutputTrust: answer.modelOutput ? 'unverified_generated_text_not_annotation_or_measurement' : null,
       structuredPrediction: answer.mode === 'assistant' ? structuredPrediction(answer.modelOutput) ?? null : null,
@@ -99,6 +105,21 @@ function fixed(value: number, digits = 3): string {
   return Number.isFinite(value) ? value.toFixed(digits) : 'unavailable';
 }
 
+function generatedPredictionMarkdown(report: InvestigationReport): string | undefined {
+  const prediction = report.interpretation.structuredPrediction;
+  if (!prediction) return;
+  return [
+    `- **Contact:** ${prediction.contact ? 'yes' : 'no'}`,
+    `- **Event type:** ${markdownText(prediction.event_type)}`,
+    `- **Onset:** ${prediction.onset_ms === null ? 'not applicable' : `${prediction.onset_ms} ms after window start`}`,
+    `- **Strongest joint:** ${markdownText(prediction.strongest_joint ?? 'not applicable')}`,
+    `- **Affected joints:** ${prediction.affected_joints.length ? prediction.affected_joints.map(markdownText).join(', ') : 'none'}`,
+    `- **Evidence interval:** ${prediction.evidence_start_ms === null || prediction.evidence_end_ms === null
+      ? 'not applicable'
+      : `${prediction.evidence_start_ms}–${prediction.evidence_end_ms} ms after window start`}`,
+  ].join('\n');
+}
+
 export function renderInvestigationMarkdown(report: InvestigationReport): string {
   const annotations = report.publisherAnnotations.length
     ? report.publisherAnnotations.map(annotation =>
@@ -113,7 +134,9 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
   const receipt = report.interpretation.inputReceipt && typeof report.interpretation.inputReceipt === 'object'
     ? report.interpretation.inputReceipt as { samplesPerChannel?: unknown; inputSha256?: unknown }
     : undefined;
-  const answer = report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
+  const answer = report.interpretation.origin === 'generated_prediction'
+    ? generatedPredictionMarkdown(report) ?? 'No valid structured prediction was returned.'
+    : report.interpretation.answer.split(/\n\s*\n/).map(markdownText).filter(Boolean).join('\n\n');
   const reviewNotes = report.reviewNotes.length ? report.reviewNotes.map(item => `- ${markdownText(item)}`) : ['- No model/measurement ranking difference was flagged by the current review checks.'];
   return [
     '# Trace incident investigation',
@@ -133,7 +156,7 @@ export function renderInvestigationMarkdown(report: InvestigationReport): string
     '',
     answer || 'No interpretation was returned.',
     '',
-    '## Cross-check before handoff',
+    '## Deterministic cross-check before handoff',
     '',
     ...reviewNotes,
     '',
