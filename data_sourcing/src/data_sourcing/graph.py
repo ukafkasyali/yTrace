@@ -894,6 +894,18 @@ class DatasetScoutGraph:
 
     def manifest_generation(self, state: SourcingState) -> dict[str, Any]:
         candidate_id = state["approved_candidate_id"]
+        manifest = self.build_manifest(state, candidate_id)
+        return {
+            "status": RunStatus.APPROVED.value,
+            "manifest": manifest.model_dump(mode="json"),
+        }
+
+    def build_manifest(
+        self,
+        state: SourcingState | dict[str, Any],
+        candidate_id: str,
+    ) -> SourcingManifest:
+        """Build the immutable manifest for one eligible assessed candidate."""
         profile = next(
             DatasetProfile.model_validate(item)
             for item in state["profiles"]
@@ -916,7 +928,7 @@ class DatasetScoutGraph:
         limitations.append(
             "Collision/contact observations are not evidence of internal mechanical faults."
         )
-        manifest = SourcingManifest(
+        return SourcingManifest(
             schema_version="1.1",
             run_id=state["run_id"],
             candidate_id=profile.candidate_id,
@@ -937,7 +949,3 @@ class DatasetScoutGraph:
             limitations=limitations,
             approved_at=datetime.now(UTC),
         )
-        return {
-            "status": RunStatus.APPROVED.value,
-            "manifest": manifest.model_dump(mode="json"),
-        }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import threading
 from datetime import UTC, datetime
@@ -141,6 +142,16 @@ class ArtifactStore:
             raise ArtifactUnavailable("Manifest is only available after approval")
         return SourcingManifest.model_validate_json(path.read_text(encoding="utf-8"))
 
+    def persist_additional_manifest(self, manifest: SourcingManifest) -> None:
+        if not re.fullmatch(r"ds_[a-f0-9]{12}", manifest.candidate_id):
+            raise ValueError("Manifest candidate ID is invalid")
+        directory = self.run_dir(manifest.run_id) / "manifests"
+        directory.mkdir(parents=True, exist_ok=True)
+        self._atomic_write(
+            directory / f"{manifest.candidate_id}.json",
+            manifest.model_dump_json(by_alias=True, indent=2),
+        )
+
     def manifests(self) -> list[SourcingManifest]:
         manifests: list[SourcingManifest] = []
         for directory in sorted(self.runs_dir.iterdir()):
@@ -149,7 +160,17 @@ class ArtifactStore:
             try:
                 manifests.append(self.read_manifest(directory.name))
             except (ArtifactUnavailable, RunNotFound, OSError, ValueError):
+                pass
+            additional_directory = directory / "manifests"
+            if not additional_directory.is_dir():
                 continue
+            for path in sorted(additional_directory.glob("ds_*.json")):
+                try:
+                    manifests.append(
+                        SourcingManifest.model_validate_json(path.read_text(encoding="utf-8"))
+                    )
+                except (OSError, ValueError):
+                    continue
         return manifests
 
 
@@ -221,6 +242,8 @@ class ApprovedSourceStore:
                 approved_at TEXT NOT NULL,
                 PRIMARY KEY(approved_source_id, sourcing_run_id)
             );
+            CREATE INDEX IF NOT EXISTS ix_approval_events_sourcing_run_id
+                ON approval_events(sourcing_run_id);
             """
         )
         columns = {
@@ -413,6 +436,17 @@ class ApprovedSourceStore:
         if row is None:
             raise ApprovedSourceNotFound("Approved source not found")
         return SourcingManifest.model_validate_json(row["latest_manifest_json"])
+
+    def candidate_ids_for_run(self, sourcing_run_id: str) -> list[str]:
+        rows = self.connection.execute(
+            """
+            SELECT candidate_id FROM approval_events
+            WHERE sourcing_run_id = ?
+            ORDER BY approved_at ASC, candidate_id ASC
+            """,
+            (sourcing_run_id,),
+        ).fetchall()
+        return [row["candidate_id"] for row in rows]
 
     def delete(self, approved_source_id: str) -> None:
         with self._lock:

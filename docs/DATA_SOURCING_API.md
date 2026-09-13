@@ -8,7 +8,8 @@ download dataset contents or start ingestion.
 
 `QUEUED → PLANNING → DISCOVERING → VERIFYING → ASSESSING` ends in one of:
 
-- `AWAITING_APPROVAL → APPROVED`, which writes `manifest.json` for the selected eligible candidate;
+- `AWAITING_APPROVAL → APPROVED`, which writes `manifest.json` for the first selected eligible candidate;
+- `APPROVED → APPROVED` when the reviewer approves another eligible candidate from the same completed shortlist;
 - `AWAITING_APPROVAL → DISCOVERING → … → AWAITING_APPROVAL` after reviewer feedback;
 - `NEEDS_INPUT` when any mandatory evidence requirement is unsupported;
 - `FAILED` for an unrecoverable workflow failure.
@@ -94,6 +95,9 @@ or `NO_CHANGE`. `excludedCandidateIds` records reviewer exclusions separately fr
 assessment results so clients can show the full audit trail without offering excluded choices.
 `feedbackAllowed` tells clients whether the current durable checkpoint can accept another bounded
 reviewer-directed search. It may be true for either `AWAITING_APPROVAL` or `NEEDS_INPUT`.
+`approvedCandidateIds` lists every candidate approved from the run in approval order. The existing
+`approvedCandidateId` and `manifest` fields continue to identify the first approval for backward
+compatibility.
 
 Candidates also expose additive source-exploration fields: `sourceRole` is `DISCOVERY_LEAD` or
 `DATASET_ARTIFACT`, `discoveryDepth` is zero to two, and `discoveredFromCandidateId` identifies the
@@ -126,10 +130,12 @@ instead of exposing numeric scores.
 
 ### `POST /api/sourcing-runs/{runId}/approvals`
 
-Only valid in `AWAITING_APPROVAL`. The reviewer may approve the recommendation or another
-assessed candidate with `MEDIUM` or `HIGH` suitability which passes every mandatory hard gate. The
-response retains `recommendedCandidateId` for auditability and records the reviewer override in
-`approvedCandidateId`.
+The first approval is valid in `AWAITING_APPROVAL`. The reviewer may approve the recommendation or
+another assessed candidate with `MEDIUM` or `HIGH` suitability which passes every mandatory hard
+gate. After the run reaches `APPROVED`, the same endpoint may approve any remaining eligible,
+non-excluded candidate from that completed shortlist. It does not rerun discovery or reassessment.
+The response retains `recommendedCandidateId` for auditability, keeps the first selection in
+`approvedCandidateId`, and returns all selections in `approvedCandidateIds`.
 
 ```json
 {"decision": "APPROVE", "candidateId": "ds_0123456789ab", "note": "Team review"}
@@ -143,8 +149,8 @@ review-directed query and resumes discovery in the same LangGraph thread, preser
 candidates and evidence. The excluded candidate remains visible in assessments and reports for
 auditability, but cannot be recommended or approved later in the run. Attempts to approve it
 return `409 RUN_CONFLICT`. Up to two reviewer refinements are allowed, subject to the original
-time and Tavily-credit budgets. Repeating the same successful approval is safe; other
-terminal-state approvals also return `409 RUN_CONFLICT`.
+time and Tavily-credit budgets. Repeating any successful approval is safe and does not create a
+second event. Rejection and refinement remain unavailable after the first approval.
 
 When a run is `NEEDS_INPUT` and `feedbackAllowed` is true, the same endpoint accepts
 `{"decision":"REJECT","note":"Search specifically for ..."}` without a `candidateId`. The run is
@@ -185,7 +191,9 @@ the strengths, limitations, or blockers that produced it; numeric scores are omi
 
 ### `GET /api/sourcing-runs/{runId}/manifest`
 
-Returns the approved manifest. Before approval it returns `409 ARTIFACT_UNAVAILABLE`.
+Returns the first approved manifest for backward compatibility. Before approval it returns
+`409 ARTIFACT_UNAVAILABLE`. Additional manifests are available through their entries in the
+approved-source library.
 
 New approvals use additive manifest schema `1.1`. `sourceKind` and `sourceRevision` identify the
 approved provider record, while `assets` contains only non-empty data, documentation, or checksum
@@ -237,7 +245,8 @@ source. A changed provider revision is a separate source.
 
 Approval writes the sourcing run first and then idempotently records its manifest in the catalog.
 Service startup reconciles approved run manifests, so an interruption between those writes does not
-lose the source. Approval still never downloads or ingests the dataset.
+lose the source. Additional approvals from the same run have separate immutable manifest artifacts
+and approval events. Approval still never downloads or ingests the dataset.
 
 ### `GET /api/approved-sources/{approvedSourceId}`
 

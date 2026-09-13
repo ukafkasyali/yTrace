@@ -142,7 +142,10 @@ describe('service contracts', () => {
     };
     const fetch = vi.fn()
       .mockResolvedValueOnce(Response.json(run))
-      .mockResolvedValueOnce(Response.json({ ...run, status: 'APPROVED' }))
+      .mockResolvedValueOnce(Response.json({
+        ...run, status: 'APPROVED', approvedCandidateId: 'candidate-1',
+        approvedCandidateIds: ['candidate-1', 'candidate-2'],
+      }))
       .mockResolvedValueOnce(new Response('# Report', { headers: { 'Content-Type': 'text/markdown' } }))
       .mockResolvedValueOnce(Response.json({
         runId: 'run-1', candidateId: 'candidate-1', name: 'Robot telemetry', canonicalUrl: 'https://zenodo.org/records/1',
@@ -152,9 +155,10 @@ describe('service contracts', () => {
     vi.stubGlobal('fetch', fetch);
     const service = createServices('/api');
     expect((await service.getSourcingRun('run/1')).status).toBe('AWAITING_APPROVAL');
-    await service.reviewSourcingRun('run/1', {
+    const reviewed = await service.reviewSourcingRun('run/1', {
       decision: 'APPROVE', candidateId: 'candidate-1', note: 'Reviewed',
     });
+    expect(reviewed.approvedCandidateIds).toEqual(['candidate-1', 'candidate-2']);
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/sourcing-runs/run%2F1/approvals', expect.objectContaining({
       method: 'POST', body: JSON.stringify({ decision: 'APPROVE', candidateId: 'candidate-1', note: 'Reviewed' }),
     }));

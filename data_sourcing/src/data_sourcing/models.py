@@ -534,6 +534,7 @@ class SourcingRun(WireModel):
     assessments: list[CandidateAssessment] = Field(default_factory=list)
     recommended_candidate_id: str | None = None
     approved_candidate_id: str | None = None
+    approved_candidate_ids: list[str] = Field(default_factory=list)
     excluded_candidate_ids: list[str] = Field(default_factory=list, max_length=2)
     review_feedback: list[str] = Field(default_factory=list, max_length=2)
     review_iterations_used: int = Field(default=0, ge=0, le=2)

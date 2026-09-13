@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, Check, CircleX } from 'lucide-react';
-import { candidateIsEligibleForApproval, candidateSuitabilityFactors, candidateSuitabilityLabel, candidateSuitabilityLevel } from '../services';
+import { approvedCandidateIds, candidateIsEligibleForApproval, candidateSuitabilityFactors, candidateSuitabilityLabel, candidateSuitabilityLevel } from '../services';
 import type { CandidateAssessment, DatasetCandidate, DatasetProfile, SourcingManifest, SourcingReview, SourcingRun } from '../services';
 import DecisionEvidence from './DecisionEvidence';
 import { friendlyRetrievalNote } from './retrievalNotes';
@@ -54,9 +54,13 @@ export default function ScoutReview({ run, busy, onReview, onUseSource }: Props)
   const excludedCandidateIds = new Set(run.excludedCandidateIds);
   const eligible = run.assessments.filter(item =>
     candidateIsEligibleForApproval(item, excludedCandidateIds));
-  const eligibleKey = eligible.map(item => item.candidateId).join('|');
-  const defaultCandidateId = run.approvedCandidateId ?? run.recommendedCandidateId
-    ?? eligible[0]?.candidateId ?? '';
+  const approvedIds = new Set(approvedCandidateIds(run));
+  const remainingEligible = eligible.filter(item => !approvedIds.has(item.candidateId));
+  const isAdditionalApproval = run.status === 'APPROVED';
+  const approvalOptions = isAdditionalApproval ? remainingEligible : eligible;
+  const eligibleKey = approvalOptions.map(item => item.candidateId).join('|');
+  const defaultCandidateId = approvalOptions[0]?.candidateId
+    ?? run.approvedCandidateId ?? run.recommendedCandidateId ?? eligible[0]?.candidateId ?? '';
   const [selectedCandidateId, setSelectedCandidateId] = useState(defaultCandidateId);
   const [feedback, setFeedback] = useState('');
   useEffect(() => {
@@ -74,8 +78,12 @@ export default function ScoutReview({ run, busy, onReview, onUseSource }: Props)
     ?? (run.status === 'AWAITING_APPROVAL' && hasRefinementSlot && hasRefinementCredits);
   const needsInput = run.status === 'NEEDS_INPUT';
   const showReviewPanel = run.status === 'AWAITING_APPROVAL'
-    || (needsInput && refinementAvailable);
+    || (needsInput && refinementAvailable)
+    || (isAdditionalApproval && remainingEligible.length > 0);
   const normalizedFeedback = feedback.trim();
+  const selectedApprovalCandidateId = approvalOptions.some(
+    item => item.candidateId === selectedCandidateId,
+  ) ? selectedCandidateId : approvalOptions[0]?.candidateId ?? '';
 
   return <div className="scout-review" aria-live="polite">
     <div className="scout-run-line"><span className={`run-status status-${run.status.toLowerCase()}`}>{run.status.replaceAll('_', ' ')}</span><span>mode: {run.executionMode.toLowerCase()} · {run.tavilyCreditsUsed}/12 Tavily credits · {run.gapQueriesUsed}/2 gap searches</span><span className="mono">{run.runId}</span></div>
@@ -84,23 +92,23 @@ export default function ScoutReview({ run, busy, onReview, onUseSource }: Props)
     {candidate && assessment && <CandidateSummary candidate={candidate} profile={profile} assessment={assessment} isRecommendation={selectedCandidateId === run.recommendedCandidateId} />}
     {run.assessments.length > 0 && <DecisionEvidence run={run} candidateId={selectedCandidateId || undefined} />}
     {showReviewPanel && <section className="scout-approval" aria-labelledby="scout-approval-title">
-      <div><strong id="scout-approval-title">{needsInput ? 'Help the scout continue' : 'Human decision required'}</strong><p>{needsInput ? 'No dataset passed the current contract. Direct the next bounded search with specific missing evidence, source types, or alternatives.' : 'Approve any eligible dataset, or give the scout specific feedback for another bounded search.'}</p></div>
-      <div className={`scout-approval-grid${needsInput ? ' needs-input' : ''}`}>
+      <div><strong id="scout-approval-title">{needsInput ? 'Help the scout continue' : isAdditionalApproval ? 'Approve another dataset' : 'Human decision required'}</strong><p>{needsInput ? 'No dataset passed the current contract. Direct the next bounded search with specific missing evidence, source types, or alternatives.' : isAdditionalApproval ? `${approvedIds.size} eligible dataset${approvedIds.size === 1 ? '' : 's'} approved from this run. Review and approve another candidate, or open the approved-source library when you are done.` : 'Approve any eligible dataset, or give the scout specific feedback for another bounded search.'}</p></div>
+      <div className={`scout-approval-grid${needsInput ? ' needs-input' : isAdditionalApproval ? ' additional-approval' : ''}`}>
         {!needsInput && <div className="scout-approval-choice">
           <label htmlFor={`approval-candidate-${run.runId}`}>Dataset to approve</label>
-          <select id={`approval-candidate-${run.runId}`} value={selectedCandidateId} onChange={event => setSelectedCandidateId(event.target.value)} disabled={Boolean(busy) || eligible.length === 0}>
-            {eligible.length === 0 && <option value="">No eligible datasets</option>}
-            {eligible.map(item => <option key={item.candidateId} value={item.candidateId}>{run.candidates.find(candidateItem => candidateItem.id === item.candidateId)?.name ?? item.candidateId} — {candidateSuitabilityLabel(item)}{item.candidateId === run.recommendedCandidateId ? ' (agent recommendation)' : ''}</option>)}
+          <select id={`approval-candidate-${run.runId}`} value={selectedApprovalCandidateId} onChange={event => setSelectedCandidateId(event.target.value)} disabled={Boolean(busy) || approvalOptions.length === 0}>
+            {approvalOptions.length === 0 && <option value="">No eligible datasets</option>}
+            {approvalOptions.map(item => <option key={item.candidateId} value={item.candidateId}>{run.candidates.find(candidateItem => candidateItem.id === item.candidateId)?.name ?? item.candidateId} — {candidateSuitabilityLabel(item)}{item.candidateId === run.recommendedCandidateId ? ' (agent recommendation)' : ''}</option>)}
           </select>
-          <small>Only datasets that pass every mandatory gate can be approved.</small>
-          <button className="btn btn-primary" disabled={Boolean(busy) || !selectedCandidateId} onClick={() => onReview({ decision: 'APPROVE', candidateId: selectedCandidateId })}>{busy === 'APPROVE' ? 'Approving…' : 'Approve selected dataset'}</button>
+          <small>{isAdditionalApproval ? `${remainingEligible.length} of ${eligible.length} eligible datasets remain unapproved.` : 'Only datasets that pass every mandatory gate can be approved.'}</small>
+          <button className="btn btn-primary" disabled={Boolean(busy) || !selectedApprovalCandidateId} onClick={() => onReview({ decision: 'APPROVE', candidateId: selectedApprovalCandidateId })}>{busy === 'APPROVE' ? 'Approving…' : 'Approve selected dataset'}</button>
         </div>}
-        <div className="scout-refinement">
+        {!isAdditionalApproval && <div className="scout-refinement">
           <label htmlFor={`refinement-feedback-${run.runId}`}>{needsInput ? 'What should the scout search for next?' : 'What should the scout improve?'}</label>
           <textarea id={`refinement-feedback-${run.runId}`} rows={3} value={feedback} onChange={event => setFeedback(event.target.value)} placeholder="Example: prioritize datasets with free-motion baselines and CSV files" disabled={Boolean(busy) || !refinementAvailable} />
           <small>{refinementAvailable ? `${run.reviewIterationsUsed}/2 refinement searches used. Feedback is added to the next bounded query.` : hasRefinementSlot ? 'The Tavily credit budget is exhausted; start a new run to continue.' : 'The refinement limit is reached; start a new run to continue.'}</small>
           <button className="btn" disabled={Boolean(busy) || !refinementAvailable || normalizedFeedback.length < 3} onClick={() => onReview({ decision: 'REJECT', candidateId: needsInput ? undefined : selectedCandidateId || undefined, note: normalizedFeedback })}>{busy === 'REJECT' ? 'Refining…' : needsInput ? 'Refine search' : 'Reject and refine'}</button>
-        </div>
+        </div>}
       </div>
       {run.reviewFeedback.length > 0 && <details className="scout-review-history"><summary>Applied reviewer feedback ({run.reviewFeedback.length})</summary><ol>{run.reviewFeedback.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol></details>}
     </section>}
