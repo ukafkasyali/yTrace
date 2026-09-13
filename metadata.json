@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CTN8RAC0B76CX8Q06MS3B1",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-family-completion",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "data_sourcing/README.md",
+    "data_sourcing/src/data_sourcing/adapters/native.py",
+    "data_sourcing/src/data_sourcing/config.py",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/src/data_sourcing/storage.py",
+    "data_sourcing/tests/test_adapters.py",
+    "data_sourcing/tests/test_api.py",
+    "docs/DATA_SOURCING_API.md",
+    "frontend/src/services/sourcing.ts",
+    "frontend/src/sourcing/DecisionEvidence.test.tsx",
+    "frontend/src/sourcing/ScoutReview.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 30204,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4151240,
+    "output_tokens": 9563,
+    "api_call_count": 29
+  }
+}

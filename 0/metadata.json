@@ -1,0 +1,51 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CTN8RAC0B76CX8Q06MS3B1",
+  "session_id": "01a099a0-3a40-7fa0-8257-25d725bb07a5",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:28:12.907797Z",
+  "branch": "codex/dataset-family-completion",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "data_sourcing/README.md",
+    "data_sourcing/src/data_sourcing/adapters/native.py",
+    "data_sourcing/src/data_sourcing/config.py",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/models.py",
+    "data_sourcing/src/data_sourcing/storage.py",
+    "data_sourcing/tests/test_adapters.py",
+    "data_sourcing/tests/test_api.py",
+    "docs/DATA_SOURCING_API.md",
+    "frontend/src/services/sourcing.ts",
+    "frontend/src/sourcing/DecisionEvidence.test.tsx",
+    "frontend/src/sourcing/ScoutReview.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "5118c104eb40",
+  "checkpoint_transcript_start": 358,
+  "transcript_lines_at_start": 358,
+  "compact_transcript_start": 44,
+  "token_usage": {
+    "input_tokens": 30204,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4151240,
+    "output_tokens": 9563,
+    "api_call_count": 29
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T07:28:12.81727Z",
+    "agent_lines": 123,
+    "agent_removed": 9,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 123,
+    "total_lines_changed": 132,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
