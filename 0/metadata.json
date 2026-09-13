@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CTERTQFXCN3TFJ4GAEWAZK",
+  "session_id": "01a099a0-3a40-7fa0-8257-25d725bb07a5",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:24:39.817275Z",
+  "branch": "codex/dataset-family-completion",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/src/data_sourcing/planning.py",
+    "data_sourcing/tests/test_graph.py",
+    "data_sourcing/tests/test_planning.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "5118c104eb40",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 128976,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3102758,
+    "output_tokens": 16156,
+    "api_call_count": 40
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T07:24:39.749285Z",
+    "agent_lines": 208,
+    "agent_removed": 2,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 208,
+    "total_lines_changed": 210,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

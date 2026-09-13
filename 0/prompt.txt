@@ -1,0 +1,11 @@
+Pull from main.
+
+---
+
+Regarding our agentic data sourcing, I realized one edge case. Some datasets publish their data in more than one part. In that case, our agent sometimes only recommends Part 1 as source but Part 2 is nowhere.
+
+Why isn't our agent smart enough to search for other parts in that case?
+
+---
+
+Let's implement that
