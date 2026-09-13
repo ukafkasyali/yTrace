@@ -188,3 +188,15 @@ ama nedense ben cnn'in bu kadar iyi olmasını beklemedim
 ben commitledims
 biraz uyuyorum sonra uyanıp sunuma bakıyorum
 @sd38 bi tane canvas yaptı bütün comparisonlar orda gayet hoş gözüküyo sen de frontende öyle bişi mi eklesen aslında demoda göstersek baselineları daha hoş bi görüntü olabilir
+
+---
+
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://127.0.0.1:5174/
+</in-app-browser-context>
+
+## My request:
+Do you even at that point think it has the probability of becoming first place? Like this project feels a bit useless tbh. How will we show this in the demo? Like make this really interesting and sexy? And also ensure that everybody is aligned or what do you think how we should proceed? Like what is left, think critically and also critique yourself. Then also push your changes for now please
