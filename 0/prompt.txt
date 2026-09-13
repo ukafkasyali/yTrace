@@ -1,0 +1,6 @@
+ensure that you are using the latest changes, and dont break anything. A friend pushed some commits on top.
+
+---
+
+ok, the model always prints No usable structured prediction
+The generation did not meet the complete seven-field contract used by Evaluation. The model response is shown below without repairing it.No usable structured prediction. It shouldnt print that but stay silent
