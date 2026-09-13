@@ -1,0 +1,53 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CA5HF1CRANYM07X3NZ7MCQ",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T02:40:38.056621Z",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "AGENTS.md",
+    "data_ingestion/README.md",
+    "data_ingestion/scripts/bosch_handoff_contract.py",
+    "data_ingestion/scripts/bosch_onboarding_stage.py",
+    "data_ingestion/src/dataset_profiler/onboarding/backend.py",
+    "data_ingestion/src/dataset_profiler/onboarding/models.py",
+    "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py",
+    "data_ingestion/src/dataset_profiler/onboarding/store.py",
+    "data_ingestion/tests/fixtures/bosch_unresolved_spec.json",
+    "data_ingestion/tests/test_bosch_handoff_contract.py",
+    "data_ingestion/tests/test_implementation_handoff.py",
+    "data_ingestion/tests/test_onboarding_artifact_integrity.py",
+    "data_ingestion/tests/test_onboarding_orchestrator.py",
+    "data_ingestion/tests/test_onboarding_source_binding.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "d34b8d65e4db",
+  "checkpoint_transcript_start": 10359,
+  "transcript_lines_at_start": 10359,
+  "compact_transcript_start": 1357,
+  "token_usage": {
+    "input_tokens": 92027,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 6945019,
+    "output_tokens": 15138,
+    "api_call_count": 53
+  },
+  "session_metrics": {
+    "turn_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T02:40:34.200872Z",
+    "agent_lines": 2050,
+    "agent_removed": 68,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 2050,
+    "total_lines_changed": 2118,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
