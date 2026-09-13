@@ -43,10 +43,10 @@ Prepare the same raw telemetry and short channel guide for both conditions:
 
 | Condition A | Condition B |
 |---|---|
-| Synchronized charts and ordinary numerical tools; no generated interpretation, evidence links or Trace export | Trace with its actual deterministic measurements, generated prediction, evidence navigation and export |
+| Synchronized charts and ordinary numerical tools; no generated interpretation, evidence links or y/trace export | y/trace with its actual deterministic measurements, generated prediction, evidence navigation and export |
 
 Give both conditions the same two-minute familiarization. Demonstrate interface
-controls only; do not reveal a case answer, say that Trace is expected to be
+controls only; do not reveal a case answer, say that y/trace is expected to be
 faster, or imply that a model prediction is ground truth.
 
 ## Participant task script
@@ -77,7 +77,7 @@ Measured evidence and interval: ______
 Uncertainty or limitation: ______
 ```
 
-For condition B, an exported Trace investigation may accompany this report but
+For condition B, an exported y/trace investigation may accompany this report but
 does not replace the participant's written classification and evidence statement.
 
 ## Scoring after the session

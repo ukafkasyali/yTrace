@@ -30,13 +30,23 @@ def main() -> None:
     parser.add_argument("--samples", type=int, default=12)
     parser.add_argument("--shift-ms", type=int, default=64)
     parser.add_argument("--seed", type=int, default=20260912)
+    parser.add_argument(
+        "--output-format",
+        choices=("answer_only", "answer_then_evidence", "rationale_then_answer"),
+        default="rationale_then_answer",
+    )
     args = parser.parse_args()
 
     model = OpenTSLMSP(llm_id="meta-llama/Llama-3.2-1B", device="cuda")
     model.enable_lora()
     model.load_from_file(str(args.checkpoint))
     model.eval()
-    dataset = RobotQADataset(args.prepared_root, "validation", mode="summary")
+    dataset = RobotQADataset(
+        args.prepared_root,
+        "validation",
+        mode="summary",
+        output_format=args.output_format,
+    )
     rng = np.random.default_rng(args.seed)
     candidate_indices: dict[str, list[int]] = {"accidental": [], "intentional": []}
     seen_sessions: dict[str, set[str]] = {"accidental": set(), "intentional": set()}
@@ -119,6 +129,7 @@ def main() -> None:
         "sessions": len({str(row["session_id"]) for row in rows}),
         "event_type_counts": dict(Counter(str(row["event_type"]) for row in rows)),
         "shift_ms": args.shift_ms,
+        "output_format": args.output_format,
         "base_onset_coverage": len(base_onset_errors) / len(rows) if rows else 0.0,
         "base_onset_mae_ms": float(np.mean(base_onset_errors)) if base_onset_errors else None,
         "shift_equivariance_mae_ms": float(np.mean(shift_errors)) if shift_errors else None,

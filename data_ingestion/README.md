@@ -109,16 +109,45 @@ After materialization, the worker inventories every regular file and exposes the
 MATLAB v5, and HDF5 require matching magic bytes and extensions; CSV/TSV require bounded UTF-8
 samples with a consistent dialect matching the extension. Empty, executable, unknown, mismatched,
 and nested archive files remain visible as `UNSUPPORTED` with a stable reason and are never opened
-as code. Jobs with at least one supported resource advance to `mapping`; jobs with none end in
-`unsupported_format`.
+as code. Jobs with one unambiguous structural mapping enter the persisted
+`OnboardingOrchestrator`; jobs with none end in `unsupported_format`. Ambiguous structural layouts
+continue to use the existing mapping endpoint, then enter that same orchestrator. The production
+worker no longer schedules `GenericImportWorker` as a parallel end-to-end path.
 
 `GET /api/ingestions/{ingestionId}/mapping-proposals` returns deterministic structural candidates;
 it never fills unknown channel units. `PUT /api/ingestions/{ingestionId}/mapping` accepts an explicit
 wide-table, long-table, or named-array mapping bound to the current `jobRevision`, resource ID, and
 resource SHA-256. Time, record, channel, value, array-axis, and annotation selectors are checked
-against the persisted schema. Competing selectors, unknown units, stale revisions, changed sources,
-and placeholder long-table channels fail without advancing the job. Repeating the identical
-confirmed mapping is idempotent; replacing it is a conflict.
+against the persisted schema. This compatibility endpoint selects structure only; it cannot approve
+unknown units. Competing selectors, stale revisions, changed sources, and placeholder long-table
+channels fail without advancing the job. Repeating the identical confirmed mapping is idempotent;
+replacing it is a conflict.
+
+The verified acquisition becomes a `SourceDescriptor` containing the approved-source and ingestion
+IDs, manifest digest, immutable asset content keys and hashes, resource inventory, provider revision,
+licence, and verified-cache root. It is persisted under
+`INGESTION_DATA_DIR/onboarding_jobs/job-<ingestion-id-without-hyphens>/`. A deterministic backend
+adapts the existing mapping and TimeF code to the orchestrator's semantic, connector, test, build,
+load, and verify stages.
+
+Unknown channel units pause with `state: "needs_human_resolution"` and
+`onboardingStatus: "NEEDS_HUMAN_RESOLUTION"`. `GET /api/ingestions/{ingestionId}/onboarding`
+returns structured blockers and artifact receipts. Submit an implementation-only decision to
+`POST /api/ingestions/{ingestionId}/human-resolutions`:
+
+```json
+{
+  "field_path": "signals[0].unit",
+  "value": "newton * meter",
+  "approved_by": "engineer@example.com",
+  "rationale": "Confirmed from the machine signal dictionary."
+}
+```
+
+The server fixes the decision source to `human_confirmation`; agent-only approval is rejected. The
+existing `ImplementationOverrideArtifact` and connector-handoff validator remain authoritative, and
+the `DatasetSpec` is never mutated. After the last blocker, the same job becomes `CONNECTOR_READY`;
+the worker resumes connector implementation/testing, TimeF build, `TimeNet.load`, and verification.
 
 Confirmed wide-table, long-table, and named-array mappings are converted into TimeF with explicit
 record boundaries, integer-microsecond irregular time axes, channel names, units, missing values,
@@ -133,7 +162,7 @@ paginated record summaries from that ingestion's TimeF registry. It exposes reco
 and value counts, regular-axis duration, signal names, and annotation keys without loading or
 returning raw arrays. Each record receives an opaque key and an explicit replay-compatibility flag.
 Compatible records expose `/records/{recordKey}/replay`, `/signals`, and `/events` subresources for
-the existing Trace workbench. Replay requires exactly seven canonical external-torque channels at
+the existing y/trace workbench. Replay requires exactly seven canonical external-torque channels at
 1 kHz; other imported layouts remain metadata-browsable and are never coerced. The replay response
 uses a bounded overview plus a five-second raw excerpt, while signal requests load explicit bounded
 windows. An ingestion without a final validation receipt cannot browse or replay records.
@@ -147,7 +176,8 @@ connectors retain seven torque and seven position series at 1 kHz and keep accid
 intentional-contact publisher annotations distinct.
 ## Job-oriented onboarding
 
-**Experimental; no completed end-to-end Bosch job is archived in this repository.**
+The approved-source ingestion path now uses this state machine. The Bosch reference preset remains
+experimental; no completed end-to-end Bosch job is archived in this repository.
 `dataset_profiler.onboarding` wraps the existing profiler, semantic agent, validator/repair loop,
 human implementation handoff, and native TimeNet workflow in a persisted state machine. Structured
 state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs. The state

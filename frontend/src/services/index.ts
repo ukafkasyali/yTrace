@@ -11,6 +11,8 @@ import {
   isImportJob,
   isMappingProposals,
   isMappingSpec,
+  isOnboardingJobView,
+  type HumanResolution,
   type MappingSpec,
 } from './ingestion';
 export * from './sourcing';
@@ -280,6 +282,18 @@ export function createServices(baseUrl?: string) {
     getImport: async (id: string) => {
       const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}`);
       if (!isImportJob(result)) throw new ProtocolError('The ingestion response does not match the job contract.');
+      return result;
+    },
+    getImportOnboarding: async (id: string) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/onboarding`);
+      if (!isOnboardingJobView(result)) throw new ProtocolError('The onboarding status does not match the contract.');
+      return result;
+    },
+    resolveImportBlocker: async (id: string, resolution: HumanResolution) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/human-resolutions`, {
+        method: 'POST', body: JSON.stringify(resolution),
+      });
+      if (!isOnboardingJobView(result)) throw new ProtocolError('The onboarding resolution response does not match the contract.');
       return result;
     },
     getImportAssets: async (id: string) => {

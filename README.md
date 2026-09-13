@@ -1,10 +1,10 @@
-# Trace
+# y/trace
 Replay-only robot contact-event investigation for the EHL Zurich Temporal AI Challenge.
 
 Start with the [submission evidence pack](docs/submission/README.md), [audited comparison](docs/submission/evaluation/report/comparison.md), and [two-minute demo](docs/submission/DEMO.md).
 
 
-## Trace replay workbench
+## y/trace replay workbench
 
 Samet’s frontend lives in [frontend/](frontend/README.md). Run `cd frontend && npm ci && npm run dev`. Model and ingestion integration contracts are in [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md).
 

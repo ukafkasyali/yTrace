@@ -4,7 +4,7 @@ Status: protocol prepared; no participants recruited, no results collected. This
 
 ## Decision
 
-Does Trace's evidence-linked analysis and export help robotics engineers complete a correct contact-event report faster than chart inspection? The buyer hypothesis is a robotics engineering or test lead responsible for incident review; the initial user is the engineer assembling the report.
+Does y/trace's evidence-linked analysis and export help robotics engineers complete a correct contact-event report faster than chart inspection? The buyer hypothesis is a robotics engineering or test lead responsible for incident review; the initial user is the engineer assembling the report.
 
 ## Protocol
 
@@ -12,7 +12,7 @@ Recruit four robotics engineers for a formative pilot so each condition and case
 
 Prepare six matched cases across collision, intentional contact and free motion. Use development/validation recordings; do not tune the model with final test answers. Keep source labels hidden during tasks. Give both conditions the same telemetry and documentation. Match case difficulty by duration and signal strength; each participant sees distinct cases in each condition. Counterbalance case assignment and condition order.
 
-Condition A: synchronized charts and ordinary numerical tools, without generated interpretations. Condition B: Trace with its actual measurements, model predictions, evidence links and export. Include at least one model failure or unavailable answer in B. Allow the same short tool familiarization in both conditions. Apply a five-minute task cap and retain incomplete attempts.
+Condition A: synchronized charts and ordinary numerical tools, without generated interpretations. Condition B: y/trace with its actual measurements, model predictions, evidence links and export. Include at least one model failure or unavailable answer in B. Allow the same short tool familiarization in both conditions. Apply a five-minute task cap and retain incomplete attempts.
 
 Each task asks the participant to locate the event, state its class or abstain, identify strongest signal changes, and produce a short evidence-backed report. A reviewer blinded to condition scores against publisher labels for class/onset and separately against deterministic measurements for joint quantities. Do not score a physical root-cause diagnosis: no such ground truth exists.
 

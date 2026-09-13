@@ -76,7 +76,7 @@ describe('investigation export', () => {
       modelOutput: 'Answer: {"contact":true,"event_type":"accidental","onset_ms":42,"strongest_joint":"J2","affected_joints":["J2"],"evidence_start_ms":42,"evidence_end_ms":200}',
     });
     const markdown = renderInvestigationMarkdown(report);
-    expect(markdown).toContain('# Trace incident investigation');
+    expect(markdown).toContain('# y/trace incident investigation');
     expect(markdown).toContain('## Interpretation');
     expect(markdown).toContain('## Deterministic cross-check before handoff');
     expect(markdown).toContain('- **Event type:** accidental');

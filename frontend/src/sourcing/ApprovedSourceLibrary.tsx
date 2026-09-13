@@ -9,11 +9,12 @@ import type {
   ImportJob,
   ImportedDatasetSelection,
   MappingSpec,
+  OnboardingBlocker,
   Services,
 } from '../services';
 
 type Props = { services: Services; refreshKey?: number; onDatasetReady: (dataset: ImportedDatasetSelection) => void };
-const terminal = new Set(['ready', 'unsupported_format', 'needs_input', 'failed']);
+const terminal = new Set(['ready', 'unsupported_format', 'needs_input', 'needs_human_resolution', 'failed']);
 const errorText = (value: unknown) => value instanceof Error ? value.message : 'The request failed.';
 
 export type ImportProgress = {
@@ -74,6 +75,43 @@ export function terminalJobNote(state: ImportJob['state']) {
   return '';
 }
 
+function HumanResolutionForm({ job, services, onResolved }: {
+  job: ImportJob; services: Services; onResolved: () => void;
+}) {
+  const [blockers, setBlockers] = useState<OnboardingBlocker[]>(job.onboardingBlockers ?? []);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [approvedBy, setApprovedBy] = useState('');
+  const [rationale, setRationale] = useState('');
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => {
+    services.getImportOnboarding(job.ingestionId).then(view => setBlockers(view.blockers))
+      .catch(reason => setError(errorText(reason)));
+  }, [job.ingestionId, services]);
+  if (!blockers.length) return <p className="status-note">Loading human-resolution blockers…</p>;
+  return <div className="human-resolution" aria-label="Human resolution required">
+    <strong>NEEDS_HUMAN_RESOLUTION</strong>
+    <p>Semantic truth remains unresolved. An identified human may approve an implementation-only value for TimeF.</p>
+    {blockers.map(blocker => <form key={blocker.field_path} onSubmit={event => {
+      event.preventDefault(); setBusy(blocker.field_path); setError('');
+      services.resolveImportBlocker(job.ingestionId, {
+        field_path: blocker.field_path,
+        value: values[blocker.field_path]?.trim(),
+        approved_by: approvedBy.trim(),
+        rationale: rationale.trim(),
+      }).then(view => { setBlockers(view.blockers); onResolved(); })
+        .catch(reason => setError(errorText(reason))).finally(() => setBusy(''));
+    }}>
+      <dl><div><dt>Field</dt><dd className="mono">{blocker.field_path}</dd></div><div><dt>Semantic status</dt><dd>{blocker.semantic_status}</dd></div><div><dt>Downstream requirement</dt><dd>{blocker.downstream_requirement}</dd></div><div><dt>Candidate</dt><dd>{blocker.candidate == null ? 'None established' : JSON.stringify(blocker.candidate)}</dd></div><div><dt>Evidence</dt><dd>{blocker.evidence_refs.join(', ') || 'No bounded evidence reference'}</dd></div><div><dt>Remaining uncertainty</dt><dd>{blocker.remaining_uncertainty ?? 'None recorded'}</dd></div></dl>
+      <label>Approved implementation value<input required value={values[blocker.field_path] ?? ''} onChange={event => setValues(current => ({ ...current, [blocker.field_path]: event.target.value }))} /></label>
+      <label>Approved by<input required value={approvedBy} onChange={event => setApprovedBy(event.target.value)} /></label>
+      <label>Rationale<textarea required value={rationale} onChange={event => setRationale(event.target.value)} /></label>
+      <button className="btn btn-primary" disabled={Boolean(busy)}>{busy === blocker.field_path ? 'Approving…' : 'Approve implementation value'}</button>
+    </form>)}
+    {error && <p className="error-message" role="alert">{error}</p>}
+  </div>;
+}
+
 export function ApprovedSourceFeedback({ connected, loading, error, empty, onRetry }: {
   connected: boolean; loading: boolean; error: string; empty: boolean; onRetry: () => void;
 }) {
@@ -128,7 +166,6 @@ function MappingForm({ job, services, onConfirmed }: {
 }) {
   const [candidates, setCandidates] = useState<MappingSpec[]>([]);
   const [candidate, setCandidate] = useState<MappingSpec | null>(null);
-  const [units, setUnits] = useState<string[]>([]);
   const [issues, setIssues] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -141,7 +178,6 @@ function MappingForm({ job, services, onConfirmed }: {
       setIssues(proposals.flatMap(item => item.issues));
       if (candidates.length > 0) {
         setCandidate(candidates[0]);
-        setUnits(candidates[0].channels.map(channel => channel.unit ?? ''));
       }
     }).catch(reason => { if (alive) setError(errorText(reason)); });
     return () => { alive = false; };
@@ -150,24 +186,18 @@ function MappingForm({ job, services, onConfirmed }: {
   if (!candidate) return <p className="status-note">{issues.length ? `Mapping needs a manual selector: ${issues.join(', ')}` : 'Loading mapping proposal…'}</p>;
   return <form className="mapping-confirmation" onSubmit={event => {
     event.preventDefault();
-    if (units.some(unit => !unit.trim())) { setError('Enter an explicit unit for every channel.'); return; }
     setBusy(true); setError('');
     const mapping = {
       ...candidate,
       jobRevision: job.jobRevision,
-      channels: candidate.channels.map((channel, index) => ({ ...channel, unit: units[index].trim() })),
     };
     services.confirmMapping(job.ingestionId, mapping).then(onConfirmed)
       .catch(reason => setError(errorText(reason))).finally(() => setBusy(false));
   }}>
-    <p className="status-note">Review the proposed {candidate.layout.toLowerCase().replaceAll('_', ' ')} mapping. Units are never inferred.</p>
-    {candidates.length > 1 && <label>Mapping candidate<select value={candidates.indexOf(candidate)} onChange={event => { const next = candidates[Number(event.target.value)]; if (next) { setCandidate(next); setUnits(next.channels.map(channel => channel.unit ?? '')); } }}>{candidates.map((item, index) => <option key={`${item.resourceId}:${index}`} value={index}>{item.layout.toLowerCase().replaceAll('_', ' ')} · {item.resourceId}</option>)}</select></label>}
-    <div className="mapping-units">{candidate.channels.map((channel, index) => <label key={channel.selector}>
-      <span>{channel.name}</span>
-      <input aria-label={`Unit for ${channel.name}`} value={units[index] ?? ''} onChange={event => setUnits(current => current.map((unit, item) => item === index ? event.target.value : unit))} placeholder="e.g. newton * meter" />
-    </label>)}</div>
+    <p className="status-note">Review the proposed {candidate.layout.toLowerCase().replaceAll('_', ' ')} structure. Semantic units are resolved separately through onboarding.</p>
+    {candidates.length > 1 && <label>Mapping candidate<select value={candidates.indexOf(candidate)} onChange={event => { const next = candidates[Number(event.target.value)]; if (next) setCandidate(next); }}>{candidates.map((item, index) => <option key={`${item.resourceId}:${index}`} value={index}>{item.layout.toLowerCase().replaceAll('_', ' ')} · {item.resourceId}</option>)}</select></label>}
     {error && <p className="error-message" role="alert">{error}</p>}
-    <button className="btn btn-primary" disabled={busy}>{busy ? 'Confirming…' : 'Confirm mapping'}</button>
+    <button className="btn btn-primary" disabled={busy}>{busy ? 'Confirming…' : 'Confirm structure'}</button>
   </form>;
 }
 
@@ -312,7 +342,7 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
         <p className="source-formats">{source.fileExtensions.length ? source.fileExtensions.join(' · ') : 'Formats unavailable'} · approved {source.approvalCount} {source.approvalCount === 1 ? 'time' : 'times'} · latest {new Date(source.latestApprovedAt).toLocaleString()}</p>
         <div className="source-actions"><a href={source.canonicalUrl} target="_blank" rel="noopener noreferrer">Source <ArrowUpRight size={13} aria-hidden="true" /></a><button className="btn" disabled={busy === `detail-${source.approvedSourceId}`} onClick={() => void show(source)}><History size={13} aria-hidden="true" />History</button><button className="btn btn-primary" disabled={Boolean(busy) || !source.isAcquisitionReady} onClick={() => void ingest(source)}>{busy === `ingest-${source.approvedSourceId}` ? 'Opening…' : action}</button><DeleteSourceButton disabled={Boolean(busy) || Boolean(job) || Boolean(ingestionError)} reason={job ? 'This source is retained because an ingestion references it.' : ingestionError ? 'Retry ingestion status before deleting this source.' : ''} onDelete={() => setDeleteConfirmation(source.approvedSourceId)} /></div>
         {deleteConfirmation === source.approvedSourceId && <DeleteSourceConfirmation busy={busy === `delete-${source.approvedSourceId}`} onConfirm={() => void deleteSource(source)} onCancel={() => setDeleteConfirmation('')} />}
-        {job && <div className="source-job" aria-live="polite"><strong>{job.message}</strong>{job.state === 'acquiring' && <IngestionProgressView progress={progress[source.approvedSourceId] ?? null} />}{job.state === 'mapping' && <MappingForm job={job} services={services} onConfirmed={() => setRevision(value => value + 1)} />}{terminalJobNote(job.state) && <p>{terminalJobNote(job.state)}</p>}</div>}
+        {job && <div className="source-job" aria-live="polite"><strong>{job.message}</strong>{job.state === 'acquiring' && <IngestionProgressView progress={progress[source.approvedSourceId] ?? null} />}{job.state === 'mapping' && <MappingForm job={job} services={services} onConfirmed={() => setRevision(value => value + 1)} />}{job.state === 'needs_human_resolution' && <HumanResolutionForm job={job} services={services} onResolved={() => setRevision(value => value + 1)} />}{terminalJobNote(job.state) && <p>{terminalJobNote(job.state)}</p>}</div>}
       </li>;
     })}</ul>}
     <ApprovedSourcePagination page={page} totalPages={totalPages} loading={loading} onPage={setPage} />

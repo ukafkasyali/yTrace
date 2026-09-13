@@ -3,7 +3,7 @@
 Copy the prompt below into a new Codex conversation opened in this repository:
 
 ```text
-Continue the Trace Temporal AI hackathon project in this repository. Read AGENTS.md
+Continue the y/trace Temporal AI hackathon project in this repository. Read AGENTS.md
 first and follow it as the source of truth. Then run `entire doctor`, inspect
 `git status --short`, fetch `origin/main`, and read the component READMEs relevant to
 the next task. Preserve all teammate work and do not add unrelated local tool folders.

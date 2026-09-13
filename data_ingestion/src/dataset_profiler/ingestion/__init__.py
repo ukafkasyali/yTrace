@@ -22,6 +22,12 @@ from .mapping import (
     MappingSpec,
     MappingValidationError,
 )
+from .onboarding import (
+    HumanResolutionRequest,
+    IngestionOnboardingCoordinator,
+    OnboardingWorker,
+    source_descriptor_from_acquisition,
+)
 from .providers import ProviderAcquirer
 from .service import CreateIngestion, IngestionService
 from .worker import AcquisitionWorker
@@ -43,7 +49,9 @@ __all__ = [
     "IngestionJobStore",
     "IngestionService",
     "IngestionState",
+    "IngestionOnboardingCoordinator",
     "InventoryError",
+    "HumanResolutionRequest",
     "ManifestContractError",
     "MappingLayout",
     "MappingProposal",
@@ -51,10 +59,12 @@ __all__ = [
     "MappingSpec",
     "MappingValidationError",
     "ProviderAcquirer",
+    "OnboardingWorker",
     "ResourceFormat",
     "ResourceInventory",
     "ResourceProfile",
     "SafeArchiveExtractor",
     "ZenodoAcquirer",
+    "source_descriptor_from_acquisition",
     "parse_manifest",
 ]

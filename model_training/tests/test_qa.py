@@ -1,4 +1,4 @@
-from robot_observability.qa import INTENTS, channel_descriptions, target_text
+from robot_observability.qa import HELDOUT_PROMPTS, INTENTS, PROMPTS, channel_descriptions, target_text
 
 
 def test_channel_descriptions_do_not_leak_window_statistics() -> None:
@@ -30,6 +30,12 @@ def test_dynamic_answer_precedes_evidence() -> None:
     assert "contact" in rationale_target.split("Answer:", 1)[0]
     assert "free-motion" not in rationale_target
     assert rationale_target.endswith('Answer: {"contact":false}')
+    assert target_text(metadata, "contact", "answer_only") == 'Answer: {"contact":false}'
+
+
+def test_heldout_paraphrases_are_disjoint_from_training_prompts() -> None:
+    for intent in INTENTS:
+        assert set(PROMPTS[intent]).isdisjoint(HELDOUT_PROMPTS[intent])
 
 
 def test_rationale_changes_with_conversational_intent() -> None:

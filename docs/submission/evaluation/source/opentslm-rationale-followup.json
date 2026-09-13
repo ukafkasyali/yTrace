@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "status": "validation_diagnostic_not_locked_test_benchmark",
+  "recorded_at": "2026-09-13",
+  "run_name": "llama-har-sp-timef-rationale-focused-v6",
+  "output_format": "rationale_then_answer",
+  "surfaces": [
+    "frontend/evaluation",
+    "codex/canvas"
+  ],
+  "repository_canvas_mirror": "model_training/docs/baseline-methods-explained.tsx",
+  "selected_step": 3600,
+  "final_step": 3823,
+  "selected_validation_loss": 0.07827791051901319,
+  "checkpoint_sha256": "7c69114d54132dd2641d59a54dc97d435ab7c578dfb320831485871012f83f62",
+  "nearest_generation_panel": {
+    "step": 3500,
+    "split": "validation",
+    "sample_count": 84,
+    "json_parse_validity": 0.9880952380952381,
+    "schema_exact_match": 0.9166666666666666,
+    "answer_exact_match": 0.5,
+    "semantics_macro_f1": 0.9581699346405229,
+    "contact_positive_f1": 0.8666666666666667,
+    "onset_mae_ms": 46.0,
+    "strongest_joint_accuracy": 0.6875,
+    "rationale_presence": 0.7261904761904762
+  },
+  "zero_signal_panel": {
+    "step": 3500,
+    "sample_count": 12,
+    "semantics_macro_f1": 0.13333333333333333,
+    "contact_positive_f1": 0.0,
+    "strongest_joint_accuracy": 0.0,
+    "prediction_change_rate": 0.75
+  },
+  "equivariance_panel": {
+    "checkpoint_step": 3600,
+    "split": "validation",
+    "sample_count": 12,
+    "session_count": 12,
+    "shift_ms": 64,
+    "base_onset_coverage": 1.0,
+    "base_onset_mae_ms": 25.416666666666668,
+    "shift_equivariance_mae_ms": 31.416666666666668,
+    "shift_prediction_change_rate": 1.0,
+    "base_strongest_joint_accuracy": 0.75,
+    "channel_permutation_accuracy": 0.5833333333333334,
+    "channel_prediction_change_rate": 0.8333333333333334
+  },
+  "limitation": "The generation and perturbation panels are small validation diagnostics with different sample contracts. They must not replace or be mixed into the locked 512-window test comparison."
+}

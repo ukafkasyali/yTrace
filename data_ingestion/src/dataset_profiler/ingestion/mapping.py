@@ -120,8 +120,15 @@ class MappingService:
         job = self.jobs.get(ingestion_id)
         return [self._proposal(job.job_revision, profile) for profile in self.jobs.list_resources(ingestion_id)]
 
-    def confirm(self, ingestion_id: str, mapping: MappingSpec) -> ConfirmedMapping:
-        mapping.require_confirmation_fields()
+    def confirm(
+        self,
+        ingestion_id: str,
+        mapping: MappingSpec,
+        *,
+        require_units: bool = True,
+    ) -> ConfirmedMapping:
+        if require_units:
+            mapping.require_confirmation_fields()
         profile = next(
             (
                 item

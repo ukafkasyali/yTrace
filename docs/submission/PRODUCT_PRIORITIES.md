@@ -20,7 +20,7 @@ manual work. Reduced downtime and successful repairs are not measured outcomes.
    signal patterns, and let the engineer inspect examples. A useful demo question
    is “Where else did this response occur?” Similarity is not a shared physical cause.
    Any unannotated-event scan needs false-alarm/missed-event evaluation before claims.
-3. Run the prepared chart-only versus Trace pilot. Measure time to a correct,
+3. Run the prepared chart-only versus y/trace pilot. Measure time to a correct,
    evidence-backed report and report errors, not just speed. Include model failures
    and reference-selection mistakes. A small exploratory pilot is useful feedback,
    not proof of fleet-wide ROI. See PILOT_RUNBOOK.md.
