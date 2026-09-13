@@ -1,0 +1,66 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C9KTD7JYNFNN9MWZF67RVH",
+  "session_id": "01a0988c-bfa9-7642-a52b-e064281f86dc",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T02:30:35.55497701Z",
+  "branch": "ingestion-orchastrator",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/pyproject.toml",
+    "data_ingestion/scripts/bosch_onboarding_stage.py",
+    "data_ingestion/src/dataset_profiler/onboarding/__init__.py",
+    "data_ingestion/src/dataset_profiler/onboarding/backend.py",
+    "data_ingestion/src/dataset_profiler/onboarding/cli.py",
+    "data_ingestion/src/dataset_profiler/onboarding/models.py",
+    "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py",
+    "data_ingestion/src/dataset_profiler/onboarding/presets.py",
+    "data_ingestion/src/dataset_profiler/onboarding/store.py",
+    "data_ingestion/tests/test_onboarding_orchestrator.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "a065697f50fe",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 125884,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3017472,
+    "output_tokens": 33166,
+    "api_call_count": 43
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T02:30:35.510002279Z",
+    "agent_lines": 163,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 163,
+    "total_lines_changed": 163,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1660,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "data_ingestion/pyproject.toml": 1,
+        "data_ingestion/scripts/bosch_onboarding_stage.py": 175,
+        "data_ingestion/src/dataset_profiler/onboarding/__init__.py": 49,
+        "data_ingestion/src/dataset_profiler/onboarding/backend.py": 328,
+        "data_ingestion/src/dataset_profiler/onboarding/cli.py": 94,
+        "data_ingestion/src/dataset_profiler/onboarding/models.py": 181,
+        "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py": 420,
+        "data_ingestion/src/dataset_profiler/onboarding/presets.py": 111,
+        "data_ingestion/src/dataset_profiler/onboarding/store.py": 70,
+        "data_ingestion/tests/test_onboarding_orchestrator.py": 231
+      }
+    }
+  ]
+}
