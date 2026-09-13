@@ -18,10 +18,9 @@ _SPEC.loader.exec_module(_MODULE)
 def _handoff(unit: str):
     return {
         "connector_ready": True,
-        "dataset_id": "boschresearch/cnc-machining",
-        "implementation_view": {
-            "signals[0].unit": {"value": {"timef_unit": unit}}
-        },
+        "dataset_id": "bosch-cnc",
+        "downstream_context": {"dataset_id": "boschresearch/cnc-machining"},
+        "implementation_view": {"signals[0].unit": {"value": {"timef_unit": unit}}},
     }
 
 

@@ -49,9 +49,7 @@ class JobStore:
     def load(self, job_id: str) -> OnboardingJob:
         """Load one persisted job and verify every registered artifact."""
         directory = self.job_dir(job_id)
-        raw = json.loads(
-            (directory / "job.json").read_text(encoding="utf-8")
-        )
+        raw = json.loads((directory / "job.json").read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
             raise ValueError("job.json root must be an object")
         job = OnboardingJob.from_dict(raw)

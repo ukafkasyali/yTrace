@@ -62,6 +62,20 @@ def test_frozen_profile_accepts_the_exact_profiled_source(tmp_path):
     assert result["files"][0]["relative_path"] == "run.h5"
 
 
+def test_frozen_profile_accepts_dataset_checkout_containing_data_root(tmp_path):
+    source = tmp_path / "source"
+    data = source / "data"
+    data.mkdir(parents=True)
+    content = b"recorded telemetry"
+    (data / "run.h5").write_bytes(content)
+    profile = tmp_path / "profile.json"
+    _write_profile(profile, "run.h5", content)
+
+    result = _backend(profile).profile(_source(source))
+
+    assert result["files"][0]["relative_path"] == "run.h5"
+
+
 def test_frozen_profile_rejects_changed_source_content(tmp_path):
     source = tmp_path / "source"
     source.mkdir()
