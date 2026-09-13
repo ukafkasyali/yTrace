@@ -400,16 +400,16 @@ input,textarea{caret-color:var(--accent)}
 .evaluation-summary>div{padding:16px 18px;border-right:1px solid var(--line)}
 .evaluation-summary>div:first-child{padding-left:0}
 .evaluation-summary>div:last-child{border-right:0}
-.evaluation-summary dt{font-size:10px!important}
+.evaluation-summary dt{font-size:11px!important}
 .evaluation-summary dd{margin:3px 0 0!important;font:500 23px 'IBM Plex Mono',monospace;color:var(--text)}
-.evaluation-summary small{color:var(--quiet);font-size:10px}
+.evaluation-summary small{color:var(--quiet);font-size:11px}
 .evaluation-summary.evaluation-summary-four{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .evaluation-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:32px}
 .evaluation-chart{min-width:0}
 .chart-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .chart-heading h2{font-size:15px}
-.chart-heading p{margin-top:3px;color:var(--quiet);font-size:10px}
-.evaluation-legend{display:flex;gap:13px;flex-wrap:wrap;padding:10px 0;color:var(--quiet);font-size:9px}
+.chart-heading p{margin-top:3px;color:var(--quiet);font-size:11px}
+.evaluation-legend{display:flex;gap:13px;flex-wrap:wrap;padding:10px 0;color:var(--quiet);font-size:10px}
 .evaluation-legend span{display:flex;align-items:center;gap:5px}
 .method-color{display:block;width:7px;height:7px}
 .method-color.method-features,.metric-track .method-features{background:var(--accent)}
@@ -420,25 +420,25 @@ input,textarea{caret-color:var(--accent)}
 .metric-group{display:grid;gap:5px}
 .metric-label{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .metric-label strong{font-size:11px;font-weight:500}
-.metric-label small{color:var(--quiet);font-size:9px}
+.metric-label small{color:var(--quiet);font-size:10px}
 .metric-bar-row{display:grid;grid-template-columns:minmax(0,1fr) 60px;align-items:center;gap:8px}
 .metric-track{height:8px;background:#273034;overflow:hidden}
 .metric-track i{display:block;height:100%;min-width:1px}
-.metric-bar-row b{text-align:right;color:#cbd5d7;font:400 9px 'IBM Plex Mono',monospace}
+.metric-bar-row b{text-align:right;color:#cbd5d7;font:400 10px 'IBM Plex Mono',monospace}
 .evaluation-table-section{margin-bottom:30px;padding-bottom:24px;border-bottom:1px solid var(--line)}
 .evaluation-table-section .section-heading,.method-explorer .section-heading{margin-bottom:8px}
 .evaluation-table-section .section-heading h2,.method-explorer .section-heading h2{font-size:16px}
 .evaluation-table{font-variant-numeric:tabular-nums}
 .evaluation-table td:first-child{font-weight:500;white-space:nowrap}
-.evaluation-table td:first-child small{display:block;margin:2px 0 0 14px;color:var(--quiet);font-size:8px;font-weight:400}
+.evaluation-table td:first-child small{display:block;margin:2px 0 0 14px;color:var(--quiet);font-size:10px;font-weight:400}
 .evaluation-headline-table{min-width:860px}
 .method-dot{display:inline-block;width:6px;height:6px;margin-right:8px;border-radius:50%;vertical-align:1px}
 .method-dot.method-features{background:var(--accent)}
 .method-dot.method-cnn{background:#76a6c4}
 .method-dot.method-opentslm{background:#d99a43}
 .method-dot.method-qwen{background:#ba6c64}
-.table-note{max-width:860px;margin-top:9px;color:var(--quiet);font-size:9px;line-height:1.55}
-.plot-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 0;color:var(--quiet);font-size:9px}
+.table-note{max-width:860px;margin-top:9px;color:var(--quiet);font-size:10px;line-height:1.55}
+.plot-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 0;color:var(--quiet);font-size:10px}
 .plot-legend span{display:flex;align-items:center;gap:6px}
 .plot-legend i{display:block;width:8px;height:8px}
 .plot-primary{background:var(--accent)}
@@ -450,8 +450,8 @@ input,textarea{caret-color:var(--accent)}
 .plot-bars{display:flex;align-items:flex-end;justify-content:center;gap:7px;min-height:0;padding:25px 5px 0}
 .plot-bar-slot{display:flex;align-items:flex-end;width:min(27px,42%);height:100%}
 .plot-bar-slot>i{position:relative;display:block;width:100%;min-height:2px}
-.plot-bar-slot b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);z-index:1;white-space:nowrap;color:#d7dfe1;font:500 8px 'IBM Plex Mono',monospace}
-.plot-method>span{align-self:center;text-align:center;color:var(--quiet);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plot-bar-slot b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);z-index:1;white-space:nowrap;color:#d7dfe1;font:500 9px 'IBM Plex Mono',monospace}
+.plot-method>span{align-self:center;text-align:center;color:var(--quiet);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .method-explorer{margin-bottom:26px}
 .method-tabs{display:flex;gap:18px;border-bottom:1px solid var(--line)}
 .method-tabs button{min-height:39px;padding:0 1px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--quiet);font-size:11px}
@@ -460,9 +460,9 @@ input,textarea{caret-color:var(--accent)}
 .method-detail>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
 .method-detail h3{font-size:18px;font-weight:500}
 .method-detail header p{color:var(--quiet);font-size:11px;margin-top:2px}
-.method-detail header>span{border:1px solid #4b565a;padding:3px 7px;color:var(--quiet);font-size:9px}
+.method-detail header>span{border:1px solid #4b565a;padding:3px 7px;color:var(--quiet);font-size:10px}
 .method-detail-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:28px}
-.method-detail h4{margin:0 0 4px;color:var(--quiet);font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.method-detail h4{margin:0 0 4px;color:var(--quiet);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
 .method-detail h4:not(:first-child){margin-top:16px}
 .method-detail p,.method-detail li{color:#c6d0d2;font-size:11px;line-height:1.6}
 .method-detail ul,.method-detail ol{margin:0;padding-left:18px}
