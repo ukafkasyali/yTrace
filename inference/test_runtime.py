@@ -51,6 +51,21 @@ class InputPreparationTests(unittest.TestCase):
         self.assertEqual((question, intent), ("Diagnose this robot telemetry window.", "summary"))
         self.assertIn("onset_ms", keys)
 
+    def test_rationale_checkpoint_uses_its_training_response_contract(self):
+        result = prepare_sample(
+            self.request,
+            self.series,
+            "none",
+            output_format="rationale_then_answer",
+        )
+        self.assertIn("First write `Rationale:`", result["post_prompt"])
+        self.assertIn("End with `Answer:`", result["post_prompt"])
+        self.assertNotIn("Then write one short `Evidence:`", result["post_prompt"])
+
+    def test_rejects_unknown_output_format(self):
+        with self.assertRaises(ValueError):
+            prepare_sample(self.request, self.series, "none", output_format="guess")
+
     def test_rejects_future_boundary_and_unaligned_series(self):
         self.series[0]["timeSec"][-1] = 6.024
         with self.assertRaises(ValueError):

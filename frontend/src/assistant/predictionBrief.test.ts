@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { predictionBrief, predictionCue, structuredPrediction } from './predictionBrief';
+import { generatedRationale, predictionBrief, predictionCue, structuredPrediction } from './predictionBrief';
 
 const contact = (overrides: Record<string, unknown> = {}) => JSON.stringify({ contact: true, event_type: 'accidental', onset_ms: 298,
   strongest_joint: 'J4', affected_joints: ['J4'], evidence_start_ms: 298, evidence_end_ms: 548, ...overrides });
@@ -42,5 +42,10 @@ describe('compact generated interpretation', () => {
     expect(structuredPrediction(raw)).toEqual({ contact: true, event_type: 'accidental', onset_ms: 298,
       strongest_joint: 'J4', affected_joints: ['J4'], evidence_start_ms: 298, evidence_end_ms: 548 });
     expect(JSON.stringify(structuredPrediction(raw))).not.toContain('manual event marker');
+  });
+  it('extracts rationale before the final structured answer', () => {
+    const raw = `Rationale: J4 changes sharply after a stable prefix.\nAnswer: ${contact()}`;
+    expect(generatedRationale(raw)).toBe('J4 changes sharply after a stable prefix.');
+    expect(generatedRationale('Answer: {}')).toBeUndefined();
   });
 });

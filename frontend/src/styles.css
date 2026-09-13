@@ -248,6 +248,8 @@ input,textarea{caret-color:var(--accent)}
 .robot-content { min-height: 0; }
 .assistant-panel > .panel-heading { height: 48px; padding-inline: 24px; }
 .assistant-capability { font-size: 12px; color: var(--quiet); }
+.assistant-model-select { max-width: 140px; border: 0; background: transparent; color: var(--quiet); font-size: 11px; text-align: right; }
+.assistant-model-select:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
 .model-input-status { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--line); }
 .model-input-status > div { display: grid; gap: 5px; }
 .model-input-status strong { font-size: 14px; font-weight: 500; }
@@ -269,6 +271,9 @@ input,textarea{caret-color:var(--accent)}
 .prediction-facts { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; color: var(--quiet); font-size: 12px; }
 .prediction-facts strong { color: var(--text); font-weight: 500; }
 .assistant-answer .prediction-caution { font-size: 11px; color: var(--quiet); line-height: 1.5; margin-top: 10px; }
+.generated-rationale { margin-top: 12px; color: #b8c6c1; font-size: 11px; }
+.generated-rationale summary { cursor: pointer; color: var(--accent); }
+.generated-rationale p { margin-top: 7px; line-height: 1.55; }
 .measured-summary { margin-top: 18px; }
 .measured-summary h3 { font-size: 11px; color: var(--quiet); font-weight: 500; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
 .measured-summary p { color: #c5ced1; font-size: 12px; line-height: 1.55; }

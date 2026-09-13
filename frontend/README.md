@@ -75,10 +75,15 @@ before starting or building Vite, for example:
 VITE_API_BASE_URL=/api npm run dev
 ```
 
+To expose the isolated `llama-har-sp-timef-rationale-focused-v6` checkpoint as an
+experimental choice while keeping canary-v4 as the default, also set
+`VITE_RATIONALE_API_BASE_URL=/api-v6` and tunnel its service to local port 8003.
+
 Vite's local development proxies route `/api/sourcing-runs`, `/api/approved-sources`, and
 `/api/sourcing-requirement-previews` to the dataset scout on `127.0.0.1:8001`,
-`/api/ingestions` to the ingestion API on `127.0.0.1:8002`, and the remaining `/api` routes to
-the inference bridge on `127.0.0.1:8000` (the local SSH tunnel). A separate backend origin must
+`/api/ingestions` to the ingestion API on `127.0.0.1:8002`, `/api-v6` to the optional isolated
+inference bridge on `127.0.0.1:8003`, and the remaining `/api` routes to the canary inference
+bridge on `127.0.0.1:8000` (local SSH tunnels). A separate backend origin must
 provide appropriate CORS. The
 client uses `credentials: 'same-origin'`; cross-origin cookie authentication is
 not configured. Never place model keys or other secrets in `VITE_*` variables.

@@ -160,7 +160,10 @@ export function createServices(baseUrl?: string) {
     endpoint(''); // Disconnected clients cannot stream arbitrary URLs.
     const origin = globalThis.location?.origin ?? 'http://localhost';
     const apiUrl = new URL(base!, `${origin}/`);
-    const url = new URL(streamUrl, `${apiUrl.href}/`);
+    const streamPath = streamUrl.startsWith('/api/')
+      ? `${apiUrl.pathname.replace(/\/$/, '')}${streamUrl.slice('/api'.length)}`
+      : streamUrl;
+    const url = new URL(streamPath, `${apiUrl.href}/`);
     if (url.origin !== apiUrl.origin) throw new ProtocolError('The stream URL must use the configured service origin.');
     const response = await fetch(url.href, { headers: { Accept: 'text/event-stream' }, credentials: 'same-origin', signal });
     await checkResponse(response);

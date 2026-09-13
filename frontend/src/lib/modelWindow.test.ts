@@ -23,6 +23,11 @@ describe('model input window', () => {
     expect(checkpointLabel()).toBe('Checkpoint unverified');
     expect(checkpointLabel(`checkpoint-sha256:${'a'.repeat(64)}`)).toBe('Checkpoint aaaaaaaa');
   });
+
+  it('identifies the deployed rationale-v6 checkpoint by its immutable hash', () => {
+    expect(checkpointLabel('checkpoint-sha256:7c69114d54132dd2641d59a54dc97d435ab7c578dfb320831485871012f83f62'))
+      .toBe('rationale-v6 · 7c69114d');
+  });
 });
 
 describe('replay sampling boundaries', () => {
