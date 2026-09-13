@@ -10,6 +10,20 @@ smoke test yet.** The service reports unavailable and does not fabricate results
 A training endpoint does not serve predictions automatically: this separate process
 loads an exported checkpoint once, then handles on-demand requests from Trace.
 
+### CNN comparison endpoint
+
+The server can also expose the trained 1D CNN when `TRACE_CNN_CONFIG` points to a
+JSON config based on `cnn.config.example.json`. The config must name the CNN
+checkpoint and the exact train-split `normalization.json` used for training. The
+CNN accepts all seven canonical channels and exactly 1,024 synchronized samples;
+other windows are rejected rather than resampled. Once loaded, `GET /api/models`
+advertises `cnn-1d`, and Trace's comparison workspace runs it alongside OpenTSLM.
+
+```bash
+export TRACE_CNN_CONFIG=/home/samet/trace-inference/inference/cnn.config.json
+TRACE_DEVICE=cuda python -m inference.server
+```
+
 ### Resume this deployment
 
 The VM is `samet@89.169.110.3`. After your Hugging Face account has access to the

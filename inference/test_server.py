@@ -35,6 +35,29 @@ class FakeRuntime:
         return "A generated test response."
 
 
+class FakeCnnRuntime:
+    enabled = True
+    ready = True
+    error = ""
+    model_id = "cnn-1d"
+    revision = "cnn-test-revision"
+
+    def validate_series(self, series):
+        if len(series) != 7:
+            raise ValueError("CNN requires all seven canonical joint channels")
+
+    def predict(self, series, cancelled):
+        return {
+            "labels": [
+                {"label": "event type: accidental", "score": 0.9},
+                {"label": "contact: detected", "score": 0.9},
+                {"label": "predicted onset: 12 ms"},
+            ],
+            "event_type": "accidental",
+            "onset_sample": 12,
+        }
+
+
 def fixture():
     times = [i / 2 for i in range(21)]
     channels = [{"id": f"joint_{i}", "name": f"Joint {i}", "unit": "Nm", "values": [t * i for t in times]} for i in range(1, 8)]
@@ -130,6 +153,21 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(events[0]["payload"]["tool"], "measurement_summary")
         self.assertEqual(events[2]["payload"]["tool"], "opentslm")
         self.assertIn("Largest observed torque ranges", events[-1]["payload"]["answer"])
+
+    def test_cnn_endpoint_returns_typed_labels(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.server = make_server(self.runtime, port=0, data_path=self.path, load_runtime=False, cnn_runtime=FakeCnnRuntime())
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.request["modelId"] = "cnn-1d"
+        self.request["window"]["channelIds"] = [f"joint_{index}" for index in range(1, 8)]
+        events = self.events(self.start())
+        self.assertEqual(events[-1]["type"], "answer.completed")
+        payload = events[-1]["payload"]
+        self.assertEqual(payload["modelId"], "cnn-1d")
+        self.assertEqual(payload["modelRevision"], "cnn-test-revision")
+        self.assertEqual(payload["labels"][0]["label"], "event type: accidental")
 
     def test_cancel_retains_busy_slot_until_runtime_exits(self):
         self.runtime.release.clear()
