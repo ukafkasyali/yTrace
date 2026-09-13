@@ -257,7 +257,7 @@ change is deployed. Use separate `codex/` worktrees/branches for parallel editin
 Do not reset, stash, stage or commit another agent's changes. Each worker opens a
 focused draft PR; the coordinating task integrates and deploys in sequence.
 
-Latest inspected main: `db68e6c` (pipeline-backed in-app baseline comparison and submission freeze).
+Latest inspected main: `71d3ff6` (submission freeze plus Bosch CNC semantic onboarding).
 The inference service still serves canary-v4; new training files do not automatically
 replace that checkpoint. PR #19 is a broad draft sourcing/ingestion integration and
 is outside the submission freeze unless the coordinator explicitly reopens it.
