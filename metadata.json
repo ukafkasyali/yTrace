@@ -3,8 +3,9 @@
   "checkpoint_id": "01M2C8P0GK1GFM02EKVWY1T0TX",
   "strategy": "manual-commit",
   "branch": "feat/bosch-cnc-semantic-onboarding",
-  "checkpoints_count": 5,
+  "checkpoints_count": 14,
   "files_touched": [
+    ".gitignore",
     "data_ingestion/docs/BOSCH_CNC_BLIND_ONBOARDING.md",
     "data_ingestion/docs/BOSCH_CNC_V02_BLIND_ONBOARDING.md",
     "data_ingestion/scripts/build_connector_handoff.py",
@@ -38,13 +39,20 @@
       "compact_transcript": "/1/transcript.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "compact_transcript": "/2/transcript.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 532537,
+    "input_tokens": 811489,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 21784448,
-    "output_tokens": 114790,
-    "api_call_count": 199
+    "cache_read_tokens": 42769536,
+    "output_tokens": 169911,
+    "api_call_count": 378
   }
 }
