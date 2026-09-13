@@ -14,6 +14,10 @@ function validatedModels(value: unknown): ModelProfile[] {
       typeof item.label !== 'string' || !item.label.trim() || typeof item.available !== 'boolean' ||
       (item.reason !== undefined && typeof item.reason !== 'string') ||
       (item.revision !== undefined && typeof item.revision !== 'string') ||
+      (item.busy !== undefined && typeof item.busy !== 'boolean') ||
+      (item.estimatedWaitMs !== undefined && (typeof item.estimatedWaitMs !== 'number' || !Number.isFinite(item.estimatedWaitMs) || item.estimatedWaitMs < 0)) ||
+      (item.typicalLatencyMs !== undefined && (typeof item.typicalLatencyMs !== 'number' || !Number.isFinite(item.typicalLatencyMs) || item.typicalLatencyMs < 0)) ||
+      (item.cachedResults !== undefined && (!Number.isInteger(item.cachedResults) || item.cachedResults < 0)) ||
       !Array.isArray(item.capabilities) || item.capabilities.some((capability: unknown) => typeof capability !== 'string' || !capabilities.has(capability))) {
       throw new Error('The model service returned an invalid registry.');
     }

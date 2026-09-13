@@ -2,14 +2,14 @@ import copy
 import hashlib
 import http.client
 import json
-from pathlib import Path
 import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 
-from inference.server import DATASET_ID, MAX_BODY, envelope_indices, make_server
 from inference.raw_recordings import CHANNEL_IDS, RawRecordingCatalog
+from inference.server import DATASET_ID, MAX_BODY, envelope_indices, make_server
 
 
 class FakeRuntime:
@@ -24,11 +24,13 @@ class FakeRuntime:
         self.release.set()
         self.failure = False
         self.received = None
+        self.calls = 0
 
     def load(self):
         self.ready = True
 
     def generate(self, request, series, cancelled):
+        self.calls += 1
         self.received = (request, series)
         self.entered.set()
         self.release.wait(3)
@@ -42,6 +44,7 @@ class FakeRuntime:
             "inputSha256": hashlib.sha256(
                 json.dumps(series, sort_keys=True, allow_nan=False).encode()
             ).hexdigest(),
+            "latencyMs": 1200,
         }
         return 'Answer: {"contact":true}\nEvidence: generated test evidence.'
 
@@ -121,7 +124,12 @@ class ServerTests(unittest.TestCase):
     def test_catalog_models_and_health(self):
         self.assertEqual(self.http("GET", "/api/datasets")[1][0]["id"], DATASET_ID)
         self.assertEqual(len(self.http("GET", f"/api/datasets/{DATASET_ID}/recordings")[1][0]["channels"]), 7)
-        self.assertTrue(self.http("GET", "/api/models")[1][0]["available"])
+        model = self.http("GET", "/api/models")[1][0]
+        self.assertTrue(model["available"])
+        self.assertFalse(model["busy"])
+        self.assertEqual(model["estimatedWaitMs"], 0)
+        self.assertGreater(model["typicalLatencyMs"], 0)
+        self.assertEqual(model["cachedResults"], 0)
         self.runtime.ready = False
         self.assertFalse(self.http("GET", "/api/health")[1]["ready"])
         self.assertFalse(self.http("GET", "/api/models")[1][0]["available"])
@@ -186,7 +194,11 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(self.runtime.entered.wait(1))
         self.assertEqual(self.http("DELETE", "/api/queries/" + job["queryId"])[0], 204)
         self.assertEqual(self.events(job)[-1]["type"], "query.cancelled")
-        self.assertEqual(self.http("POST", "/api/queries", self.request)[0], 409)
+        status, busy = self.http("POST", "/api/queries", self.request)
+        self.assertEqual(status, 409)
+        self.assertEqual(busy["error"]["code"], "MODEL_BUSY")
+        self.assertGreaterEqual(busy["error"]["estimatedWaitMs"], 0)
+        self.assertGreater(busy["error"]["typicalLatencyMs"], 0)
         self.runtime.release.set()
         for _ in range(100):
             if self.server.bridge.active is None:
@@ -195,6 +207,61 @@ class ServerTests(unittest.TestCase):
         self.assertIsNone(self.server.bridge.active)
         self.assertNotIn("answer.completed", [e["type"] for e in self.events(job)])
         self.start()
+
+    def test_busy_response_includes_retry_after_header(self):
+        self.runtime.release.clear()
+        self.start()
+        self.assertTrue(self.runtime.entered.wait(1))
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=4)
+        connection.request(
+            "POST",
+            "/api/queries",
+            body=json.dumps(self.request),
+            headers={"Content-Type": "application/json"},
+        )
+        response = connection.getresponse()
+        self.assertEqual(response.status, 409)
+        self.assertGreaterEqual(int(response.getheader("Retry-After")), 1)
+        response.read()
+        connection.close()
+
+    def test_identical_request_reuses_checkpoint_and_input_scoped_result(self):
+        first = self.events(self.start())[-1]["payload"]
+        second_job = self.start()
+        self.assertTrue(second_job["cacheHit"])
+        second = self.events(second_job)[-1]["payload"]
+        self.assertEqual(self.runtime.calls, 1)
+        self.assertFalse(first["cacheHit"])
+        self.assertTrue(second["cacheHit"])
+        self.assertTrue(second["inputTrace"]["cacheHit"])
+        self.assertEqual(second["modelOutput"], first["modelOutput"])
+        self.assertEqual(second["inputTrace"]["inputSha256"], first["inputTrace"]["inputSha256"])
+        health = self.http("GET", "/api/health")[1]
+        self.assertEqual(health["cachedResults"], 1)
+        self.assertEqual(health["typicalLatencyMs"], 1200)
+
+        changed = copy.deepcopy(self.request)
+        changed["question"] = "Was contact present?"
+        changed_events = self.events(self.http("POST", "/api/queries", changed)[1])
+        self.assertFalse(changed_events[-1]["payload"]["cacheHit"])
+        self.assertEqual(self.runtime.calls, 2)
+
+    def test_exact_cached_result_remains_available_while_generation_is_busy(self):
+        self.events(self.start())
+        self.runtime.entered.clear()
+        self.runtime.release.clear()
+        changed = copy.deepcopy(self.request)
+        changed["question"] = "Was contact present?"
+        running = self.http("POST", "/api/queries", changed)[1]
+        self.assertTrue(self.runtime.entered.wait(1))
+
+        cached = self.start()
+        self.assertTrue(cached["cacheHit"])
+        self.assertTrue(self.events(cached)[-1]["payload"]["cacheHit"])
+        self.assertEqual(self.runtime.calls, 2)
+
+        self.runtime.release.set()
+        self.assertEqual(self.events(running)[-1]["type"], "answer.completed")
 
     def test_malformed_future_unknown_and_unsupported_queries(self):
         cases = [("window.startSec", 3, "RAW_DATA_UNAVAILABLE"),

@@ -5,17 +5,19 @@
 An isolated Python bridge is deployed privately on the Nebius H100; see
 [`inference/README.md`](../inference/README.md) for the Nebius VM, SSH tunnel,
 checkpoint configuration and real smoke-test commands. CUDA and OpenTSLM imports
-are verified, and all 16 bridge tests pass on the VM. The real data path through
-Vite and SSH returns the exact initial historical window. Model loading awaits
-Hugging Face access to the Llama backbone; no generated answer has passed yet.
-This first service exposes direct OpenTSLM-SP, the bundled dataset,
-and query streaming/cancellation. It does not provide assistant orchestration or
-ingestion. In local development, Vite proxies inference routes to `127.0.0.1:8000`, sourcing and
+are verified. The real data path through Vite and SSH returns the exact initial
+historical window, and the promoted canary-v4 checkpoint produces real generated
+answers. The current shared process intentionally runs on CPU while a teammate's
+training run owns the GPU.
+This service exposes OpenTSLM-SP, deterministic assistant routing, the bundled
+dataset, and query streaming/cancellation. It does not add another orchestration
+LLM or provide ingestion. In local development, Vite proxies inference routes to `127.0.0.1:8000`, sourcing and
 approved-source routes to `127.0.0.1:8001`, and ingestion routes to `127.0.0.1:8002`.
 
 The completion payload adds an optional `inputTrace`: `window`, `playheadSec`,
 `samplesPerChannel`, `inputSha256`, `model`, `revision`, `normalization`, `padding`
-and `latencyMs`. The smoke client checks this receipt against the requested
+and `latencyMs`. An exact result reuse also sets `cacheHit: true` on the completion
+and input trace. The smoke client checks this receipt against the requested
 historical interval. The initial selection contains 1,024 raw samples per channel.
 Evidence identifies the model's input, not a verified physical explanation.
 
@@ -104,8 +106,8 @@ The routes below are requested by the implemented service client with `/api` as 
 | `listRecordings(datasetId)` | `GET /api/datasets/:id/recordings` | `Recording[]` |
 | `getWindow(recordingId, startSec, endSec, channelIds, maxPoints)` | `GET /api/recordings/:id/signals` | `SignalWindow`; query keys are `startSec`, `endSec`, comma-separated `channelIds`, and `maxPoints` |
 | `getEvents(recordingId)` | `GET /api/recordings/:id/events` | `SignalEvent[]` |
-| `listModels()` | `GET /api/models` | model IDs, labels, availability and capabilities |
-| `startQuery(request)` | `POST /api/queries` | `{ queryId, streamUrl }` |
+| `listModels()` | `GET /api/models` | model IDs, labels, availability and capabilities; OpenTSLM entries may add `busy`, `estimatedWaitMs`, `typicalLatencyMs` and `cachedResults` |
+| `startQuery(request)` | `POST /api/queries` | `{ queryId, streamUrl, cacheHit? }` |
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
 | `startImport(approvedSourceId, assetIds?)` | `POST /api/ingestions` | persisted ingestion job |
 | `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion state and validation report |
@@ -158,13 +160,13 @@ After creating a query, consume its `streamUrl` as SSE. Its origin must match th
 | `tool.started` | `{ callId, tool, label }` |
 | `tool.completed` | `{ callId, summary, evidence?: Evidence[] }` |
 | `answer.delta` | `{ text }` |
-| `answer.completed` | `{ answer?, evidence?: Evidence[], modelId?, modelRevision?, labels?: { label, score? }[] }`; the final answer may use accumulated deltas |
+| `answer.completed` | `{ answer?, evidence?: Evidence[], modelId?, modelRevision?, cacheHit?, labels?: { label, score? }[] }`; the final answer may use accumulated deltas |
 | `query.error` | `{ code, message, retryable }` |
 | `query.cancelled` | `{}` |
 
 Completion, error and cancellation are terminal. The client ignores duplicate/older IDs and late events from replaced queries. Closing the browser stream is not server cancellation: the frontend also calls the cancellation endpoint. Partial output stays visible with an error or cancellation state. Ending a stream before a terminal event raises “Connection lost before the answer completed.” There is no resume or `Last-Event-ID` implementation. “Use this question again” returns the text to the composer; sending it creates a new query with the current selection.
 
-Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP errors. Distinguish unavailable model, unsupported question, invalid window, missing recording and inference failure. No successful sample response should substitute for a failed live request.
+Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP errors. Distinguish unavailable model, unsupported question, invalid window, missing recording and inference failure. A `409 MODEL_BUSY` response may add `estimatedWaitMs` and `typicalLatencyMs` to the error plus a whole-second `Retry-After` header. No successful sample response should substitute for a failed live request.
 
 ## Ingestion visibility and security
 

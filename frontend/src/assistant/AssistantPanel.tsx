@@ -8,10 +8,15 @@ import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelW
 import { analyzeWindow } from '../lib/data';
 import { intervalLabel } from '../lib/format';
 import type { DemoData, EvidenceLink, Interval } from '../types';
-import type { Evidence, Services } from '../services';
+import { ApiError, type Evidence, type Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 
-type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled'; restored?: boolean };
+type Message = InvestigationAnswer & {
+  telemetry: DemoData; id: string; tools: string[];
+  status: 'running' | 'complete' | 'error' | 'cancelled'; restored?: boolean;
+  phase?: string; startedAtMs?: number; expectedLatencyMs?: number;
+  measurementPreview?: string; cacheHit?: boolean;
+};
 type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; experimental?: { services: Services; registry: ModelRegistry }; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction?: PredictionCue) => void };
 const automaticPrompt = 'Analyze this robot telemetry window.';
 
@@ -60,6 +65,9 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const canaryAvailable = services.connected && !registry.loading && !registry.error && registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
   const rationaleAvailable = Boolean(experimental?.services.connected && !experimental.registry.loading && !experimental.registry.error && experimental.registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language')));
   const assistantAvailable = analysisSource === 'rationale' ? rationaleAvailable : canaryAvailable;
+  const assistantModel = selectedConnection.registry.models.find(model => model.id === 'assistant');
+  const expectedLatencyMs = assistantModel?.typicalLatencyMs || 25_000;
+  const [clockMs, setClockMs] = useState(() => Date.now());
   const modeUnavailable = mode === 'assistant' && (!assistantAvailable || Boolean(windowIssue));
   const active = useRef<{ id: string; controller: AbortController; services: Services; queryId?: string; stopRequested?: boolean } | null>(null);
   const body = useRef<HTMLDivElement>(null);
@@ -72,6 +80,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     if (saved) setMessages(current => current.length ? current : [{ ...saved, telemetry: data, restored: true }]);
   }, [rawLoading, rawError, sessionKey, data, initialContextFingerprint]);
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
+  useEffect(() => {
+    if (!busy) return;
+    setClockMs(Date.now());
+    const timer = window.setInterval(() => setClockMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [busy]);
   useEffect(() => {
     if (restoredCueApplied.current) return;
     const restored = [...messages].reverse().find(message => message.restored && message.status === 'complete');
@@ -99,9 +113,15 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
     if (runMode === 'assistant' && modelWindowIssue(data, snapshot, horizon)) return;
     const id = crypto.randomUUID(); const controller = new AbortController();
     const queryServices = selectedServices;
+    const startedAtMs = Date.now();
+    let measurementPreview = '';
+    if (runMode === 'assistant') {
+      try { measurementPreview = analyzeWindow(data, snapshot, 'Compare torque ranges.', horizon).text.split(/\n\s*\n/)[0]; }
+      catch { /* The model-window validation above remains the authoritative gate. */ }
+    }
     active.current = { id, controller, services: queryServices }; completed.current = false;
     onRobotPrediction(undefined);
-    setMessages(ms => [...ms.filter(message => !message.restored), { id, telemetry: data, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running' }]);
+    setMessages(ms => [...ms.filter(message => !message.restored), { id, telemetry: data, mode: runMode, question: prompt.trim(), interval: snapshot, playhead: horizon, replayCursor: playhead, text: '', source: runMode === 'local' ? 'Local numerical analysis' : 'Assistant', tools: [], evidence: [], status: 'running', phase: 'Preparing exact model input', startedAtMs, expectedLatencyMs, measurementPreview }]);
     setQuestion('');
     setBusy(true);
     try {
@@ -117,16 +137,25 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
           try { await queryServices.cancelQuery(job.queryId); }
           catch { completed.current = true; throw new Error('Server cancellation could not be confirmed.'); }
         }
+        update(id, { cacheHit: job.cacheHit === true, phase: job.cacheHit ? 'Reusing exact checkpoint/input result' : 'Opening model event stream' });
         await queryServices.streamQuery(job.streamUrl, event => {
           if (active.current?.id !== id || event.queryId !== job.queryId) return;
           const p = event.payload;
-          if (event.type === 'tool.started') update(id, m => ({ tools: [...m.tools, p.label ?? p.tool ?? 'Tool started'] }));
-          if (event.type === 'tool.completed') update(id, m => ({ tools: [...m.tools, p.summary ?? 'Tool completed'] }));
-          if (event.type === 'answer.delta') update(id, m => ({ text: m.text + (p.text ?? '') }));
+          if (event.type === 'tool.started') update(id, m => ({
+            tools: [...m.tools, p.label ?? p.tool ?? 'Tool started'],
+            phase: p.tool === 'measurement_summary' ? 'Calculating deterministic measurements'
+              : typeof p.label === 'string' && p.label.startsWith('Reusing') ? 'Reusing exact checkpoint/input result'
+              : 'OpenTSLM is generating a prediction',
+          }));
+          if (event.type === 'tool.completed') update(id, m => ({
+            tools: [...m.tools, p.summary ?? 'Tool completed'],
+            phase: typeof p.summary === 'string' && p.summary.startsWith('Calculated') ? 'Measurements ready · starting OpenTSLM' : 'Preparing the evidence-linked result',
+          }));
+          if (event.type === 'answer.delta') update(id, m => ({ text: m.text + (p.text ?? ''), phase: 'OpenTSLM is generating a prediction' }));
           if (event.type === 'answer.completed') {
             completed.current = true;
             const modelOutput = typeof p.modelOutput === 'string' ? p.modelOutput : undefined;
-            update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) }));
+            update(id, m => ({ status: 'complete', phase: undefined, cacheHit: p.cacheHit === true || m.cacheHit, text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) }));
             const cue = predictionCue(modelOutput, snapshot);
             onRobotPrediction(cue);
           }
@@ -135,7 +164,15 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
         }, controller.signal);
       }
     } catch (error) {
-      update(id, m => ({ status: controller.signal.aborted ? 'cancelled' : 'error', text: `${m.text}${m.text ? '\n\n' : ''}${controller.signal.aborted ? 'Stopped. This answer is incomplete.' : error instanceof Error ? error.message : 'The request failed.'}` }));
+      const waitSeconds = error instanceof ApiError
+        ? error.estimatedWaitMs !== undefined
+          ? Math.max(1, Math.ceil(error.estimatedWaitMs / 1000))
+          : error.retryAfterSeconds
+        : undefined;
+      const wait = error instanceof ApiError && error.code === 'MODEL_BUSY'
+        ? waitSeconds !== undefined ? ` Estimated wait: about ${waitSeconds} seconds.` : ' Wait for the current analysis to finish, then retry.'
+        : '';
+      update(id, m => ({ status: controller.signal.aborted ? 'cancelled' : 'error', phase: undefined, text: `${m.text}${m.text ? '\n\n' : ''}${controller.signal.aborted ? 'Stopped. This answer is incomplete.' : error instanceof Error ? error.message + wait : 'The request failed.'}` }));
     } finally { if (active.current?.id === id) { if (active.current.stopRequested && !completed.current) update(id, { status: 'cancelled', text: 'Stopped. This answer is incomplete.' }); active.current = null; setBusy(false); setStopping(false); } }
   }
   function exportReport(message: Message) {
@@ -162,12 +199,17 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
         const rationale = generatedRationale(m.modelOutput);
         const review = m.status === 'complete' ? reviewPrediction(m.telemetry, m.interval, m.modelOutput) : undefined;
         const measuredText = m.text.split(/\n\s*\n/).find(block => block.startsWith('Measured in this selected window'))?.split('\n').slice(1).join(' ');
+        const elapsedSeconds = m.startedAtMs ? Math.max(0, Math.floor((clockMs - m.startedAtMs) / 1000)) : 0;
+        const typicalSeconds = Math.max(1, Math.round((m.expectedLatencyMs ?? 25_000) / 1000));
         return <article className="conversation-turn" key={m.id}>
           {m.question !== automaticPrompt && <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>}
           <div className="assistant-answer"><div>
             {m.restored && <div className="answer-source">Saved result</div>}
-            {m.status !== 'complete' && <div className="answer-source">{m.status === 'running' ? 'Reading the selected telemetry…' : m.status}</div>}
+            {m.cacheHit && m.status === 'complete' && <div className="answer-source">Reused exact input and checkpoint result · no new generation.</div>}
+            {m.status === 'running' && <div className="analysis-progress" role="status"><strong>{m.phase ?? 'Reading the selected telemetry'}</strong><span>{m.cacheHit ? 'Checkpoint-matched cache hit' : `${elapsedSeconds} s elapsed · typically about ${typicalSeconds} s`}</span></div>}
+            {m.status !== 'running' && m.status !== 'complete' && <div className="answer-source">{m.status}</div>}
             <div className={m.status === 'error' ? 'error-message' : ''}>
+              {m.status === 'running' && m.measurementPreview && <section className="measured-summary measured-preview"><h3>Measured torque ready</h3><p>{m.measurementPreview}</p><small>Deterministic calculation · OpenTSLM prediction pending.</small></section>}
               {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Onset <strong>{brief.onset} ms</strong></span>}</div><p className="prediction-caution">Model prediction · not a verified diagnosis.</p></section>{rationale && <details className="generated-rationale"><summary>Generated interpretation</summary><p>{rationale}</p></details>}{measuredText && <section className="measured-summary"><h3>Measured range leaders</h3><p>{compactMeasuredRanges(measuredText)}</p></section>}{review && <section className="review-note"><h3>Cross-check</h3><p>Model {review.predictedJoint} · measured range leader {review.largestRangeJoint}. Inspect both.</p></section>}</> : m.status === 'complete' && m.mode === 'assistant' ? <><section className="prediction-summary"><h3>No usable structured prediction</h3><p className="prediction-caution">The generation did not meet the complete seven-field contract used by Evaluation. The model response is shown below without repairing it.</p></section>{m.text && <AnswerText text={m.text}/>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
             {m.status === 'complete' && <section className="investigation-next" aria-label="Verify and hand off"><h3>Verify and hand off</h3><ol className="investigation-actions">

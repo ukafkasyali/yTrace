@@ -118,6 +118,9 @@ cannot start another ingestion.
   cancellation. The deployed model IDs are `assistant` and `opentslm`.
   Assistant requests allow server-side tool orchestration; comparison requests
   run available models directly. CNN labels have their own results rendering.
+  Optional model-registry timing and busy fields are backward compatible. The
+  investigation view calculates the selected window's deterministic torque ranges
+  immediately, then shows the OpenTSLM phase and elapsed time while generation runs.
 - **Shared contract:** seconds from recording start, half-open intervals, stable
   channel IDs and explicit units. Query requests include `playheadSec`; the
   selected interval cannot extend past it. SSE streams must use the configured

@@ -36,19 +36,22 @@ describe('service contracts', () => {
   });
 
   it('preserves the exact query context and uses same-origin credentials', async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({ queryId: 'q-1', streamUrl: '/api/queries/q-1/events' }));
+    const fetch = vi.fn().mockResolvedValue(Response.json({ queryId: 'q-1', streamUrl: '/api/queries/q-1/events', cacheHit: true }));
     vi.stubGlobal('fetch', fetch);
     const controller = new AbortController();
-    await createServices('/api').startQuery(query, controller.signal);
+    expect((await createServices('/api').startQuery(query, controller.signal)).cacheHit).toBe(true);
     expect(fetch).toHaveBeenCalledWith('/api/queries', expect.objectContaining({
       method: 'POST', credentials: 'same-origin', body: JSON.stringify(query), signal: controller.signal,
     }));
   });
 
   it('maps backend error envelopes without returning sample answers', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: { code: 'MODEL_UNAVAILABLE', message: 'Model is starting.', retryable: true } }, { status: 503 })));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+      error: { code: 'MODEL_BUSY', message: 'Another inference is running.', retryable: true, estimatedWaitMs: 12_400 },
+    }, { status: 409, headers: { 'Retry-After': '13' } })));
     await expect(createServices('/api').startQuery(query)).rejects.toMatchObject({
-      name: 'ApiError', status: 503, code: 'MODEL_UNAVAILABLE', retryable: true, message: 'Model is starting.',
+      name: 'ApiError', status: 409, code: 'MODEL_BUSY', retryable: true,
+      message: 'Another inference is running.', estimatedWaitMs: 12_400, retryAfterSeconds: 13,
     });
   });
 

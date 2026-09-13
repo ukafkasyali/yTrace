@@ -70,6 +70,10 @@ input,textarea{caret-color:var(--accent)}
 .user-question p{font-size:14px;font-weight:500}
 .user-question small{font-size:11px;line-height:1.6}
 .answer-source{font-size:12px}
+.analysis-progress{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;margin:0 0 16px;padding:10px 12px;border:1px solid #405047;border-radius:5px;background:#202825;color:#d8e6df;font-size:12px}
+.analysis-progress strong{font-weight:500}.analysis-progress span{color:var(--quiet);font-size:11px}
+.measured-preview{margin:0 0 20px;padding:12px;border-left:2px solid #6f8d80;background:#1d2321}
+.measured-preview p{margin:0}.measured-preview small{display:block;margin-top:7px;color:var(--quiet);font-size:10px}
 .evidence-links button{font-size:12px;padding:5px 9px;min-height:32px}
 .strip-heading{font-size:12px;height:21px;margin-bottom:4px}
 .sample-value{font-size:11px}

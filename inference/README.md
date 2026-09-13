@@ -269,12 +269,21 @@ previous config until the smoke test passes so rollback is one restart.
 - No resampling: the selected channels are normalized individually and zero-padded
   to a multiple of four for the upstream encoder. The initial interval needs no
   padding. Ordering follows the submitted channel IDs.
-- One query at a time. Cancellation requests stop generation at the next decoding
+- One new OpenTSLM generation at a time. Cancellation requests stop generation at the next decoding
   step; the slot stays occupied until the model call returns. A GPU operation already
   running cannot be forcibly interrupted by HTTP cancellation. The 120-second
   stopping criterion also acts between decoding steps, not as a process watchdog.
   y/trace keeps the control in **Stopping…** until the stream closes, preventing an
-  immediate retry from colliding with the occupied slot.
+  immediate retry from colliding with the occupied slot. `409 MODEL_BUSY` responses
+  include an estimated wait and `Retry-After`; health and model-registry responses
+  expose the same best-effort timing metadata.
+- Successful structured OpenTSLM generations enter a bounded, process-memory LRU
+  cache keyed by the exact question, mode, checkpoint revision, input window,
+  analysis cutoff and submitted samples. A checkpoint/input-matched hit remains
+  available while another generation occupies the slot, is labeled `cacheHit` in
+  the result and receipt, and never masquerades as a fresh generation. The cache has
+  at most 128 results and is cleared on restart; failed, cancelled and CNN calls are
+  not cached.
 - Evidence links identify **input telemetry**, not verified causal explanations.
   Checkpoint SHA256, configuration hash and resolved backbone revision accompany
   model identity; an input hash/sample count is included in the completion receipt.

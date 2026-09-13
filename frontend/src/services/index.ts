@@ -41,6 +41,7 @@ export type ModelProfile = {
   id: string; label: string; available: boolean;
   capabilities: ('language' | 'classification' | 'localization')[];
   reason?: string; revision?: string;
+  busy?: boolean; estimatedWaitMs?: number; typicalLatencyMs?: number; cachedResults?: number;
 };
 export const DECLARED_MODELS: readonly ModelProfile[] = [
   { id: 'assistant', label: 'Telemetry assistant', available: false, capabilities: ['language'], reason: 'Model service not connected' },
@@ -71,8 +72,11 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly retryable: boolean;
-  constructor(message: string, status = 0, code = 'REQUEST_FAILED', retryable = false) {
+  readonly estimatedWaitMs?: number;
+  readonly retryAfterSeconds?: number;
+  constructor(message: string, status = 0, code = 'REQUEST_FAILED', retryable = false, estimatedWaitMs?: number, retryAfterSeconds?: number) {
     super(message); this.name = 'ApiError'; this.status = status; this.code = code; this.retryable = retryable;
+    this.estimatedWaitMs = estimatedWaitMs; this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 export class ServiceUnavailableError extends ApiError {
@@ -136,9 +140,12 @@ export function createServices(baseUrl?: string) {
     let details: unknown;
     try { details = await response.json(); } catch { /* Error bodies may be empty or HTML. */ }
     const error = isObject(details) && isObject(details.error) ? details.error : {};
+    const retryAfter = response.headers.get('Retry-After');
     throw new ApiError(
       typeof error.message === 'string' ? error.message : `Request failed (${response.status}).`,
       response.status, typeof error.code === 'string' ? error.code : 'HTTP_ERROR', error.retryable === true,
+      typeof error.estimatedWaitMs === 'number' && Number.isFinite(error.estimatedWaitMs) ? error.estimatedWaitMs : undefined,
+      retryAfter !== null && Number.isFinite(Number(retryAfter)) ? Number(retryAfter) : undefined,
     );
   }
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -370,7 +377,7 @@ export function createServices(baseUrl?: string) {
       }
       if (!query.question.trim()) throw new ApiError('Enter a question.', 0, 'INVALID_QUERY');
       if (query.mode === 'direct' && !query.modelId) throw new ApiError('Select a model for direct mode.', 0, 'MODEL_REQUIRED');
-      return request<{ queryId: string; streamUrl: string }>('/queries', { method: 'POST', body: JSON.stringify(query), signal });
+      return request<{ queryId: string; streamUrl: string; cacheHit?: boolean }>('/queries', { method: 'POST', body: JSON.stringify(query), signal });
     },
     streamQuery,
     // Aborting a fetch closes transport only. The caller must also invoke this endpoint.

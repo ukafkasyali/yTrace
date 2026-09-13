@@ -3,36 +3,41 @@ from __future__ import annotations
 
 import argparse
 import bisect
-import hashlib
+import copy
 import gzip
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import hashlib
 import json
 import logging
 import math
-from pathlib import Path
 import threading
 import time
 import traceback
-from urllib.parse import parse_qs, unquote, urlsplit
 import uuid
+from collections import OrderedDict
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlsplit
 
 try:
-    from .raw_recordings import CHANNEL_IDS, RawRecordingCatalog
     from .cnn_runtime import CnnRuntime
+    from .raw_recordings import CHANNEL_IDS, RawRecordingCatalog
 except ImportError:  # pragma: no cover - direct script execution
-    from raw_recordings import CHANNEL_IDS, RawRecordingCatalog
     from cnn_runtime import CnnRuntime
+    from raw_recordings import CHANNEL_IDS, RawRecordingCatalog
 
 DATASET_ID = "zenodo-21927431"
 MAX_BODY = 16_384
 TERMINAL = {"answer.completed", "query.error", "query.cancelled"}
+DEFAULT_INFERENCE_MS = 25_000
+RESULT_CACHE_LIMIT = 128
 
 
 class ApiError(Exception):
-    def __init__(self, status, code, message, retryable=False):
+    def __init__(self, status, code, message, retryable=False, details=None, headers=None):
         super().__init__(message)
         self.status = status
-        self.error = {"code": code, "message": message, "retryable": retryable}
+        self.error = {"code": code, "message": message, "retryable": retryable, **(details or {})}
+        self.headers = headers or {}
 
 
 def finite(value):
@@ -151,9 +156,11 @@ def present_generation(generation, summary):
 
 
 class Job:
-    def __init__(self, request):
+    def __init__(self, request, cache_key=None):
         self.id = uuid.uuid4().hex
         self.request = request
+        self.cache_key = cache_key
+        self.started_at = time.monotonic()
         self.cancelled = threading.Event()
         self.condition = threading.Condition()
         self.events = []
@@ -213,6 +220,49 @@ class Bridge:
         self.active = None
         self.finished_limit = 100
         self.finished_ttl = 1800
+        self.result_cache = OrderedDict()
+        self.result_cache_limit = RESULT_CACHE_LIMIT
+        self.generation_durations_ms = []
+
+    def _typical_latency_ms_locked(self):
+        if not self.generation_durations_ms:
+            return DEFAULT_INFERENCE_MS
+        ordered = sorted(self.generation_durations_ms)
+        return ordered[len(ordered) // 2]
+
+    def _status_locked(self):
+        typical = self._typical_latency_ms_locked()
+        active_job = self.jobs.get(self.active) if self.active else None
+        elapsed = round((time.monotonic() - active_job.started_at) * 1000) if active_job else 0
+        return {
+            "busy": active_job is not None,
+            "estimatedWaitMs": max(0, typical - elapsed) if active_job else 0,
+            "typicalLatencyMs": typical,
+            "cachedResults": len(self.result_cache),
+        }
+
+    def status(self):
+        with self.lock:
+            return self._status_locked()
+
+    def _cache_key(self, request, series, runtime):
+        payload = {
+            "mode": request["mode"],
+            "modelId": request["modelId"],
+            "modelRevision": runtime.revision,
+            "question": request["question"],
+            "window": request["window"],
+            "playheadSec": request["playheadSec"],
+            "series": series,
+        }
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, allow_nan=False).encode()).hexdigest()
+
+    def _store_result(self, key, generation, trace):
+        with self.lock:
+            self.result_cache[key] = {"generation": generation, "trace": copy.deepcopy(trace)}
+            self.result_cache.move_to_end(key)
+            while len(self.result_cache) > self.result_cache_limit:
+                self.result_cache.popitem(last=False)
 
     def prune(self):
         # Caller holds self.lock. A cancelled worker remains active until it exits.
@@ -350,17 +400,34 @@ class Bridge:
                 raise ApiError(422, "INVALID_CNN_INPUT", str(error)) from error
         cleaned = {"mode": mode, "modelId": selected_model, "question": question.strip(),
                    "window": window, "playheadSec": playhead}
+        cache_key = self._cache_key(cleaned, series, selected_runtime) if selected_model == "opentslm" else None
         with self.lock:
             self.prune()
+            cached = copy.deepcopy(self.result_cache.get(cache_key)) if cache_key else None
+            if cached is not None:
+                self.result_cache.move_to_end(cache_key)
+                job = Job(cleaned, cache_key)
+                self.jobs[job.id] = job
+                threading.Thread(target=self.run, args=(job, series, cached), daemon=True).start()
+                return {"queryId": job.id, "streamUrl": f"/api/queries/{job.id}/events", "cacheHit": True}
             if self.active is not None:
-                raise ApiError(409, "MODEL_BUSY", "Another inference is still running. Try again after it completes.", True)
-            job = Job(cleaned)
+                status = self._status_locked()
+                retry_after = max(1, math.ceil(status["estimatedWaitMs"] / 1000))
+                raise ApiError(
+                    409,
+                    "MODEL_BUSY",
+                    "Another inference is still running. Try again after it completes.",
+                    True,
+                    details={"estimatedWaitMs": status["estimatedWaitMs"], "typicalLatencyMs": status["typicalLatencyMs"]},
+                    headers={"Retry-After": str(retry_after)},
+                )
+            job = Job(cleaned, cache_key)
             self.jobs[job.id] = job
             self.active = job.id
         threading.Thread(target=self.run, args=(job, series), daemon=True).start()
-        return {"queryId": job.id, "streamUrl": f"/api/queries/{job.id}/events"}
+        return {"queryId": job.id, "streamUrl": f"/api/queries/{job.id}/events", "cacheHit": False}
 
-    def run(self, job, series):
+    def run(self, job, series, cached=None):
         call_id = f"inference-{job.id}"
         try:
             if job.cancelled.is_set():
@@ -386,15 +453,30 @@ class Bridge:
                 job.emit("answer.completed", {"modelId": "cnn-1d", "modelRevision": self.cnn_runtime.revision,
                                                 "labels": prediction["labels"], "evidence": evidence})
                 return
-            job.emit("tool.started", {"callId": call_id, "tool": "opentslm", "label": "Running OpenTSLM on selected raw telemetry"})
-            answer = self.runtime.generate(job.request, series, job.cancelled)
+            cache_hit = cached is not None
+            job.emit("tool.started", {"callId": call_id, "tool": "opentslm", "label": "Reusing checkpoint-matched OpenTSLM result" if cache_hit else "Running OpenTSLM on selected raw telemetry"})
+            if cache_hit:
+                answer = cached["generation"]
+                trace = copy.deepcopy(cached["trace"])
+            else:
+                answer = self.runtime.generate(job.request, series, job.cancelled)
+                trace = copy.deepcopy(getattr(self.runtime, "last_trace", None))
             if job.cancelled.is_set():
                 return
             if not isinstance(answer, str) or not answer.strip() or len(answer) > 32_000:
                 raise ValueError("Runtime returned invalid or oversized output")
-            job.emit("tool.completed", {"callId": call_id, "summary": "OpenTSLM generation completed; explanation has not been independently verified."})
-            job.emit("answer.completed", {"answer": present_generation(answer, summary), "modelOutput": answer, "modelId": self.runtime.model_id,
-                     "modelRevision": self.runtime.revision, "inputTrace": getattr(self.runtime, "last_trace", None),
+            presented = present_generation(answer, summary)
+            if not cache_hit and job.cache_key and trace:
+                self._store_result(job.cache_key, answer, trace)
+                latency = trace.get("latencyMs")
+                if isinstance(latency, (int, float)) and latency > 0:
+                    with self.lock:
+                        self.generation_durations_ms = (self.generation_durations_ms + [round(latency)])[-21:]
+            if isinstance(trace, dict):
+                trace["cacheHit"] = cache_hit
+            job.emit("tool.completed", {"callId": call_id, "summary": "Reused the exact checkpoint/input result; no new generation was run." if cache_hit else "OpenTSLM generation completed; explanation has not been independently verified."})
+            job.emit("answer.completed", {"answer": presented, "modelOutput": answer, "modelId": self.runtime.model_id,
+                     "modelRevision": self.runtime.revision, "inputTrace": trace, "cacheHit": cache_hit,
                      "evidence": [{"id": f"input-{job.id}",
                      "window": job.request["window"], "label": "Input telemetry (not a verified explanation)",
                      "source": f"{self.runtime.model_id}@{self.runtime.revision}"}], "measurements": summary[:3]})
@@ -422,11 +504,13 @@ class Handler(BaseHTTPRequestHandler):
         # Do not log questions, request bodies, or credentials.
         pass
 
-    def json_response(self, status, data=None):
+    def json_response(self, status, data=None, headers=None):
         body = b"" if status == 204 else json.dumps(data, allow_nan=False).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
         self.end_headers()
@@ -470,7 +554,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 raise ApiError(404, "NOT_FOUND", "This capability is not connected.")
         except ApiError as error:
-            self.json_response(error.status, {"error": error.error})
+            self.json_response(error.status, {"error": error.error}, error.headers)
         except (BrokenPipeError, ConnectionResetError):
             pass
         except Exception:
@@ -495,7 +579,8 @@ class Handler(BaseHTTPRequestHandler):
         elif route == ["health"]:
             self.json_response(200, {"ready": bool(bridge.runtime.ready), "modelId": bridge.runtime.model_id,
                                     "revision": bridge.runtime.revision,
-                                    "status": "ready" if bridge.runtime.ready else "unavailable" if bridge.runtime.error else "loading"})
+                                    "status": "ready" if bridge.runtime.ready else "unavailable" if bridge.runtime.error else "loading",
+                                    **bridge.status()})
         elif route == ["datasets"]:
             self.json_response(200, [{"id": DATASET_ID, "name": "KUKA contact-event telemetry",
                                     "sourceUrl": recording["sourceUrl"], "revision": bridge.revision}])
@@ -519,14 +604,17 @@ class Handler(BaseHTTPRequestHandler):
                                 "durationSec": recording["durationSeconds"], "channels": channels})
             self.json_response(200, records)
         elif route == ["models"]:
+            runtime_status = bridge.status()
             self.json_response(200, [{"id": "assistant", "label": "Telemetry assistant", "available": bool(bridge.runtime.ready),
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
+                     **runtime_status,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})},
                     {"id": "cnn-1d", "label": "1D CNN", "available": bool(bridge.cnn_runtime.ready),
                      "capabilities": ["classification", "localization"], "revision": bridge.cnn_runtime.revision,
                      **({} if bridge.cnn_runtime.ready else {"reason": bridge.cnn_runtime.error or "Model loading"})},
                     {"id": "opentslm", "label": "OpenTSLM", "available": bool(bridge.runtime.ready),
                      "capabilities": ["language", "classification", "localization"], "revision": bridge.runtime.revision,
+                     **runtime_status,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})}])
         elif len(route) == 3 and route[0] == "recordings":
             if route[1] not in bridge.recordings and route[1] not in bridge.raw_recordings:
