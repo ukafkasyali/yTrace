@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CSVB3RJWG2ZQ9M8YQWZVMQ",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:14:39.376191Z",
+  "branch": "codex/factorybench-canary",
+  "checkpoints_count": 1,
+  "files_touched": [],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "bdd15d7359a9",
+  "checkpoint_transcript_start": 15857,
+  "transcript_lines_at_start": 15857,
+  "compact_transcript_start": 2091,
+  "token_usage": {
+    "input_tokens": 146892,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 10389113,
+    "output_tokens": 24419,
+    "api_call_count": 82
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 743,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147
+      }
+    }
+  ]
+}
