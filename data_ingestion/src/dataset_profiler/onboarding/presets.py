@@ -80,7 +80,10 @@ def bosch_reference_backend(
                 "--no-isolation",
             ),
             cwd=str(timenet_root),
-            environment={"TIMENET_BOSCH_CNC_SOURCE_DIR": "{source_path}"},
+            environment={
+                "TIMENET_BOSCH_CNC_SOURCE_DIR": "{source_path}",
+                "TIMENET_HOME": "{job_dir}/build/timenet-home",
+            },
         ),
         loading=CommandSpec(
             argv=(
