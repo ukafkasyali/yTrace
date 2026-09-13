@@ -40,7 +40,7 @@ def plot_run(
     for index in ([] if event_indices is None else event_indices):
         if 1 <= index <= time.size:
             axis.axvline(time[index - 1], color="black", alpha=0.18, linewidth=0.7)
-    axis.set(title=f"{directory.name} — {variable} ({source_file.name})", xlabel="Time (s)", ylabel=variable)
+    axis.set(title=f"{directory.name}: {variable} ({source_file.name})", xlabel="Time (s)", ylabel=variable)
     axis.legend(ncol=2)
     axis.grid(alpha=0.2)
     figure.tight_layout()

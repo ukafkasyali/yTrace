@@ -129,13 +129,13 @@ function generatedPredictionMarkdown(report: InvestigationReport): string | unde
 export function renderInvestigationMarkdown(report: InvestigationReport): string {
   const annotations = report.publisherAnnotations.length
     ? report.publisherAnnotations.map(annotation =>
-      `- ${fixed(annotation.timeSeconds)} s — ${markdownText(annotation.label)} (${markdownText(annotation.source)})`).join('\n')
+      `- ${fixed(annotation.timeSeconds)} s: ${markdownText(annotation.label)} (${markdownText(annotation.source)})`).join('\n')
     : '- No publisher annotation falls inside this interval.';
   const measurements = report.measurements.channels.map(channel =>
     `| ${markdownText(channel.name)} | ${fixed(channel.range)} ${markdownText(channel.unit)} | ${fixed(channel.signedPeak)} ${markdownText(channel.unit)} | ${fixed(channel.peakTimeSec)} s |`).join('\n');
   const evidence = report.interpretation.evidence.length
     ? report.interpretation.evidence.map(item =>
-      `- ${markdownText(item.label)} — ${fixed(item.interval.start)}–${fixed(item.interval.end)} s; ${item.channelIds?.map(markdownText).join(', ') ?? markdownText(item.channelId)}`).join('\n')
+      `- ${markdownText(item.label)}: ${fixed(item.interval.start)}–${fixed(item.interval.end)} s; ${item.channelIds?.map(markdownText).join(', ') ?? markdownText(item.channelId)}`).join('\n')
     : '- No separate evidence links were returned.';
   const receipt = report.interpretation.inputReceipt && typeof report.interpretation.inputReceipt === 'object'
     ? report.interpretation.inputReceipt as { samplesPerChannel?: unknown; inputSha256?: unknown }

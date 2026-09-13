@@ -58,7 +58,7 @@ export default function SignalViewer({ visibleChannelIds, prediction, data, play
         const idx = lo > 0 && Math.abs(p.times[lo - 1] - time) < Math.abs(p.times[lo] - time) ? lo - 1 : lo;
         value = p.values[idx];
       }
-      el.textContent = value === undefined ? '—' : value.toFixed(3);
+      el.textContent = value === undefined ? 'n/a' : value.toFixed(3);
     });
     const label = panel.current.querySelector('[data-cursor-time]');
     if (label) label.textContent = time === null ? 'Hover to inspect · drag to select' : `Cursor ${time.toFixed(3)} s · nearest available samples`;
@@ -73,7 +73,7 @@ export default function SignalViewer({ visibleChannelIds, prediction, data, play
   return <section className="signals-panel" ref={panel} aria-label="Synchronized torque signals">
     <header className="panel-heading"><div><h2>{visibleChannelIds ? "Torque evidence" : "All joint signals"}</h2><span>Signed external torque</span></div><div className="plot-actions"><select aria-label="Signal zoom" value={following ? String(zoom) : "selection"} onChange={e => onZoom(Number(e.target.value))}><option value="selection" disabled>Selection</option><option value="1.024">1.024 s</option><option value="5">5 s</option><option value="10">10 s</option><option value="0">Full history</option></select><button className="icon-button" title="Follow playhead" aria-label="Follow playhead" aria-pressed={following} onClick={onFollow}><Crosshair size={16}/></button></div></header>
     <div className="signal-strips">{plots.map((p, plotIndex) => <div key={p.channel.id} className={`signal-strip ${highlighted.includes(p.channel.id) ? 'signal-highlighted' : ''}`} data-channel={p.channel.id}>
-      <div className="strip-heading"><span className="channel-name"><i style={{ background: COLORS[p.colorIndex] }}/>{p.channel.name}<span className="unit">Nm</span></span><span className="mono sample-value" data-sample-value>{p.last?.toFixed(3) ?? '—'}</span></div>
+      <div className="strip-heading"><span className="channel-name"><i style={{ background: COLORS[p.colorIndex] }}/>{p.channel.name}<span className="unit">Nm</span></span><span className="mono sample-value" data-sample-value>{p.last?.toFixed(3) ?? 'n/a'}</span></div>
       <div className="plot-frame"><div className="y-labels"><span>{p.high.toFixed(p.high-p.low < 1 ? 2 : 1)}</span><span>{p.low.toFixed(p.high-p.low < 1 ? 2 : 1)}</span></div><div className="plot-area">
         {right > left && <div className="selection-band" style={{ left: `${left}%`, width: `${right - left}%` }}/>}<div className="hover-guide"/>
         {predictedOnsetPercent !== undefined && <div className={`model-onset-cue${onsetNearRightEdge ? ' at-right-edge' : ''}`} style={{ left: `${predictedOnsetPercent}%` }}>{plotIndex === 0 && <span>Predicted onset</span>}</div>}

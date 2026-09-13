@@ -39,7 +39,7 @@ def main() -> None:
         for event in events:
             if 1 <= event <= data.shape[1] and data[0, event - 1] <= 30:
                 axis.axvline(data[0, event - 1], color="crimson", alpha=0.3, linewidth=0.6)
-    axes[0].set_title("03-15-13-13 — measured external torque, first 30 seconds")
+    axes[0].set_title("03-15-13-13: measured external torque, first 30 seconds")
     axes[-1].set_xlabel("Time (s)")
     figure.tight_layout()
     figure.savefig(OUTPUT / "03-15-13-13_external_torque_first_30s.png", dpi=150)
@@ -55,7 +55,7 @@ def main() -> None:
             linewidth=0.8,
             label=run.name,
         )
-    axis.set_title("Batch 01 — maximum absolute external torque across joints")
+    axis.set_title("Batch 01: maximum absolute external torque across joints")
     axis.set_xlabel("Time (s)")
     axis.set_ylabel("max |torque| across joints")
     axis.grid(alpha=0.2)

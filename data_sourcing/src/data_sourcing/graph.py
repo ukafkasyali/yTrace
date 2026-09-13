@@ -678,7 +678,7 @@ class DatasetScoutGraph:
         missing: list[str],
     ) -> str:
         lines = [
-            f"# Dataset sourcing report — {state['run_id']}",
+            f"# Dataset sourcing report: {state['run_id']}",
             "",
             f"Execution mode: **{state['execution_mode']}**",
             (
@@ -726,13 +726,13 @@ class DatasetScoutGraph:
             candidate = candidates.get(assessment.candidate_id)
             name = _markdown_text(candidate.name if candidate else assessment.candidate_id)
             lines.append(
-                f"- {name} (`{assessment.candidate_id}`) — {suitability} suitability; "
+                f"- {name} (`{assessment.candidate_id}`): {suitability} suitability; "
                 f"conflicts: {conflict}{review_status}"
             )
             for factor in assessment.suitability_factors:
                 lines.append(
-                    f"  - Why {suitability} — {factor.kind.value.casefold()}: "
-                    f"{_markdown_text(factor.label)} — "
+                    f"  - Why {suitability}, {factor.kind.value.casefold()}: "
+                    f"{_markdown_text(factor.label)}. "
                     f"{_markdown_text(factor.explanation)}"
                 )
             for claim in assessment.conflicts:

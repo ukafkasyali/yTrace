@@ -363,7 +363,7 @@ def markdown(report: dict) -> str:
     ]
     for title, key, note in specs:
         values = [report["models"][m][key] for m in ("features", "opentslm", "qwen")]
-        rendered = ["—" if v is None else f"{v:.2f}" if key.endswith("_ms") else f"{v:.4f}" for v in values]
+        rendered = ["n/a" if v is None else f"{v:.2f}" if key.endswith("_ms") else f"{v:.4f}" for v in values]
         lines.append(f"| {title} | " + " | ".join(rendered) + f" | {note} |")
     lines += [
         "",

@@ -66,7 +66,7 @@ function runFixture(): SourcingRun {
     approvedCandidateId: null, excludedCandidateIds: [], reviewFeedback: [], reviewIterationsUsed: 0,
     refinementOutcomes: [],
     executionMode: 'LIVE', errors: [],
-    reportMarkdown: '# Dataset sourcing report — raw markdown', manifest: null,
+    reportMarkdown: '# Dataset sourcing report: raw markdown', manifest: null,
     createdAt: '2026-09-12T12:00:00Z', updatedAt: '2026-09-12T12:01:00Z',
   };
 }

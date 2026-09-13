@@ -86,7 +86,7 @@ export default function RobotPanel({ prediction, data, playhead, interval, highl
         <div className="robot-joint-heading"><span>Joint</span><span>Nm</span></div>
         {data.channels.map((channel, i) => <button key={channel.id} aria-pressed={highlighted.includes(channel.id)}
           aria-label={`Highlight ${channel.name} in robot and signals`} onClick={() => onHighlight(channel.id)}>
-          <span><i style={{ background: COLORS[i] }}/>J{i + 1}</span><span className="mono">{sample?.channels.find(c => c.id === channel.id)?.value.toFixed(3) ?? '—'}</span>
+          <span><i style={{ background: COLORS[i] }}/>J{i + 1}</span><span className="mono">{sample?.channels.find(c => c.id === channel.id)?.value.toFixed(3) ?? 'n/a'}</span>
         </button>)}
         <p className="mono">{sample ? `${sample.time.toFixed(3)} s` : 'No sample'}</p>
       </div>

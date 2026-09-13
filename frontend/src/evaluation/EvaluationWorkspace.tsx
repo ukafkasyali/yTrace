@@ -90,7 +90,7 @@ const cnn = cnnSummary.metrics;
 
 const methodOrder: MethodKey[] = ['features', 'cnn', 'opentslm', 'qwen'];
 const percent = (value: number) => value * 100;
-const usableSummaryLabel = (value: number | null) => value === null ? '—' : value.toFixed(4);
+const usableSummaryLabel = (value: number | null) => value === null ? 'n/a' : value.toFixed(4);
 const answeredWindows = Math.round(audited.opentslm.usable_summary_rate * comparison.window_count);
 const rationaleGeneration = rationaleFollowup.nearest_generation_panel;
 const rationaleEquivariance = rationaleFollowup.equivariance_panel;

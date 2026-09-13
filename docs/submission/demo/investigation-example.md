@@ -40,7 +40,7 @@ sampled min, max, range and absolute peak.
 
 ## Publisher annotations
 
-- 6.187 s — Event 01 (JK\_moments)
+- 6.187 s: Event 01 (JK\_moments)
 
 ## Evidence and provenance
 
@@ -49,7 +49,7 @@ sampled min, max, range and absolute peak.
 - **Revision:** checkpoint-sha256:8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23; config:4dbdd82f5ff7; backbone:unknown
 - **Input receipt:** 1024 samples/channel; SHA-256 7e78c56206491b03af817e11f1aaec165c5271675164d2e0a68ea579c4c92915
 
-- Inspect 7 input channels — 5.787–6.811 s; joint\_1, joint\_2, joint\_3, joint\_4, joint\_5, joint\_6, joint\_7
+- Inspect 7 input channels: 5.787–6.811 s; joint\_1, joint\_2, joint\_3, joint\_4, joint\_5, joint\_6, joint\_7
 
 ## Limitations
 
