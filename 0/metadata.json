@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C6FRNS16YGJPF7VN5NMR8J",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T01:35:57.337084Z",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "docs/submission/evaluation/source/cnn-recorded-summary.json",
+    "frontend/src/evaluation/EvaluationWorkspace.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "d34b8d65e4db",
+  "checkpoint_transcript_start": 7318,
+  "transcript_lines_at_start": 7318,
+  "compact_transcript_start": 948,
+  "token_usage": {
+    "input_tokens": 5943,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 801858,
+    "output_tokens": 2402,
+    "api_call_count": 6
+  },
+  "session_metrics": {
+    "turn_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T01:35:55.207195Z",
+    "agent_lines": 6,
+    "agent_removed": 5,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 6,
+    "total_lines_changed": 11,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
