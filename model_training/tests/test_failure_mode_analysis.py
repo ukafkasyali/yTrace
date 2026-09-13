@@ -1,3 +1,4 @@
+import gzip
 import importlib.util
 import json
 from pathlib import Path
@@ -20,7 +21,16 @@ def test_analyzer_catches_dead_selection_and_late_task_regression(tmp_path: Path
         json.dumps({"state": "complete", "global_step": 200, "elapsed_seconds": 3600}), encoding="utf-8"
     )
     (run / "run_manifest.json").write_text(
-        json.dumps({"config": {"checkpoint_selection": {"gates": {"first_pass/schema_exact_match": 0.95}}}}),
+        json.dumps(
+            {
+                "config": {
+                    "checkpoint_selection": {"gates": {"first_pass/schema_exact_match": 0.95}},
+                    "experiment": {"hypothesis": "focused_three_intent_curriculum"},
+                    "training": {"curriculum_intents": "all"},
+                },
+                "training_intent_counts": {f"intent-{index}": 1 for index in range(7)},
+            }
+        ),
         encoding="utf-8",
     )
     common = {
@@ -64,6 +74,7 @@ def test_analyzer_catches_dead_selection_and_late_task_regression(tmp_path: Path
     codes = {finding["code"] for finding in report["findings"]}
     assert "checkpoint_gate_deadlock" in codes
     assert "late_decoded_regression" in codes
+    assert "manifest_hypothesis_mismatch" in codes
     assert report["checkpoint_selection"]["best_observed_decoded_step"] == 100
     assert report["final_validation"]["row_analysis"]["failure_counts"]["strongest_joint_error"] == 1
 
@@ -96,3 +107,11 @@ def test_row_analysis_separates_schema_retry_and_temporal_failures() -> None:
     assert analysis["failure_counts"]["schema_value_violation"] == 1
     assert analysis["failure_counts"]["missing_rationale"] == 1
     assert analysis["per_intent"]["affected_joints"]["schema_validity"] == 0.0
+
+
+def test_read_jsonl_accepts_compressed_receipts(tmp_path: Path) -> None:
+    path = tmp_path / "metrics.jsonl.gz"
+    with gzip.open(path, "wt", encoding="utf-8") as handle:
+        handle.write('{"event":"generation_eval","step":1}\n')
+
+    assert MODULE.read_jsonl(path) == [{"event": "generation_eval", "step": 1}]

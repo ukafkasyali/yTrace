@@ -1,5 +1,5 @@
 {
-  "source": "Team Nebius training artifacts, retrieved 2026-09-12; original bytes preserved",
+  "source": "Frozen held-out artifacts plus a checksummed V6 validation diagnostic; raw prediction bytes preserved",
   "checkpoint_sha256": "8ff63b84ae5b64758f66b3e0527f4f225a04bb2b6b39193c806f58d94cec9f23",
   "files": {
     "opentslm.jsonl.gz": {
@@ -51,6 +51,11 @@
       "sha256_uncompressed": "e4b77e8203caad3111fe12e10b6d14533fa88a52b0b7dde253a275d9e666a7d1",
       "bytes_uncompressed": 1377,
       "original_relative_path": "artifacts/evaluation/llama-har-sp-canary-v4-20260912-test/metrics.json"
+    },
+    "opentslm-v6-validation-audit.json": {
+      "sha256_uncompressed": "c4e8890e7e2c8d93075b1864d9d256b0dea97b0d7351e26d764aeecc579290a9",
+      "bytes_uncompressed": 4209,
+      "original_relative_path": "docs/submission/evaluation/source/opentslm-v6-validation-audit.json"
     },
     "qwen-metrics.json": {
       "sha256_uncompressed": "d0180ebf0a7a38a7062d93f2be3a0486a8221366b80e68a4f7b4af398f54756b",

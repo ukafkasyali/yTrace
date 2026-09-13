@@ -1,0 +1,207 @@
+{
+  "command": "/home/atakantopaloglu/ysamet-training/src/robot_observability/train_opentslm.py --config configs/opentslm_sp_focused_control.yaml --prepared-root data/prepared/timef-v1 --output runs --run-name llama-har-sp-timef-rationale-focused-v6",
+  "config": {
+    "architecture": "soft_prompt",
+    "base_model": "meta-llama/Llama-3.2-1B",
+    "batch_size": 3,
+    "checkpoint_selection": {
+      "enabled": true,
+      "gates": {
+        "first_pass/contact_f1": 0.95,
+        "first_pass/schema_exact_match": 0.95,
+        "first_pass/semantics_macro_f1": 0.9
+      },
+      "joint_metric": "strongest_joint_accuracy",
+      "joint_weight": 0.5,
+      "onset_weight": 0.5
+    },
+    "early_stopping_patience": 3,
+    "epochs": 1,
+    "experiment": {
+      "comparison_run": "llama-har-sp-timef-rationale-v5b",
+      "hypothesis": "focused_three_intent_curriculum_without_channel_permutation"
+    },
+    "fit_probe": {
+      "batch_size": 3,
+      "epochs": 40,
+      "train_examples": 48,
+      "validation_batch_size": 4,
+      "validation_examples": 48
+    },
+    "gradient_accumulation_steps": 5,
+    "learning_rates": {
+      "encoder": 0.0002,
+      "lora": 2e-05,
+      "projector": 0.0001
+    },
+    "lora": {
+      "alpha": 32,
+      "dropout": 0.0,
+      "rank": 16
+    },
+    "max_wall_time_hours": 5.1,
+    "observability": {
+      "generation_at_start": false,
+      "gpu_metrics_every_seconds": 10,
+      "jsonl": true,
+      "log_every_steps": 10,
+      "sample_generations_every_steps": 250,
+      "tensorboard": true,
+      "training_probe": {
+        "dataset_table_rows": 16,
+        "enabled": true,
+        "every_steps": 200,
+        "examples_table_rows": 8,
+        "generation_every_steps": 500,
+        "generation_subset": 48,
+        "loss_subset": 64,
+        "manifest_table_rows": 256,
+        "matched_validation_subset": 64,
+        "zero_signal_subset": 12
+      },
+      "wandb": {
+        "enabled": true,
+        "entity": null,
+        "log_adapter_artifact": true,
+        "project": "robot-observability"
+      }
+    },
+    "precision": "bfloat16",
+    "targets": {
+      "format": "rationale_then_answer",
+      "rationale_source": "deterministic_signal_pseudolabels_v1"
+    },
+    "training": {
+      "balanced_joint_permutation": false,
+      "curriculum_intents": "all",
+      "joint_attribution_curriculum": true,
+      "max_examples": 8192,
+      "warmup_fraction": 0.03
+    },
+    "upstream_commit": "2968f4b891baab4307f7e9d0043e87677b593a30",
+    "validation": {
+      "at_start": true,
+      "batch_size": 4,
+      "every_epoch": true,
+      "every_steps": 50,
+      "examples_table_rows": 21,
+      "generation_selection": "event_intent_stratified",
+      "generation_subset": 84,
+      "loss_subset": 128,
+      "zero_signal_subset": 12
+    },
+    "warm_start": "OpenTSLM/llama-3.2-1b-har-sp"
+  },
+  "cuda": "12.8",
+  "dataset_source_receipt": {
+    "adapter": "robot_observability.data.timef",
+    "contract": {
+      "sampling_hz": 1000,
+      "signals": [
+        "joint_1",
+        "joint_2",
+        "joint_3",
+        "joint_4",
+        "joint_5",
+        "joint_6",
+        "joint_7"
+      ],
+      "torque_spec_type": "measured_external_joint_torque"
+    },
+    "datasets": [
+      {
+        "dataset_id": "kuka/collision-part1",
+        "dataset_version": "1.0.0",
+        "manifest_sha256": "cb02afbdc7491b90b235ac21dd532f0e4ddc66365e4886d6cc74ecfa08f93f26",
+        "version_dir": "/home/atakantopaloglu/ysamet-training/artifacts/timef-raw/kuka/collision-part1/1.0.0"
+      },
+      {
+        "dataset_id": "kuka/contact-part2",
+        "dataset_version": "1.0.0",
+        "manifest_sha256": "275e103a7be20eee0703ac8af6f47c9e1be35862914a3cfb99eabd269b17f5db",
+        "version_dir": "/home/atakantopaloglu/ysamet-training/artifacts/timef-raw/kuka/contact-part2/1.0.0"
+      }
+    ],
+    "source_backend": "timenet_timef"
+  },
+  "generation_canary_class_counts": {
+    "accidental": 28,
+    "free": 28,
+    "intentional": 28
+  },
+  "generation_canary_joint_counts": {
+    "J1": 18,
+    "J2": 12,
+    "J3": 4,
+    "J4": 16,
+    "J5": 5,
+    "J6": 1,
+    "free": 28
+  },
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "opentslm_commit": "2968f4b891baab4307f7e9d0043e87677b593a30",
+  "prepared_root": "/home/atakantopaloglu/ysamet-training/data/prepared/timef-v1",
+  "prepared_sha256": {
+    "dataset_summary.json": "430a72c38ad48c61037db6ef84b9cf392e47544e084fd0fff49938f0f8e1cdb8",
+    "normalization.json": "f29e5dea6846d14ef7dc4da6ee55addca264b33439d0de4f8c57201a578f334b",
+    "source_receipt.json": "80e399c76e7a8125caae7a2dd5602eeac5adf93ac4874389828c4a0e947a1035",
+    "splits.json": "399923b13605703115022bf39c8de2cfdad512e96e39529fd82ac630cfac860c",
+    "test/records.jsonl": "4386fb9271031645736565d16f7214459dd7683b6033ce378d3be2adedf7a413",
+    "test/signals.npy": "a364a44013cec1680e1e47bc42b9f2de2a3a39d145155a86859a7d7b6e68cb70",
+    "train/records.jsonl": "bb34821d1bbb9089c42a29c5ce2891c82ba24716f1c3c52606108026cd9a2634",
+    "train/signals.npy": "180d9ec76dff58be85b68ac9f4e6e25c46ad97d297ade217e2ad3395de32d345",
+    "validation/records.jsonl": "5138defab7d06f690e09db9a0d85fe7ffdacfca18c4121dcf52a58aade136909",
+    "validation/signals.npy": "d6cd98c6d944c07caa0c74c896093ffa6dee3af32d77cb6cac34742dcfcab8a4"
+  },
+  "python": "3.12.3",
+  "run_name": "llama-har-sp-timef-rationale-focused-v6",
+  "seed": 20260912,
+  "smoke": false,
+  "timenet_commit": "c39ca32b64ad0c89ea54093dbcb285c1a93eb006",
+  "torch": "2.9.1+cu128",
+  "train_examples": 57344,
+  "train_source_examples": 8192,
+  "train_views_per_source": 7,
+  "trainable_parameter_inventory": {
+    "encoder_parameters": 2110976,
+    "lora_parameters": 11272192,
+    "projector_parameters": 264448
+  },
+  "training_intent_counts": {
+    "affected_joints": 8192,
+    "contact": 8192,
+    "evidence_interval": 8192,
+    "onset": 8192,
+    "semantics": 8192,
+    "strongest_joint": 8192,
+    "summary": 8192
+  },
+  "training_probe_class_counts": {
+    "accidental": 20,
+    "free": 14,
+    "intentional": 14
+  },
+  "training_probe_examples": 64,
+  "training_probe_generation_examples": 48,
+  "training_probe_intent_counts": {
+    "affected_joints": 7,
+    "contact": 7,
+    "evidence_interval": 7,
+    "onset": 7,
+    "semantics": 7,
+    "strongest_joint": 7,
+    "summary": 6
+  },
+  "training_selection_manifest_sha256": "d98c805589b0ded4271ced0b9db8fdaaa090a02513201290714265b0eb9fa846",
+  "training_strongest_joint_counts": {
+    "J1": 1890,
+    "J2": 1078,
+    "J3": 477,
+    "J4": 1988,
+    "J5": 87,
+    "J6": 103,
+    "J7": 7
+  },
+  "validation_examples": 28546,
+  "validation_matched_examples": 64
+}

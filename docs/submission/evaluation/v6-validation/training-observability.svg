@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">OpenTSLM V6 training observability audit</title>
+  <desc id="desc">A slide comparing the best observed decoded checkpoint at step 3000 with the final checkpoint at step 3823 and showing the checkpoint gate failure.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="1" stop-color="#101e35"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <style>
+      .sans { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .muted { fill: #91a3bb; }
+      .white { fill: #f8fbff; }
+      .cyan { fill: #4dd7e8; }
+      .amber { fill: #f7ba5b; }
+      .red { fill: #ff7676; }
+      .panel { fill: #13243b; stroke: #263b57; stroke-width: 1; }
+      .best { fill: #43d8c1; }
+      .final { fill: #ff8177; }
+      .track { fill: #263b57; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <text x="72" y="78" class="sans cyan" font-size="24" font-weight="700" letter-spacing="2">Y/TRACE · TRAINING AUDIT</text>
+  <text x="72" y="135" class="sans white" font-size="46" font-weight="760">Observability caught the wrong checkpoint</text>
+  <text x="72" y="176" class="sans muted" font-size="22">OpenTSLM V6 · 84-row repeated validation panel · not the locked test benchmark</text>
+
+  <g filter="url(#shadow)">
+    <rect x="72" y="215" width="1020" height="530" rx="22" class="panel"/>
+    <rect x="1120" y="215" width="408" height="530" rx="22" class="panel"/>
+  </g>
+
+  <text x="112" y="264" class="sans white" font-size="25" font-weight="700">Best decoded behavior vs. end of training</text>
+  <rect x="750" y="241" width="18" height="18" rx="4" class="best"/>
+  <text x="778" y="256" class="sans muted" font-size="17">step 3,000</text>
+  <rect x="918" y="241" width="18" height="18" rx="4" class="final"/>
+  <text x="946" y="256" class="sans muted" font-size="17">final 3,823</text>
+
+  <g class="sans" font-size="18">
+    <text x="112" y="316" class="white">Semantics macro-F1</text>
+    <rect x="390" y="294" width="610" height="14" rx="7" class="track"/>
+    <rect x="390" y="294" width="610" height="6" rx="3" class="best"/>
+    <rect x="390" y="302" width="558" height="6" rx="3" class="final"/>
+    <text x="1018" y="308" class="muted">1.000 → 0.915</text>
+
+    <text x="112" y="382" class="white">Positive-contact F1</text>
+    <rect x="390" y="360" width="610" height="14" rx="7" class="track"/>
+    <rect x="390" y="360" width="591" height="6" rx="3" class="best"/>
+    <rect x="390" y="368" width="529" height="6" rx="3" class="final"/>
+    <text x="1018" y="374" class="muted">0.970 → 0.867</text>
+
+    <text x="112" y="448" class="white">Strongest-joint accuracy</text>
+    <rect x="390" y="426" width="610" height="14" rx="7" class="track"/>
+    <rect x="390" y="426" width="534" height="6" rx="3" class="best"/>
+    <rect x="390" y="434" width="343" height="6" rx="3" class="final"/>
+    <text x="1018" y="440" class="red" font-weight="700">0.875 → 0.563</text>
+
+    <text x="112" y="514" class="white">Affected-joint set F1</text>
+    <rect x="390" y="492" width="610" height="14" rx="7" class="track"/>
+    <rect x="390" y="492" width="534" height="6" rx="3" class="best"/>
+    <rect x="390" y="500" width="440" height="6" rx="3" class="final"/>
+    <text x="1018" y="506" class="red" font-weight="700">0.876 → 0.722</text>
+
+    <text x="112" y="580" class="white">Onset within 50 ms</text>
+    <rect x="390" y="558" width="610" height="14" rx="7" class="track"/>
+    <rect x="390" y="558" width="529" height="6" rx="3" class="best"/>
+    <rect x="390" y="566" width="447" height="6" rx="3" class="final"/>
+    <text x="1018" y="572" class="red" font-weight="700">0.867 → 0.733</text>
+
+    <text x="112" y="646" class="white">Evidence-interval IoU</text>
+    <rect x="390" y="624" width="610" height="14" rx="7" class="track"/>
+    <rect x="390" y="624" width="178" height="6" rx="3" class="best"/>
+    <rect x="390" y="632" width="266" height="6" rx="3" class="final"/>
+    <text x="1018" y="638" class="cyan">0.292 → 0.436</text>
+  </g>
+
+  <rect x="112" y="680" width="940" height="42" rx="12" fill="#0d1b2d"/>
+  <text x="134" y="708" class="sans amber" font-size="18" font-weight="650">Loss selected step 3,600; decoded task score peaked at step 3,000.</text>
+
+  <text x="1160" y="264" class="sans white" font-size="25" font-weight="700">Run receipts</text>
+  <text x="1160" y="326" class="sans cyan" font-size="42" font-weight="760">3.21 h</text>
+  <text x="1160" y="354" class="sans muted" font-size="17">3,823 steps · H100 80 GB</text>
+  <line x1="1160" y1="382" x2="1488" y2="382" stroke="#263b57"/>
+  <text x="1160" y="434" class="sans red" font-size="42" font-weight="760">0 / 16</text>
+  <text x="1160" y="462" class="sans muted" font-size="17">decoded checkpoints eligible</text>
+  <text x="1160" y="490" class="sans muted" font-size="15">schema gate 0.950 · max 0.893</text>
+  <line x1="1160" y1="520" x2="1488" y2="520" stroke="#263b57"/>
+  <text x="1160" y="572" class="sans amber" font-size="42" font-weight="760">79.8%</text>
+  <text x="1160" y="600" class="sans muted" font-size="17">first-pass schema validity</text>
+  <text x="1160" y="628" class="sans muted" font-size="15">90.5% after 14.3% retries</text>
+  <line x1="1160" y1="658" x2="1488" y2="658" stroke="#263b57"/>
+  <text x="1160" y="704" class="sans cyan" font-size="20" font-weight="700">Decision: do not promote V6</text>
+
+  <rect x="72" y="780" width="1456" height="72" rx="18" fill="#172d47" stroke="#315172"/>
+  <text x="104" y="812" class="sans white" font-size="20" font-weight="650">The technical result:</text>
+  <text x="104" y="839" class="sans muted" font-size="18">decoded evaluations, reasoning traces, retries and signal ablations prevented a falling loss curve from becoming a misleading model claim.</text>
+  <text x="1528" y="880" text-anchor="end" class="sans muted" font-size="13">Validation diagnostic · metrics are generated predictions · joint/evidence targets are deterministic pseudo-labels</text>
+</svg>

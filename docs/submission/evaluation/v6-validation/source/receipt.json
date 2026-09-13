@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "run_name": "llama-har-sp-timef-rationale-focused-v6",
+  "source": "Nebius H100 training run copied after clean completion",
+  "remote_run_directory": "/home/atakantopaloglu/ysamet-training/runs/llama-har-sp-timef-rationale-focused-v6",
+  "retrieved_on": "2026-09-13",
+  "files": {
+    "status.json": {
+      "sha256_original": "5bd146fbae1dd5ac0d618f1cd65918709bf3156360165a13a427f8258e6b67ca",
+      "sha256_archived": "5bd146fbae1dd5ac0d618f1cd65918709bf3156360165a13a427f8258e6b67ca"
+    },
+    "run_manifest.json": {
+      "sha256_original": "cf2e1588bc5167d92db007186ae3c3eb971030872f9381f5681b8e3a35664ed8",
+      "sha256_archived": "cf2e1588bc5167d92db007186ae3c3eb971030872f9381f5681b8e3a35664ed8"
+    },
+    "metrics.jsonl.gz": {
+      "sha256_uncompressed": "a7461328fe94a5ddc7d0c2335aa47e1e9d759d675c31190749d29b14bea90d7a",
+      "sha256_archived": "574c6e03f3dc9d3eb8950a3f50f51c4dd23cb5b40b6ad689517dd4dbdbd05e24"
+    },
+    "generation_epoch_step_003823.jsonl.gz": {
+      "sha256_uncompressed": "d5bddb1d04b3ceac47f490641e42903b20fccfeed3c9ee61639684a7649a3f36",
+      "sha256_archived": "8e4776417c40e84555fc0df75299d3023d17764b651481b3b63da16cba4672fd"
+    }
+  },
+  "generated_artifacts": {
+    "../report/failure_analysis.json": "a8404573b72e2057546456b38ae85426dff311ad6ebfb1baaf644181fa4015c1",
+    "../report/failure_analysis.md": "44a85de2716426af8a3408e2aad8e3c7be2aa242d6d796e52a380156c8bf3e1c",
+    "../report/checkpoint_trajectory.csv": "9c131f0554852d478de236b32a6ab3456221c9ae613e1e4f051966574f36c1eb",
+    "../training-observability.svg": "5a82876f5af40e27ea285ac03506ddf20145381e3a96114ce72c2382bbe4c4b9"
+  },
+  "scope": "Validation methodology audit only; not a replacement for the locked held-out test comparison"
+}

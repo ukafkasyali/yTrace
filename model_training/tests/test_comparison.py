@@ -1,9 +1,24 @@
 import copy
+import json
 import math
 
 import pytest
 
-from robot_observability.comparison import percentile, schema_valid, score, usable_summary_text, validate_alignment
+from robot_observability.comparison import (
+    load_validation_diagnostics,
+    percentile,
+    schema_valid,
+    score,
+    usable_summary_text,
+    validate_alignment,
+)
+
+
+def test_validation_diagnostic_is_namespaced_outside_test_models(tmp_path):
+    payload = {"status": "validation_diagnostic_not_locked_test_benchmark", "final_step": 3823}
+    (tmp_path / "opentslm-v6-validation-audit.json").write_text(json.dumps(payload))
+
+    assert load_validation_diagnostics(tmp_path) == {"opentslm_v6_rationale": payload}
 
 
 def target(contact=True):
@@ -57,10 +72,12 @@ def test_keys_alone_are_not_schema_validity():
 
 def test_usable_summary_counts_exclude_partial_event_type_answers():
     partial = {"event_type": "free"}
-    result = score([
-        {"target": target(False), "prediction": target(False)},
-        {"target": target(False), "prediction": partial},
-    ])
+    result = score(
+        [
+            {"target": target(False), "prediction": target(False)},
+            {"target": target(False), "prediction": partial},
+        ]
+    )
     assert result["semantics_confusion"]["free"] == {"free": 2}
     assert result["usable_semantics_confusion"]["free"] == {"free": 1, "abstain": 1}
     text = usable_summary_text(result)

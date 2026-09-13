@@ -8,6 +8,8 @@ source annotations, deterministic pseudo-labels, and generated predictions.
 from __future__ import annotations
 
 import argparse
+import csv
+import gzip
 import json
 import math
 import re
@@ -25,7 +27,7 @@ TASK_METRICS = (
     "onset_within_50ms",
     "evidence_interval_iou",
 )
-GENERATION_FILE = re.compile(r"generation_(?:step|epoch)_step_(\d{6})\.jsonl$")
+GENERATION_FILE = re.compile(r"generation_(?:step|epoch)_step_(\d{6})\.jsonl(?:\.gz)?$")
 
 
 def read_json(path: Path) -> dict[str, object]:
@@ -35,7 +37,16 @@ def read_json(path: Path) -> dict[str, object]:
 def read_jsonl(path: Path) -> list[dict[str, object]]:
     if not path.exists():
         return []
+    if path.suffix == ".gz":
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            return [json.loads(line) for line in handle if line.strip()]
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def jsonl_receipt(run_dir: Path, name: str) -> Path:
+    plain = run_dir / name
+    compressed = run_dir / f"{name}.gz"
+    return plain if plain.exists() else compressed
 
 
 def safe_rate(numerator: float, denominator: int) -> float:
@@ -331,7 +342,7 @@ def analyze_rows(rows: list[dict[str, object]]) -> dict[str, object]:
 
 def generation_receipts(run_dir: Path) -> dict[int, Path]:
     receipts = {}
-    for path in run_dir.glob("generation_*_step_*.jsonl"):
+    for path in run_dir.glob("generation_*_step_*.jsonl*"):
         match = GENERATION_FILE.fullmatch(path.name)
         if match:
             receipts[int(match.group(1))] = path
@@ -360,7 +371,8 @@ def add_finding(
 def analyze_run(run_dir: Path) -> dict[str, object]:
     status = read_json(run_dir / "status.json")
     manifest = read_json(run_dir / "run_manifest.json")
-    events = read_jsonl(run_dir / "metrics.jsonl")
+    metrics_path = jsonl_receipt(run_dir, "metrics.jsonl")
+    events = read_jsonl(metrics_path)
     generation_events = [row for row in events if row.get("event") == "generation_eval"]
     validation_events = [row for row in events if row.get("event") == "validation_check"]
     selection_events = [row for row in events if row.get("event") == "grounding_checkpoint_selection"]
@@ -368,7 +380,7 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
     ablation_events = [row for row in events if row.get("event") == "validation_signal_ablation"]
     receipts = generation_receipts(run_dir)
     if not generation_events:
-        raise ValueError(f"No generation_eval events found in {run_dir / 'metrics.jsonl'}")
+        raise ValueError(f"No generation_eval events found in {metrics_path}")
 
     final_generation = max(generation_events, key=lambda row: int(row.get("step", -1)))
     final_step = int(final_generation["step"])
@@ -469,6 +481,23 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
             "The model remains capacity/optimization limited on exact training prompts; validation errors are not purely overfit.",
             "Inspect prompt-family losses and output-token allocation before adding epochs.",
         )
+    hypothesis = str(config.get("experiment", {}).get("hypothesis", ""))
+    training_intents = manifest.get("training_intent_counts", {})
+    curriculum = config.get("training", {}).get("curriculum_intents")
+    if (
+        curriculum == "all"
+        and isinstance(training_intents, dict)
+        and len(training_intents) > 3
+        and "three_intent" in hypothesis
+    ):
+        add_finding(
+            findings,
+            "medium",
+            "manifest_hypothesis_mismatch",
+            f"Immutable hypothesis says {hypothesis!r}, while curriculum_intents='all' and receipts contain {len(training_intents)} intents.",
+            "A headline metadata field misdescribes the experiment even though detailed receipt fields are correct.",
+            "Use the detailed intent counts as authoritative and validate hypothesis labels against materialized views before launch.",
+        )
     panel_n = int(final_generation.get("n", len(final_rows)))
     per_intent_min = min((entry["n"] for entry in row_analysis.get("per_intent", {}).values()), default=0)
     if len(generation_events) > 5 and per_intent_min < 30:
@@ -515,6 +544,19 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
 
     severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     findings.sort(key=lambda finding: (severity_order[finding["severity"]], finding["code"]))
+    trajectory_keys = (
+        "step",
+        "contact_f1",
+        "semantics_macro_f1",
+        "strongest_joint_accuracy",
+        "affected_joints_set_f1",
+        "onset_within_50ms",
+        "evidence_interval_iou",
+        "schema_exact_match",
+        "first_pass/schema_exact_match",
+        "rationale_presence",
+        "retry_rate",
+    )
     return {
         "report_contract": {
             "scope": "completed-run validation methodology audit; not a test-set score or safety claim",
@@ -529,7 +571,7 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
             },
         },
         "run": {
-            "path": str(run_dir.resolve()),
+            "path": str(run_dir),
             "state": status.get("state"),
             "stop_reason": status.get("stop_reason"),
             "final_step": status.get("global_step", final_step),
@@ -546,6 +588,10 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
             "final_minus_best_observed_decoded": regression,
             "best_observed_metrics": {key: best_observed_generation.get(key) for key in TASK_METRICS},
             "final_metrics": {key: final_generation.get(key) for key in TASK_METRICS},
+            "trajectory": [
+                {key: row.get(key) for key in trajectory_keys}
+                for row in sorted(generation_events, key=lambda entry: int(entry["step"]))
+            ],
         },
         "optimization": {
             "final_training_probe": latest_probe,
@@ -632,6 +678,16 @@ def markdown_report(report: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+def write_trajectory_csv(report: dict[str, object], path: Path) -> None:
+    rows = report["checkpoint_selection"]["trajectory"]
+    if not rows:
+        return
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", type=Path, required=True)
@@ -645,6 +701,7 @@ def main() -> None:
             json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
         (args.output_dir / "failure_analysis.md").write_text(markdown_report(report), encoding="utf-8")
+        write_trajectory_csv(report, args.output_dir / "checkpoint_trajectory.csv")
     print(json.dumps(report, indent=2, sort_keys=True))
     if args.strict and any(finding["severity"] == "critical" for finding in report["findings"]):
         raise SystemExit(2)
