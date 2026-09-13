@@ -32,6 +32,12 @@ from .mapping import (
     MappingSpec,
     MappingValidationError,
 )
+from .replay import (
+    ImportedReplay,
+    ImportedReplayService,
+    ImportedSignalEvent,
+    ImportedSignalWindow,
+)
 from .service import (
     ApprovedSourceResolutionError,
     CreateIngestion,
@@ -78,6 +84,13 @@ def create_app(
     app.state.ingestion = ingestion
     mappings = MappingService(ingestion.jobs)
     imported = catalog or ImportedDatasetCatalog(ingestion.data_dir / "timef")
+    replay = ImportedReplayService(imported)
+
+    def validated_receipt(ingestion_id: str) -> FinalReceipt:
+        receipt = ingestion.jobs.get_final_receipt(ingestion_id)
+        if receipt is None:
+            raise ImportedDatasetUnavailable("Ingestion has no validated dataset receipt")
+        return receipt
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -170,14 +183,69 @@ def create_app(
         page: Annotated[int, Query(ge=1)] = 1,
         page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
     ) -> ImportedRecordPage:
-        receipt = ingestion.jobs.get_final_receipt(ingestion_id)
-        if receipt is None:
-            raise ImportedDatasetUnavailable("Ingestion has no validated dataset receipt")
+        receipt = validated_receipt(ingestion_id)
         return imported.list_records(
             receipt.output["datasetId"],
             receipt.output["datasetVersion"],
             page=page,
             page_size=page_size,
+        )
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/records/{record_key}/replay",
+        response_model=ImportedReplay,
+    )
+    def get_imported_replay(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+        record_key: Annotated[str, ApiPath(pattern=r"^[a-f0-9]{24}$")],
+    ) -> ImportedReplay:
+        receipt = validated_receipt(ingestion_id)
+        return replay.replay(
+            receipt.output["datasetId"],
+            receipt.output["datasetVersion"],
+            ingestion_id,
+            record_key,
+            receipt.source_url,
+        )
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/records/{record_key}/signals",
+        response_model=ImportedSignalWindow,
+    )
+    def get_imported_signals(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+        record_key: Annotated[str, ApiPath(pattern=r"^[a-f0-9]{24}$")],
+        start_sec: Annotated[float, Query(alias="startSec")],
+        end_sec: Annotated[float, Query(alias="endSec")],
+        channel_ids: Annotated[str, Query(alias="channelIds", min_length=1)],
+        max_points: Annotated[int, Query(alias="maxPoints", ge=1, le=200_000)] = 2_000,
+    ) -> ImportedSignalWindow:
+        receipt = validated_receipt(ingestion_id)
+        return replay.signals(
+            receipt.output["datasetId"],
+            receipt.output["datasetVersion"],
+            ingestion_id,
+            record_key,
+            start_sec=start_sec,
+            end_sec=end_sec,
+            channel_ids=channel_ids.split(","),
+            max_points=max_points,
+        )
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/records/{record_key}/events",
+        response_model=list[ImportedSignalEvent],
+    )
+    def get_imported_events(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+        record_key: Annotated[str, ApiPath(pattern=r"^[a-f0-9]{24}$")],
+    ) -> list[ImportedSignalEvent]:
+        receipt = validated_receipt(ingestion_id)
+        return replay.events(
+            receipt.output["datasetId"],
+            receipt.output["datasetVersion"],
+            ingestion_id,
+            record_key,
         )
 
     @app.get(

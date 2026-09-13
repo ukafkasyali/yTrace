@@ -699,11 +699,13 @@ class IngestionApiTests(unittest.TestCase):
                     data=[
                         ImportedRecordSummary(
                             record_id="batch-01/run-01",
+                            record_key="c" * 24,
                             series_count=14,
                             value_count=140,
                             duration_seconds=0.009,
                             signals=["joint_1", "joint_2"],
                             annotation_keys=["collision"],
+                            is_replay_compatible=True,
                         )
                     ],
                     pagination=ImportedRecordPagination(

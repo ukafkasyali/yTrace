@@ -23,8 +23,11 @@ class FakeClient:
 def record(number: int):
     axis = SimpleNamespace(period_us=1_000)
     series = [
-        SimpleNamespace(signal="joint_1", n_values=1_001, time_axis=axis),
-        SimpleNamespace(signal="joint_2", n_values=1_001, time_axis=axis),
+        SimpleNamespace(
+            signal=f"joint_{index}", n_values=1_001, time_axis=axis,
+            spec=SimpleNamespace(spec_type="measured_external_joint_torque"),
+        )
+        for index in range(1, 8)
     ]
     annotations = [SimpleNamespace(key="collision"), SimpleNamespace(key="source_run_id")]
     return SimpleNamespace(
@@ -47,10 +50,14 @@ class ImportedDatasetCatalogTests(unittest.TestCase):
         self.assertEqual(result.pagination.total_items, 3)
         self.assertEqual(result.pagination.total_pages, 2)
         self.assertEqual([item.record_id for item in result.data], ["batch-01/run-03"])
-        self.assertEqual(result.data[0].series_count, 2)
-        self.assertEqual(result.data[0].value_count, 2_002)
+        self.assertEqual(result.data[0].series_count, 7)
+        self.assertEqual(result.data[0].value_count, 7_007)
         self.assertEqual(result.data[0].duration_seconds, 1)
-        self.assertEqual(result.data[0].signals, ["joint_1", "joint_2"])
+        self.assertEqual(
+            result.data[0].signals,
+            [f"joint_{index}" for index in range(1, 8)],
+        )
+        self.assertTrue(result.data[0].is_replay_compatible)
         self.assertEqual(
             result.data[0].annotation_keys, ["collision", "source_run_id"]
         )

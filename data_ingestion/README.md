@@ -131,7 +131,12 @@ or raw arrays. Interrupted imports revalidate the same content-addressed output.
 After validation, `GET /api/ingestions/{ingestionId}/records?page=1&pageSize=20` reads bounded,
 paginated record summaries from that ingestion's TimeF registry. It exposes record identity, series
 and value counts, regular-axis duration, signal names, and annotation keys without loading or
-returning raw arrays. An ingestion without a final validation receipt cannot browse records.
+returning raw arrays. Each record receives an opaque key and an explicit replay-compatibility flag.
+Compatible records expose `/records/{recordKey}/replay`, `/signals`, and `/events` subresources for
+the existing Trace workbench. Replay requires exactly seven canonical external-torque channels at
+1 kHz; other imported layouts remain metadata-browsable and are never coerced. The replay response
+uses a bounded overview plus a five-second raw excerpt, while signal requests load explicit bounded
+windows. An ingestion without a final validation receipt cannot browse or replay records.
 
 The exact Zenodo identities `21927431.r4` and `21941203.r4`, with their verified CC-BY-4.0 dataset
 licence, dispatch to the existing KUKA Part I and Part II connectors before generic mapping. A
