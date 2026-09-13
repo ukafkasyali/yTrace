@@ -2,11 +2,12 @@ import { useMemo, useRef } from 'react';
 import { Crosshair, Maximize2 } from 'lucide-react';
 import { downsample, selectWindow } from '../lib/data';
 import { COLORS } from '../lib/format';
+import type { PredictionCue } from '../assistant/predictionBrief';
 import type { DemoData, Interval } from '../types';
 
-type Props = { visibleChannelIds?: string[]; data: DemoData; playhead: number; interval: Interval; viewport: Interval; highlighted: string[]; following: boolean; zoom: number; onSelect: (v: Interval) => void; onFollow: () => void; onZoom: (seconds: number) => void };
+type Props = { visibleChannelIds?: string[]; prediction?: PredictionCue; data: DemoData; playhead: number; interval: Interval; viewport: Interval; highlighted: string[]; following: boolean; zoom: number; onSelect: (v: Interval) => void; onFollow: () => void; onZoom: (seconds: number) => void };
 
-export default function SignalViewer({ visibleChannelIds, data, playhead, interval, viewport, highlighted, following, zoom, onSelect, onFollow, onZoom }: Props) {
+export default function SignalViewer({ visibleChannelIds, prediction, data, playhead, interval, viewport, highlighted, following, zoom, onSelect, onFollow, onZoom }: Props) {
   const hover = useRef<number | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const drag = useRef<number | null>(null);
@@ -64,12 +65,18 @@ export default function SignalViewer({ visibleChannelIds, data, playhead, interv
   }
   const left = Math.max(0, (interval.start - viewport.start) / (viewport.end - viewport.start) * 100);
   const right = Math.min(100, (Math.min(interval.end, playhead) - viewport.start) / (viewport.end - viewport.start) * 100);
+  const predictedOnset = prediction?.onsetSeconds;
+  const predictedOnsetPercent = predictedOnset !== undefined && predictedOnset >= viewport.start && predictedOnset <= end
+    ? (predictedOnset - viewport.start) / (viewport.end - viewport.start) * 100
+    : undefined;
+  const onsetNearRightEdge = predictedOnsetPercent !== undefined && predictedOnsetPercent > 82;
   return <section className="signals-panel" ref={panel} aria-label="Synchronized torque signals">
     <header className="panel-heading"><div><h2>{visibleChannelIds ? "Torque evidence" : "All joint signals"}</h2><span>Signed external torque</span></div><div className="plot-actions"><select aria-label="Signal zoom" value={following ? String(zoom) : "selection"} onChange={e => onZoom(Number(e.target.value))}><option value="selection" disabled>Selection</option><option value="1.024">1.024 s</option><option value="5">5 s</option><option value="10">10 s</option><option value="0">Full history</option></select><button className="icon-button" title="Follow playhead" aria-label="Follow playhead" aria-pressed={following} onClick={onFollow}><Crosshair size={16}/></button></div></header>
-    <div className="signal-strips">{plots.map(p => <div key={p.channel.id} className={`signal-strip ${highlighted.includes(p.channel.id) ? 'signal-highlighted' : ''}`} data-channel={p.channel.id}>
+    <div className="signal-strips">{plots.map((p, plotIndex) => <div key={p.channel.id} className={`signal-strip ${highlighted.includes(p.channel.id) ? 'signal-highlighted' : ''}`} data-channel={p.channel.id}>
       <div className="strip-heading"><span className="channel-name"><i style={{ background: COLORS[p.colorIndex] }}/>{p.channel.name}<span className="unit">Nm</span></span><span className="mono sample-value" data-sample-value>{p.last?.toFixed(3) ?? '—'}</span></div>
       <div className="plot-frame"><div className="y-labels"><span>{p.high.toFixed(p.high-p.low < 1 ? 2 : 1)}</span><span>{p.low.toFixed(p.high-p.low < 1 ? 2 : 1)}</span></div><div className="plot-area">
         {right > left && <div className="selection-band" style={{ left: `${left}%`, width: `${right - left}%` }}/>}<div className="hover-guide"/>
+        {predictedOnsetPercent !== undefined && <div className={`model-onset-cue${onsetNearRightEdge ? ' at-right-edge' : ''}`} style={{ left: `${predictedOnsetPercent}%` }}>{plotIndex === 0 && <span>Predicted onset</span>}</div>}
         <svg viewBox="0 0 1000 76" preserveAspectRatio="none" role="img" aria-label={`${p.channel.name}, signed external torque in Nm, ${viewport.start.toFixed(3)} to ${end.toFixed(3)} seconds`} onPointerMove={e => showCursor(pointerTime(e))} onPointerLeave={() => showCursor(null)} onPointerDown={beginSelection} onPointerUp={finishSelection} onPointerCancel={cancelSelection} onLostPointerCapture={cancelSelection}>
           {[0, 250, 500, 750, 1000].map(x => <line key={x} x1={x} x2={x} y1="0" y2="76" className="chart-grid"/>)}
           {[18, 38, 58].map(y => <line key={y} x1="0" x2="1000" y1={y} y2={y} className="chart-grid"/>)}

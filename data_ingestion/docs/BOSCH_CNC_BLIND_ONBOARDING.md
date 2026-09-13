@@ -102,7 +102,7 @@ three channels are correctly mapped with direct structural and documentation evi
 mapping was invented. Record discovery is correct after repair, but documented path metadata is not
 expressible as a validated extraction mapping in `DatasetSpec` v0.1.
 
-## Trace and verification
+## y/trace and verification
 
 The initial generation used 5 Responses API turns and 15 tool calls. Repair round 1 used 5 turns and
 16 calls; repair round 2 used 4 turns and 10 calls. All used `gpt-5.6-sol`, Responses API, high

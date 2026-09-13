@@ -78,6 +78,13 @@ After training, evaluate a fixed held-out subset without using it for model sele
   --output artifacts/evaluation/<run>-test
 ```
 
+For the matched rationale ablation, train `configs/opentslm_sp_answer_only.yaml`; it differs from
+`opentslm_sp_focused_control.yaml` only in the answer target. Compare both selected checkpoints on
+the same validation panel and seed. Add `--prompt-set heldout` to measure generalization to the
+evaluation-only paraphrases. The resulting metrics include strict JSON/schema accuracy plus
+rationale onset/joint support and answer/target consistency. Answer-only runs should report zero
+rationale presence by construction.
+
 For an unattended run, `scripts/post_training.py` waits for the training tmux session to exit, then
 runs the same held-out evaluation plus temporal-shift and channel-permutation grounding checks. It
 writes an atomic `post_training_status.json` and can resume the W&B run to attach final metrics.

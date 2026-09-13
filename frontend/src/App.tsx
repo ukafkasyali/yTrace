@@ -70,7 +70,7 @@ export default function App() {
     setDatasetId(selection.datasetId);
     setData(replayData);
   }
-  if (loading || !data) return <main className="loading-screen"><Waves size={28}/><h1>Trace</h1>{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => void load()}>Retry loading recording</button></> : <><p>Opening the KUKA recording…</p><div className="loading-lines"><i/><i/><i/></div></>}</main>;
+  if (loading || !data) return <main className="loading-screen"><Waves size={28}/><h1>y/trace</h1>{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => void load()}>Retry loading recording</button></> : <><p>Opening the KUKA recording…</p><div className="loading-lines"><i/><i/><i/></div></>}</main>;
   return <Workbench key={`${datasetId}:${data.recording.id}:${data.demoCase?.id ?? "default"}`} data={data} datasetId={datasetId} onOpenRecording={openRecording} onOpenImportedRecord={openImportedRecord} cases={cases} onOpenCase={openCase} caseLoading={caseLoading} caseError={caseError}/>;
 }
 
@@ -94,9 +94,12 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, onOpenImporte
     if (replayStop !== undefined && replay.playhead >= replayStop) { replay.seek(replayStop); setReplayStop(undefined); }
   }, [replay.playhead, replayStop, replay.seek]);
   const visiblePrediction = robotPrediction && robotPrediction.interval.start === interval.start && robotPrediction.interval.end === interval.end ? robotPrediction : undefined;
-  function showRobotPrediction(prediction: PredictionCue) {
-    setReplayStop(undefined); setRobotPrediction(prediction); setInterval({ ...prediction.interval });
-    replay.seek(prediction.onsetSeconds); setFollowing(false); setHighlighted(prediction.channelId ? [prediction.channelId] : []);
+  function showRobotPrediction(prediction?: PredictionCue) {
+    setRobotPrediction(prediction);
+    if (!prediction) { setHighlighted([]); return; }
+    const postOnsetContext = Math.max(.08, (prediction.interval.end - prediction.interval.start) * .12);
+    setReplayStop(undefined); setInterval({ ...prediction.interval });
+    replay.seek(Math.min(prediction.interval.end, prediction.onsetSeconds + postOnsetContext)); setFollowing(false); setHighlighted(prediction.channelId ? [prediction.channelId] : []);
     setView('inspect'); setMobile('signals'); setVisualMode('robot');
   }
   function openComparison(window: Interval) {
@@ -175,7 +178,7 @@ function Workbench({ data: sourceData, datasetId, onOpenRecording, onOpenImporte
             <div className="visual-tabs" role="group" aria-label="Replay view">{(['robot', 'signals', 'markers', 'compare'] as const).map(mode => <button key={mode} aria-pressed={visualMode === mode} onClick={() => setVisualMode(mode)}>{mode === 'robot' ? 'Robot' : mode === 'signals' ? 'All 7 signals' : mode === 'markers' ? 'Publisher markers' : 'Compare'}</button>)}<button className="text-button replay-interval" onClick={replayInterval}><Play size={12}/>Replay interval · 0.5×</button></div>
             {visualMode === 'compare' && <ComparisonPanel key={`${interval.start}:${interval.end}`} data={data} interval={interval} cases={cases} services={services} onEvidence={e => { evidence(e); replay.seek(e.interval.end); }}/> }
             {(visualMode === 'robot' || visualMode === 'markers') && <RecordingContext prediction={visiblePrediction} display={visualMode === 'robot' ? 'robot' : 'overview'} datasetId={datasetId} data={data} playhead={replay.playhead} interval={effectiveInterval} highlighted={highlighted} onMarker={marker} onHighlight={id => setHighlighted(h => h.includes(id) ? h.filter(x => x !== id) : [id])} onData={() => { replay.pause(); setView('data'); }}/>}
-            {(visualMode === 'robot' || visualMode === 'signals') && <SignalViewer visibleChannelIds={visualMode === 'robot' ? previewChannels : undefined} data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>}
+            {(visualMode === 'robot' || visualMode === 'signals') && <SignalViewer visibleChannelIds={visualMode === 'robot' ? previewChannels : undefined} prediction={visiblePrediction} data={data} playhead={replay.playhead} interval={effectiveInterval} viewport={validViewport} highlighted={highlighted} following={following} zoom={zoom} onSelect={select} onFollow={() => { setFollowing(true); setZoom(10); }} onZoom={n => { setFollowing(true); setZoom(n); }}/>}
           </div>
         </div>
         {view === 'data' && <div className="secondary-view"><button className="text-button back-inspect" onClick={() => setView('inspect')}><ArrowLeft size={14}/>Back to replay</button><DataWorkspace services={services} data={data} onOpenRecording={onOpenRecording} onOpenImportedRecord={onOpenImportedRecord}/></div>}

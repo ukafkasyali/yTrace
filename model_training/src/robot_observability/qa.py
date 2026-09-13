@@ -59,6 +59,39 @@ PROMPTS: dict[Intent, tuple[str, ...]] = {
     ),
 }
 
+# Evaluation-only paraphrases. These must never be added to PROMPTS: training samples draw
+# exclusively from PROMPTS, so this pool remains an honest phrasing-generalization check.
+HELDOUT_PROMPTS: dict[Intent, tuple[str, ...]] = {
+    "summary": (
+        "What happened in this telemetry segment, and what signal evidence supports it?",
+        "Interpret the robot interaction shown by these seven torque traces.",
+    ),
+    "contact": (
+        "Is there a real external interaction in this recording?",
+        "Determine whether the arm made contact with its environment.",
+    ),
+    "semantics": (
+        "Choose between undisturbed motion, deliberate contact, and an unintended collision.",
+        "What kind of interaction does this torque window represent?",
+    ),
+    "onset": (
+        "At what elapsed time does the disturbance first become sustained?",
+        "Locate the beginning of contact on the window timeline.",
+    ),
+    "strongest_joint": (
+        "Which axis carries the clearest contact signature?",
+        "Name the joint with the dominant torque disturbance.",
+    ),
+    "affected_joints": (
+        "Identify every joint with meaningful disturbance evidence.",
+        "Which robot axes respond materially to the interaction?",
+    ),
+    "evidence_interval": (
+        "Between which timestamps is the disturbance sustained?",
+        "Give the start and end of the informative contact region.",
+    ),
+}
+
 
 def answer_payload(metadata: dict[str, object], intent: Intent) -> dict[str, object]:
     complete = {
@@ -172,6 +205,8 @@ def target_text(
     output_format: str = "answer_then_evidence",
 ) -> str:
     payload = json.dumps(answer_payload(metadata, intent), separators=(",", ":"), sort_keys=True)
+    if output_format == "answer_only":
+        return f"Answer: {payload}"
     rationale = evidence_sentence(metadata, intent)
     if output_format == "answer_then_evidence":
         return f"Answer: {payload}\nEvidence: {rationale}"

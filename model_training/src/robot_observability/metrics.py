@@ -12,6 +12,9 @@ from sklearn.metrics import accuracy_score, f1_score
 _ANSWER = re.compile(r"Answer:\s*", re.IGNORECASE)
 _EVENT_TYPES = {"free", "intentional", "accidental"}
 _JOINTS = {f"J{index}" for index in range(1, 8)}
+_RATIONALE = re.compile(r"Rationale:\s*(.*?)(?=\n\s*Answer:)", re.IGNORECASE | re.DOTALL)
+_MS_VALUE = re.compile(r"(?<![A-Za-z0-9.])(\d+(?:\.\d+)?)\s*(?:ms|milliseconds?)\b", re.IGNORECASE)
+_JOINT_MENTION = re.compile(r"\bJ([1-7])\b", re.IGNORECASE)
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -123,6 +126,62 @@ def parse_answer(text: str) -> dict[str, object] | None:
     return value if isinstance(value, dict) else None
 
 
+def _rationale_consistency(
+    items: list[dict[str, object]], parsed: list[dict[str, object] | None]
+) -> dict[str, float | int]:
+    rationales = []
+    for item, prediction in zip(items, parsed):
+        match = _RATIONALE.search(str(item.get("output", "")))
+        rationales.append((match.group(1).strip() if match else "", prediction, item["target"]))
+    present = [bool(text) for text, _, _ in rationales]
+    result: dict[str, float | int] = {
+        "rationale_presence": float(np.mean(present)) if present else 0.0,
+    }
+
+    onset_rows = [row for row in rationales if row[2].get("onset_ms") is not None]
+    onset_supported = []
+    onset_answer_consistent = []
+    onset_target_consistent = []
+    for text, prediction, target in onset_rows:
+        values = [float(value) for value in _MS_VALUE.findall(text)]
+        onset_supported.append(bool(values))
+        if values and isinstance(prediction, dict) and prediction.get("onset_ms") is not None:
+            onset_answer_consistent.append(
+                min(abs(value - float(prediction["onset_ms"])) for value in values) <= 50
+            )
+        if values:
+            onset_target_consistent.append(
+                min(abs(value - float(target["onset_ms"])) for value in values) <= 50
+            )
+    if onset_rows:
+        result["rationale_onset_n"] = len(onset_rows)
+        result["rationale_onset_support_coverage"] = float(np.mean(onset_supported))
+    if onset_answer_consistent:
+        result["rationale_onset_answer_consistency_50ms"] = float(np.mean(onset_answer_consistent))
+    if onset_target_consistent:
+        result["rationale_onset_target_consistency_50ms"] = float(np.mean(onset_target_consistent))
+
+    joint_rows = [row for row in rationales if row[2].get("strongest_joint") is not None]
+    joint_supported = []
+    joint_answer_consistent = []
+    joint_target_consistent = []
+    for text, prediction, target in joint_rows:
+        mentions = {f"J{value}" for value in _JOINT_MENTION.findall(text)}
+        joint_supported.append(bool(mentions))
+        if mentions and isinstance(prediction, dict) and prediction.get("strongest_joint") is not None:
+            joint_answer_consistent.append(prediction["strongest_joint"] in mentions)
+        if mentions:
+            joint_target_consistent.append(target["strongest_joint"] in mentions)
+    if joint_rows:
+        result["rationale_joint_n"] = len(joint_rows)
+        result["rationale_joint_support_coverage"] = float(np.mean(joint_supported))
+    if joint_answer_consistent:
+        result["rationale_joint_answer_consistency"] = float(np.mean(joint_answer_consistent))
+    if joint_target_consistent:
+        result["rationale_joint_target_consistency"] = float(np.mean(joint_target_consistent))
+    return result
+
+
 def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
     items = list(rows)
     parsed = [
@@ -171,6 +230,7 @@ def evaluate_rows(rows: Iterable[dict[str, object]]) -> dict[str, float | int]:
             else 0.0
         ),
     }
+    metrics.update(_rationale_consistency(items, parsed))
     if not items:
         return metrics
 

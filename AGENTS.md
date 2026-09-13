@@ -1,7 +1,7 @@
-# Trace Agent Guide
+# y/trace Agent Guide
 
 This repository is the team submission for the Aionic Labs × Agentic Systems Lab
-Temporal AI Challenge. The product is **Trace**, a replay-only robot observability
+Temporal AI Challenge. The product is **y/trace**, a replay-only robot observability
 workbench for investigating recorded KUKA LWR4+ torque events with OpenTSLM.
 
 ## Product contract
@@ -9,7 +9,7 @@ workbench for investigating recorded KUKA LWR4+ torque events with OpenTSLM.
 Keep the project centered on this user problem:
 
 > Robot operators and maintenance engineers must inspect several synchronized
-> torque signals to understand a recorded contact event. Trace lets them replay
+> torque signals to understand a recorded contact event. y/trace lets them replay
 > the event, ask what happened, and inspect an OpenTSLM interpretation linked to
 > the responsible joints and time interval.
 
@@ -155,7 +155,7 @@ Do not prioritize live telemetry, robot control, exact 3D reconstruction or more
 The product is now feature-complete for the challenge demo. The single jury-facing
 promise is:
 
-> Trace turns one recorded robot incident from seven synchronized signals into a
+> y/trace turns one recorded robot incident from seven synchronized signals into a
 > reviewable investigation: a model hypothesis, deterministic measurements, linked
 > raw evidence, a reference comparison and an exportable report.
 
@@ -182,7 +182,7 @@ shown to improve a required criterion without destabilizing the app.
 
 Remaining work is evidence and delivery, not more surface area:
 
-1. Run at least a small timed charts-only versus Trace pilot and record every result;
+1. Run at least a small timed charts-only versus y/trace pilot and record every result;
    if no participant is available, state that the benefit remains a hypothesis.
 2. Complete the approved checkpoint/adapter handoff and name a rollback owner.
 3. Rehearse the two-minute path with the CPU service, a pre-run answer and the recorded

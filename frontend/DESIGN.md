@@ -1,4 +1,4 @@
-# Trace interface
+# y/trace interface
 
 Operate-mode recording workbench, inspired by the supplied Foxglove screenshot. The primary interaction is selecting an event and seeing all plots and the assistant share the same interval.
 

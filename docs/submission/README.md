@@ -1,6 +1,6 @@
-# Trace: evidence-backed robot contact-event investigation
+# y/trace: evidence-backed robot contact-event investigation
 
-Trace helps a robotics engineer investigate a recorded contact event, inspect synchronized torque measurements and a trained OpenTSLM interpretation, and export the evidence for a teammate. Its immediate business hypothesis is less time spent assembling a correct incident report. That time saving has **not yet been measured**.
+y/trace helps a robotics engineer investigate a recorded contact event, inspect synchronized torque measurements and a trained OpenTSLM interpretation, and export the evidence for a teammate. Its immediate business hypothesis is less time spent assembling a correct incident report. That time saving has **not yet been measured**.
 
 ## Challenge audit and evidence
 
