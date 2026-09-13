@@ -1,0 +1,123 @@
+Inspect the current `origin/main` and determine whether the merged frontend ingestion path is actually using the new `OnboardingOrchestrator`.
+
+## Goal
+
+Establish one canonical end-to-end ingestion path:
+```text
+approved source
+→ verified acquisition
+→ SourceDescriptor
+→ OnboardingOrchestrator
+→ semantic onboarding
+→ NEEDS_HUMAN_RESOLUTION if required
+→ native TimeNet connector/build
+→ TimeF
+→ verification
+→ imported-record frontend APIs
+```
+
+Do not create a second ingestion framework.
+
+## Tasks
+
+1. Trace the current frontend flow from source approval through:
+   - sourcing API,
+   - ingestion API,
+   - ingestion worker,
+   - TimeF build,
+   - imported-record browser/replay.
+2. Determine explicitly whether `data_ingestion/.../ingestion/api.py` and the worker use:
+   - `OnboardingOrchestrator`,
+   - `SourceDescriptor`,
+   - persisted onboarding jobs.
+3. If they already do:
+   - document the exact call path,
+   - verify status/artifact propagation,
+   - verify the frontend can represent all orchestrator states.
+4. If they do not:
+   - adapt the ingestion worker so the approved-source/acquisition result becomes a `SourceDescriptor`,
+   - invoke the existing `OnboardingOrchestrator`,
+   - remove or bypass duplicated ingestion logic where safe,
+   - keep existing frontend/import APIs compatible.
+5. Expose the generic human-resolution flow through the ingestion HTTP API.
+
+The frontend must be able to receive:
+```text
+NEEDS_HUMAN_RESOLUTION
+```
+
+with structured blockers, including:
+```text
+field_path
+semantic_status
+downstream_requirement
+candidate
+evidence_refs
+remaining_uncertainty
+```
+
+and submit a human resolution containing at least:
+```text
+value
+approved_by
+rationale
+```
+
+The backend must continue using the existing `ImplementationOverrideArtifact` validation.
+
+Do not let the frontend directly mutate `DatasetSpec`.
+
+Agent-only approval must remain insufficient.
+
+6. Verify resume behavior:
+```text
+NEEDS_HUMAN_RESOLUTION
+→ user approval through HTTP
+→ CONNECTOR_READY
+→ connector/build/load/verification
+→ COMPLETED
+```
+
+7. Preserve the existing imported-record frontend/replay behavior after completion.
+
+## Tests
+
+Add or update tests covering:
+
+- approved source → `SourceDescriptor`,
+- ingestion API → orchestrator job creation,
+- orchestrator status surfaced through HTTP,
+- human-resolution blocker returned to frontend,
+- human approval accepted,
+- non-human approval rejected,
+- same job resumes after approval,
+- completed TimeF receipt remains available through existing frontend APIs,
+- existing compatible-record replay still works.
+
+Use mocks for expensive stages where appropriate, but include at least one real integration path through the current local stack if practical.
+
+## Scope
+
+Do not yet:
+
+- move services to the inference VM,
+- change inference APIs,
+- integrate OpenTSLM/CNN,
+- redesign TimeNet,
+- create a new connector repository,
+- add distributed queues or cloud infrastructure.
+
+## Final report
+
+Report:
+
+1. whether the merged ingestion path previously used `OnboardingOrchestrator`,
+2. the final canonical request flow,
+3. files changed,
+4. HTTP endpoints used for job status and human resolution,
+5. how approved-source data becomes a `SourceDescriptor`,
+6. how the frontend sees `NEEDS_HUMAN_RESOLUTION`,
+7. how approval resumes the same job,
+8. tests and results,
+9. any remaining duplicated ingestion path,
+10. whether the system is now ready to move the ingestion worker onto the inference VM.
