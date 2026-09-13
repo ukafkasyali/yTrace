@@ -177,6 +177,58 @@ describe('decision evidence', () => {
     expect(markup).toContain('Reject and refine');
   });
 
+  it('offers remaining eligible candidates after the first approval', () => {
+    const run = runFixture();
+    run.status = 'APPROVED';
+    run.approvedCandidateId = run.assessments[0].candidateId;
+    run.approvedCandidateIds = [run.assessments[0].candidateId];
+    run.candidates.push({
+      ...run.candidates[0],
+      id: 'ds_aaaaaaaaaaaa',
+      name: 'Alternate collision dataset',
+      canonicalUrl: 'https://zenodo.org/records/1234',
+    });
+    run.assessments.push({
+      ...run.assessments[0],
+      candidateId: 'ds_aaaaaaaaaaaa',
+    });
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).toContain('Approve another dataset');
+    expect(markup).toContain('1 eligible dataset approved from this run');
+    expect(markup).toContain('1 of 2 eligible datasets remain unapproved');
+    expect(markup).toContain('value="ds_aaaaaaaaaaaa"');
+    expect(markup).not.toContain(`value="${run.approvedCandidateId}"`);
+    expect(markup).not.toContain('Reject and refine');
+  });
+
+  it('finishes the approval flow when every eligible candidate is approved', () => {
+    const run = runFixture();
+    const primaryId = run.assessments[0].candidateId;
+    run.status = 'APPROVED';
+    run.approvedCandidateId = primaryId;
+    run.approvedCandidateIds = [primaryId];
+    run.manifest = {
+      runId: run.runId, candidateId: primaryId,
+      name: run.candidates[0].name, canonicalUrl: run.candidates[0].canonicalUrl,
+      revision: run.profiles[0].revision, licenseId: run.profiles[0].licenseId ?? '',
+      labels: run.profiles[0].labels, sampleRateHz: run.profiles[0].sampleRateHz,
+      fileExtensions: run.profiles[0].fileExtensions,
+      totalSizeBytes: run.profiles[0].totalSizeBytes,
+      evidenceIds: ['ev_license'], limitations: [], approvedAt: run.updatedAt,
+    };
+
+    const markup = renderToStaticMarkup(<ScoutReview
+      run={run} busy="" onReview={() => undefined} onUseSource={() => undefined}
+    />);
+
+    expect(markup).not.toContain('Approve another dataset');
+    expect(markup).toContain('Open approved sources');
+  });
+
   it('explains when refinement found no decision-changing evidence', () => {
     const run = runFixture();
     run.reviewFeedback = ['Prioritize free-motion baselines.'];

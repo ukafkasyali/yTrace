@@ -133,7 +133,7 @@ def create_app(
 
     @app.get("/api/sourcing-runs/{run_id}", response_model=SourcingRun)
     def get_sourcing_run(run_id: str) -> SourcingRun:
-        return sourcing.artifacts.read_run(run_id)
+        return sourcing.get_run(run_id)
 
     @app.post("/api/sourcing-runs/{run_id}/approvals", response_model=SourcingRun)
     def approve_sourcing_run(run_id: str, body: ApprovalRequest) -> SourcingRun:

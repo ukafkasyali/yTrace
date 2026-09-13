@@ -96,8 +96,8 @@ dataset-ingestion-worker
 ```
 
 Then run the frontend with `VITE_API_BASE_URL=/api npm run dev`. The **Data source** workspace can
-start or resume an evidence review, inspect hard gates and contradictions, and approve its
-recommendation. Approved revisions remain in a paginated source library after reload. The user
+start or resume an evidence review, inspect hard gates and contradictions, and approve one or more
+eligible candidates from its completed shortlist. Approved revisions remain in a paginated source library after reload. The user
 chooses manifest-listed data assets and explicitly starts or resumes the source's single ingestion
 job; approval never starts ingestion automatically. A ready source shows its validation receipt and
 cannot start another ingestion.
