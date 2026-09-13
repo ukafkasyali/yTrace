@@ -1,4 +1,4 @@
-import type { DemoData, Interval } from '../types';
+import type { DemoCase, DemoData, Interval } from '../types';
 
 /** Preserve the signed value and original timestamp of the largest absolute sample. */
 export function sampledPeak(times: number[], values: number[]) {
@@ -38,6 +38,79 @@ function metrics(values: number[]) {
   let mean = 0, m2 = 0, min = Infinity, max = -Infinity;
   values.forEach((v, i) => { const delta = v - mean; mean += delta / (i + 1); m2 += delta * (v - mean); min = Math.min(min, v); max = Math.max(max, v); });
   return { range: max - min, variability: Math.sqrt(Math.max(0, m2 / values.length)), mean };
+}
+
+function incidentSignature(data: DemoData, interval: Interval) {
+  if (!rawCovers(data, interval)) throw new Error('Incident matching requires raw telemetry for the complete window.');
+  const sample = samples(data, interval, true);
+  const features = sample.channels.flatMap(channel => {
+    const summary = metrics(channel.values);
+    let largestStep = 0;
+    for (let index = 1; index < channel.values.length; index++) {
+      largestStep = Math.max(largestStep, Math.abs(channel.values[index] - channel.values[index - 1]));
+    }
+    return [summary.range, summary.variability, largestStep];
+  });
+  const strongest = sample.channels
+    .map(channel => ({ id: channel.id, range: metrics(channel.values).range }))
+    .sort((left, right) => right.range - left.range)[0]?.id;
+  return { features, sampleRateHz: sample.rate, samplesPerChannel: sample.times.length, strongestJoint: strongest };
+}
+
+function symmetricDifference(left: number, right: number) {
+  return Math.abs(left - right) / Math.max(Math.abs(left) + Math.abs(right), 1e-9);
+}
+
+export type IncidentCandidate = { item: DemoCase; data: DemoData };
+export type SimilarIncident = {
+  caseId: string;
+  title: string;
+  recordingId: string;
+  interval: Interval;
+  score: number;
+  strongestJoint?: string;
+  samplesPerChannel: number;
+  sourceUrl: string;
+  archive: string;
+};
+
+/**
+ * Rank fixed, raw incident windows by a transparent torque-profile distance.
+ * This is retrieval for review and cohorting, never a diagnosis or probability.
+ */
+export function rankSimilarIncidents(selectedData: DemoData, selected: Interval, candidates: IncidentCandidate[]): SimilarIncident[] {
+  const selectedSignature = incidentSignature(selectedData, selected);
+  const selectedDuration = selected.end - selected.start;
+  const ranked: SimilarIncident[] = [];
+  for (const candidate of candidates) {
+    const interval = candidate.item.interval;
+    if (candidate.data.recording.id === selectedData.recording.id
+      && Math.abs(interval.start - selected.start) < 1e-9
+      && Math.abs(interval.end - selected.end) < 1e-9) continue;
+    if (Math.abs((interval.end - interval.start) - selectedDuration) > 1e-7) continue;
+    try {
+      const signature = incidentSignature(candidate.data, interval);
+      if (signature.sampleRateHz !== selectedSignature.sampleRateHz
+        || signature.samplesPerChannel !== selectedSignature.samplesPerChannel) continue;
+      const distance = signature.features.reduce(
+        (total, value, index) => total + symmetricDifference(value, selectedSignature.features[index]), 0,
+      ) / signature.features.length;
+      ranked.push({
+        caseId: candidate.item.id,
+        title: candidate.item.title,
+        recordingId: candidate.data.recording.id,
+        interval: { ...interval },
+        score: Math.max(0, Math.min(1, 1 - distance)),
+        strongestJoint: signature.strongestJoint,
+        samplesPerChannel: signature.samplesPerChannel,
+        sourceUrl: candidate.data.recording.sourceUrl,
+        archive: candidate.data.recording.archive,
+      });
+    } catch {
+      // A candidate without complete raw evidence is not eligible for the cohort.
+    }
+  }
+  return ranked.sort((left, right) => right.score - left.score || left.recordingId.localeCompare(right.recordingId));
 }
 export function compareWindows(selectedData: DemoData, selected: Interval, referenceData: DemoData, reference: Interval) {
   if (Math.abs((selected.end - selected.start) - (reference.end - reference.start)) > 1e-7) throw new Error('Use equal-duration windows for this comparison.');

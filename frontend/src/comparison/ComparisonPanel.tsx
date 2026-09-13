@@ -4,7 +4,7 @@ import type { DemoCase, DemoData, EvidenceLink, Interval } from '../types';
 import type { Services } from '../services';
 import { downsample, loadDemoData } from '../lib/data';
 import { intervalLabel } from '../lib/format';
-import { compareWindows, comparisonReport, suggestReference, sampledPeak, type WindowComparison } from './compare';
+import { compareWindows, comparisonReport, rankSimilarIncidents, suggestReference, sampledPeak, type SimilarIncident, type WindowComparison } from './compare';
 
 type Props = { data: DemoData; interval: Interval; cases: DemoCase[]; services: Services; onEvidence: (e: EvidenceLink) => void };
 const fixed = (n: number) => n.toFixed(3);
@@ -48,21 +48,59 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
   const [reference, setReference] = useState<Interval | undefined>(initial);
   const [suggested, setSuggested] = useState(Boolean(initial));
   const [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
+  const [matching, setMatching] = useState(false), [matchIssue, setMatchIssue] = useState('');
+  const [matches, setMatches] = useState<SimilarIncident[]>([]);
   const [joint, setJoint] = useState('');
   const request = useRef(0);
   const duration = interval.end - interval.start;
   useEffect(() => () => { request.current++; }, []);
   const options = [...new Map([{ recordingId: data.recording.id, title: 'This recording' }, { recordingId: '05-28-21-25', title: 'Original recording' }, ...cases].map(c => [c.recordingId, c])).values()];
+  async function recordingData(id: string) {
+    return id === data.recording.id ? data : id === '05-28-21-25' ? loadDemoData() : services.getReplay(id);
+  }
+  useEffect(() => {
+    let active = true;
+    const original: DemoCase = { id: 'original', title: 'Original recording', recordingId: '05-28-21-25', interval: { start: 5.787, end: 6.811 }, note: 'Fixed raw demonstration window.' };
+    const pool = [original, ...cases];
+    if (!pool.length || !services.connected) { setMatches([]); return () => { active = false; }; }
+    setMatching(true); setMatchIssue('');
+    const recordings = new Map<string, Promise<DemoData>>();
+    const loadCandidate = (item: DemoCase) => {
+      if (!recordings.has(item.recordingId)) recordings.set(item.recordingId, recordingData(item.recordingId));
+      return recordings.get(item.recordingId)!.then(candidateData => ({ item, data: candidateData }));
+    };
+    Promise.allSettled(pool.map(loadCandidate)).then(results => {
+      if (!active) return;
+      const available = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+      try {
+        setMatches(rankSimilarIncidents(data, interval, available).slice(0, 3));
+        if (available.length < 2) setMatchIssue('Related recordings could not be loaded. The current investigation remains available.');
+      } catch (cause) {
+        setMatches([]); setMatchIssue(cause instanceof Error ? cause.message : 'Incident matching is unavailable.');
+      } finally { setMatching(false); }
+    });
+    return () => { active = false; };
+  }, [cases, data, interval.start, interval.end, services]);
   async function chooseRecording(id: string) {
     const version = ++request.current; setReferenceId(id); setLoading(true); setError(''); setReference(undefined); setStatus('');
     try {
-      const next = id === data.recording.id ? data : id === '05-28-21-25' ? await loadDemoData() : await services.getReplay(id);
+      const next = await recordingData(id);
       if (version !== request.current) return;
       if (next.recording.id !== id) throw new Error('The service returned a different recording.');
       setReferenceData(next);
       const suggestion = id === data.recording.id ? suggestReference(next, interval) : undefined;
       setReference(suggestion); setStart(suggestion ? fixed(suggestion.start) : ''); setSuggested(Boolean(suggestion));
     } catch (e) { if (version === request.current) setError(e instanceof Error ? e.message : 'Reference could not load. Choose it again to retry.'); }
+    finally { if (version === request.current) setLoading(false); }
+  }
+  async function chooseMatch(match: SimilarIncident) {
+    const version = ++request.current; setReferenceId(match.recordingId); setLoading(true); setError(''); setReference(undefined); setStatus('');
+    try {
+      const next = await recordingData(match.recordingId);
+      if (version !== request.current) return;
+      if (next.recording.id !== match.recordingId) throw new Error('The service returned a different recording.');
+      setReferenceData(next); setReference({ ...match.interval }); setStart(fixed(match.interval.start)); setSuggested(false);
+    } catch (cause) { if (version === request.current) setError(cause instanceof Error ? cause.message : 'Related incident could not load.'); }
     finally { if (version === request.current) setLoading(false); }
   }
   const computed = useMemo(() => {
@@ -83,9 +121,32 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
     const link = document.createElement('a'); link.href = url; link.download = `trace-comparison-${data.recording.id}.json`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000); setStatus('Comparison report downloaded.');
   }
+  function exportCohort() {
+    if (!matches.length) return;
+    const content = {
+      schemaVersion: 1,
+      kind: 'trace_signal_similarity_cohort',
+      origin: 'deterministic_calculation',
+      selected: { recordingId: data.recording.id, interval: { ...interval }, sourceUrl: data.recording.sourceUrl, archive: data.recording.archive },
+      candidates: matches,
+      method: 'Rank equal-length raw 1 kHz windows by symmetric distance over each joint’s torque range, variability and largest sample-to-sample change. Publisher labels and model predictions are not scoring inputs.',
+      limitation: 'Similarity is a retrieval lead, not evidence of the same physical cause, safety state or required repair. An engineer must review motion phase, payload and operating conditions.',
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2) + '\n'], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = `trace-incident-cohort-${data.recording.id}.json`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000); setStatus('Incident cohort downloaded for review or labeling.');
+  }
   return <section className="comparison-panel" aria-label="Incident comparison">
-    <header><h2>What changed?</h2><p>Compare this incident with a reference window or another run.</p></header>
+    <header><h2>Related incidents</h2><p>Retrieve similar signal windows, then compare one against this incident.</p></header>
     <div className="comparison-selection"><span>Selected · {data.recording.id}</span><strong>{intervalLabel(interval)}</strong></div>
+    <section className="incident-cohort" aria-labelledby="incident-cohort-title">
+      <div className="incident-cohort-heading"><div><h3 id="incident-cohort-title">Similar signal profiles across runs</h3><p>Deterministic retrieval from raw torque only. Matching labels and model answers are not used.</p></div>{matches.length > 0 && <button className="text-button" onClick={exportCohort}><Download size={13}/>Export cohort</button>}</div>
+      {matching && <p role="status">Comparing fixed raw incident windows…</p>}
+      {!matching && matches.length > 0 && <div className="incident-matches">{matches.map((match, index) => <button key={match.caseId} className="incident-match" onClick={() => void chooseMatch(match)}><span className="incident-rank">{index + 1}</span><span><strong>{match.title}</strong><small>{match.recordingId} · {intervalLabel(match.interval)} · strongest range {match.strongestJoint?.replace('joint_', 'J') ?? '—'}</small></span><span className="incident-score">{match.score.toFixed(2)}<small>similarity</small></span></button>)}</div>}
+      {!matching && matchIssue && <p className="reference-note">{matchIssue}</p>}
+      {!matching && !matchIssue && !matches.length && <p className="reference-note">No other fixed raw window is eligible for this interval.</p>}
+      <p className="cohort-limit">Similarity groups evidence for review or labeling. It does not establish a shared physical cause.</p>
+    </section>
     <details className="reference-editor" open={!initial}><summary>Change reference or compare another run</summary>
     <form className="reference-controls" onSubmit={e => { e.preventDefault(); apply(); }}>
       <label>Reference recording<select aria-label="Reference recording" value={referenceId} onChange={e => void chooseRecording(e.target.value)}>{options.map(c => <option key={c.recordingId} value={c.recordingId}>{c.recordingId === data.recording.id ? 'This recording' : 'Recording'} · {c.recordingId}</option>)}</select></label>

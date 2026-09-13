@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compareWindows, comparisonReport, suggestReference, sampledPeak } from './compare';
+import { compareWindows, comparisonReport, rankSimilarIncidents, suggestReference, sampledPeak } from './compare';
 import type { DemoData } from '../types';
 function fixture(id = 'test'): DemoData {
   const times = Array.from({length: 6000}, (_, i) => i / 1000);
@@ -57,5 +57,26 @@ describe('incident comparison', () => {
   it('keeps the report source windows frozen after selection changes', () => {
     const w={...current}; const r=compareWindows(fixture(),w,fixture(),reference); w.start=0;
     expect(r.selected.interval.start).toBe(4);
+  });
+  it('ranks raw incident profiles without using publisher labels', () => {
+    const selected = fixture('selected');
+    const exact = fixture('exact');
+    const weaker = fixture('weaker');
+    const matches = rankSimilarIncidents(selected, current, [
+      { item: { id:'weaker', title:'Different profile', recordingId:'weaker', interval:reference, note:'intentional label is display-only' }, data:weaker },
+      { item: { id:'exact', title:'Matching profile', recordingId:'exact', interval:current, note:'free label is display-only' }, data:exact },
+    ]);
+    expect(matches.map(match => match.caseId)).toEqual(['exact', 'weaker']);
+    expect(matches[0]).toMatchObject({ score:1, strongestJoint:'joint_7', samplesPerChannel:1024 });
+    expect(matches[1].score).toBeLessThan(matches[0].score);
+  });
+  it('excludes the selected window and candidates without complete raw evidence', () => {
+    const selected = fixture('selected');
+    const unavailable = fixture('unavailable'); unavailable.detail.endSeconds = 1.5;
+    const matches = rankSimilarIncidents(selected, current, [
+      { item: { id:'same', title:'Same', recordingId:'selected', interval:current, note:'' }, data:selected },
+      { item: { id:'unavailable', title:'Unavailable', recordingId:'unavailable', interval:reference, note:'' }, data:unavailable },
+    ]);
+    expect(matches).toEqual([]);
   });
 });
