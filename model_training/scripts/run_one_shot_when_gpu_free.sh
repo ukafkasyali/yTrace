@@ -13,6 +13,10 @@ IDLE_CONFIRMATIONS=${IDLE_CONFIRMATIONS:-2}
 LIMIT=${LIMIT:-512}
 LOG_ROOT=${LOG_ROOT:-"${PROJECT_ROOT}/runs/qwen3-vl-one-shot-launcher"}
 
+# vLLM can invoke sibling build tools (for example, ninja during FlashInfer JIT
+# warmup). An absolute VLLM_BIN alone does not place those tools on PATH.
+export PATH="$(dirname "${VLLM_BIN}"):${PATH}"
+
 mkdir -p "${LOG_ROOT}" "$(dirname "${OUTPUT_ROOT}")"
 LOG_PATH="${LOG_ROOT}/launcher.log"
 SERVER_LOG_PATH="${LOG_ROOT}/vllm.log"
