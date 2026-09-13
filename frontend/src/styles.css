@@ -605,3 +605,23 @@ input,textarea{caret-color:var(--accent)}
   .annotated-comparison figcaption { flex-wrap: wrap; gap: 10px; }
   .graph-scale { font-size: 18px; }
 }
+
+.incident-cohort { margin: 14px 0 18px; padding-block: 14px; border-block: 1px solid var(--line); }
+.incident-cohort-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.incident-cohort-heading h3 { margin: 0; font-size: 13px; }
+.incident-cohort-heading p, .incident-cohort > p { color: var(--quiet); font-size: 11px; line-height: 1.5; }
+.incident-matches { display: grid; gap: 6px; margin-top: 12px; }
+.incident-match { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.incident-match:hover { background: #202825; }
+.incident-match strong, .incident-match small { display: block; }
+.incident-match strong { font-size: 12px; font-weight: 500; }
+.incident-match small { margin-top: 3px; color: var(--quiet); font-size: 10px; }
+.incident-rank { color: var(--accent); font: 11px var(--mono); text-align: center; }
+.incident-score { color: var(--accent); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; text-align: right; }
+.incident-score small { font-family: 'IBM Plex Sans', sans-serif; }
+.incident-cohort .cohort-limit { margin-top: 10px; color: #aebbb6; }
+@media(max-width:850px) {
+  .incident-cohort-heading { align-items: stretch; flex-direction: column; gap: 6px; }
+  .incident-match { grid-template-columns: 22px minmax(0, 1fr); }
+  .incident-score { grid-column: 2; text-align: left; }
+}

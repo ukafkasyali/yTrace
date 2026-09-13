@@ -193,10 +193,16 @@ shows a valid generated contact onset and responding joint, never impact locatio
 The active additional motion catalogue and deployment details are documented in
 [the walkthrough](../docs/submission/UI_WALKTHROUGH.md#deployment-handoff).
 
-## Compare an incident with a reference
+## Retrieve related incidents and compare a reference
 
-Choose **Compare with reference** beside Analyze interval, or open the **Compare**
-tab. The suggested earlier window has no nearby publisher annotation; this does
+Choose **Find similar incidents across runs** after analysis, or open the **Compare**
+tab. Trace ranks eligible fixed raw windows using each joint's torque range,
+variability and largest sample-to-sample change. Publisher labels and model outputs
+are excluded from the score. Export the ranked cohort for engineering review or
+labeling; similarity is not evidence of the same physical cause.
+
+Choose a ranked incident to compare its synchronized signals, or edit the reference
+manually. The suggested earlier window has no nearby publisher annotation; this does
 not establish normal motion. **Change reference or compare another run** lets you
 choose another available recording and a start time. Both windows have the same
 duration. Match motion phase, payload and operating conditions yourself.
