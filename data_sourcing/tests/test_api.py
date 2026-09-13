@@ -61,6 +61,7 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         run = client.get(f"/api/sourcing-runs/{run_id}")
         assert run.status_code == 200
         assert run.json()["status"] == "AWAITING_APPROVAL"
+        assert run.json()["familyQueriesUsed"] == 1
         assessment = run.json()["assessments"][0]
         assert assessment["suitabilityLevel"] in {"LOW", "MEDIUM", "HIGH"}
         assert assessment["suitabilityFactors"]

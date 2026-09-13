@@ -86,7 +86,8 @@ The `202` response is:
 ### `GET /api/sourcing-runs/{runId}`
 
 Returns requirements, bounded hypotheses, canonical candidates, verified profiles, evidence,
-deterministic assessments, separate evidence/recommendation confidence, retrieval errors and the
+deterministic assessments, separate evidence/recommendation confidence, retrieval errors,
+`familyQueriesUsed`, and the
 current status. The frontend should treat IDs as opaque. After a reviewer refinement,
 `refinementOutcomes` makes the result explicit: it records the executed query, newly discovered
 candidate and evidence IDs, the recommendation before and after rescoring, and one of
@@ -275,18 +276,27 @@ Errors use the shared envelope:
 {"error":{"code":"INVALID_REQUEST","message":"Request validation failed","retryable":false}}
 ```
 
-One run has three initial hypotheses, at most two evidence-gap hypotheses, at most two
-review-directed refinements, eight deeply verified dataset artifacts, twelve Tavily credits and
+One run has three initial hypotheses, at most one numbered-part family-completion hypothesis, at
+most two evidence-gap hypotheses, at most two review-directed refinements, eight deeply verified
+dataset artifacts, twelve Tavily credits and
 ninety seconds of active research time. The scout may inspect up to sixteen discovery leads over
 at most two native-link hops. Time spent waiting for human review does not consume the active
-research clock. Tavily advanced search costs two credits per query, so reviewer refinements use
-only the credits remaining after initial and gap searches. Mandatory gates always include
+research clock. Tavily advanced search costs two credits per query, so family completion, gap
+searches and reviewer refinements share the credits remaining after initial discovery. Mandatory
+gates always include
 source-local dataset identity and canonical provenance. Usable time-series files, licence, task
 labels, schema, acquisition, domain and other configurable checks become mandatory only when
 their confirmed priority is `MUST`. Dataset identity first
 requires a direct, non-empty supported data or archive file on the candidate's own native source.
 Model-assisted semantic support must cite a verbatim excerpt from that same source and fails
 closed on model errors; linked pages cannot lend evidence to a parent.
+
+The family-completion query is created only after a verified native title contains a numbered
+`Part` marker. Before using it, native verification also exposes canonical Zenodo record URLs from
+dataset-family `related_identifiers` relations (`hasPart`, `isPartOf`, continuation and supplement
+relations). Discovered family members remain separate candidates and must independently pass every
+gate. Family discovery does not assert that similarly titled records share a physical cause or
+merge their files, evidence or manifests.
 
 Custom `OTHER` requirements are evaluated only against fetched native-source documents. The model
 must return the requirement ID, source-document index and a verbatim supporting quote; the service

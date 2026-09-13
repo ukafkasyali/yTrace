@@ -102,6 +102,12 @@ remain auditable discovery leads: they may reveal a child dataset URL, but neith
 a linked source's evidence can make them approvable. Reports and the UI rank promoted artifacts
 and list rejected discovery leads separately with the dataset-identity reason.
 
+When a verified native title declares a numbered part, the scout performs at most one bounded
+family-completion search before requirement-gap searches. It also follows Zenodo dataset-family
+relations such as `hasPart` and `isPartOf` from native `related_identifiers`. Every discovered part
+keeps its own canonical candidate, verification evidence, approval decision and manifest; a family
+link never lends one part's evidence to another.
+
 Runtime artifacts are written under `var/runs/<run-id>/`. SQLite checkpoints and idempotency keys
 remain under `var/`. Set `SOURCING_DATA_DIR` to relocate all runtime state.
 

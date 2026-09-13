@@ -466,7 +466,7 @@ class DatasetScoutGraph:
         )
         can_search = (
             has_planned_family_search
-            and state.get("family_queries_used", 0) < 1
+            and state.get("family_queries_used", 0) < self.settings.family_query_limit
             and state["tavily_credits_used"] + 2 <= self.settings.tavily_credit_limit
             and not self._expired(state)
         )

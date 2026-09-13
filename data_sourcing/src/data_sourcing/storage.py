@@ -101,6 +101,7 @@ class ArtifactStore:
             review_iterations_used=state.get("review_iterations_used", 0),
             feedback_allowed=state.get("feedback_allowed", False),
             refinement_outcomes=state.get("refinement_outcomes", []),
+            family_queries_used=state.get("family_queries_used", 0),
             gap_queries_used=state.get("gap_queries_used", 0),
             tavily_credits_used=state.get("tavily_credits_used", 0),
             execution_mode=ExecutionMode(state.get("execution_mode", ExecutionMode.LIVE.value)),

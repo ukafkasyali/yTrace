@@ -414,6 +414,59 @@ def test_search_snippet_links_cannot_contribute_native_verification_evidence() -
     assert set(requested_hosts) == {"api.github.com"}
 
 
+def test_zenodo_adapter_preserves_dataset_family_relations() -> None:
+    payload = {
+        "title": "Machine Measurements — Part I",
+        "revision": 3,
+        "metadata": {
+            "description": "Robot torque time-series dataset with documented columns.",
+            "license": {"id": "cc-by-4.0"},
+            "related_identifiers": [
+                {
+                    "identifier": "10.5281/zenodo.202",
+                    "relation": "isPartOf",
+                    "resource_type": "dataset",
+                },
+                {
+                    "identifier": "https://zenodo.org/records/303",
+                    "relation": "hasPart",
+                    "resource_type": "dataset",
+                },
+                {
+                    "identifier": "10.1234/example.paper",
+                    "relation": "isDocumentedBy",
+                    "resource_type": "publication-article",
+                },
+            ],
+        },
+        "files": [
+            {
+                "key": "signals.csv",
+                "size": 500,
+                "links": {"self": "https://zenodo.org/api/files/101/signals.csv"},
+            }
+        ],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_111111111111",
+        name="Machine Measurements — Part I",
+        canonical_url="https://zenodo.org/records/101",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert set(verified.documents[0].related_urls) == {
+        "https://zenodo.org/records/202",
+        "https://zenodo.org/records/303",
+    }
+
+
 def test_oversized_github_tree_does_not_discard_linked_native_record() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
