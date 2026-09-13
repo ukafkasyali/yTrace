@@ -4,7 +4,7 @@
 
 Follow `inference/README.md` to restore the private tunnel; do not restart training or change the served checkpoint. Start the frontend with `VITE_API_BASE_URL=/api`. Run `python3 -m inference.smoke` and check the expected checkpoint digest. Open the initial `[5.787,6.811)` second selection and run **Analyze interval** once before the presentation clock. Leave that result open. This recording is a development example, not the held-out accuracy demonstration.
 
-Have the audited comparison and a pre-run Markdown handoff open beside the app. If the live service is unavailable, explicitly present the committed smoke result as a previously recorded run; never present it as fresh inference.
+Have the audited comparison and the committed [pre-run Markdown handoff](demo/investigation-example.md) open beside the app. If the live service is unavailable, explicitly present the committed smoke result as a previously recorded run; never present it as fresh inference.
 
 Timing, measured 13 September 2026 on the current CPU-only deployment (two smoke runs through the SSH tunnel): one full analyze-interval round trip takes about **24 seconds**. Do not start another query during the timed demo. Say that the visible result is the current canary-v4 output for this exact 7×1,024 input. If a judge requests fresh inference, run it after the core story. Only one query is served at a time; do not queue clicks.
 
