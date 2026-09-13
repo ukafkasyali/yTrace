@@ -12,10 +12,10 @@ Timing, measured 13 September 2026 on the current CPU-only deployment (two smoke
 
 | Time | Action | Suggested narration |
 |---|---|---|
-| 0:00–0:18 | Start on the selected publisher event with the pre-run result ready | “After a robot stop, an engineer must inspect seven synchronized traces and write the incident handoff. Trace turns this recorded event into a reviewable hypothesis, measured cross-check and exact evidence. This is a compact fixture from an open KUKA recording; separately, our tested TimeNet connector reproduces the raw source arrays.” |
+| 0:00–0:18 | Start on the selected publisher event with the pre-run result ready | “After a robot stop, an engineer inspects seven traces and writes the incident handoff. Trace turns that event into a reviewable hypothesis, measured cross-check and exact evidence. This compact fixture comes from open KUKA data.” |
 | 0:18–0:40 | Click **Replay interval · 0.5×**, then **Show generated onset cue in 3D** | “The marker is a publisher annotation, not a model detection. The robot replays separately recorded joint angles; the generated cue moves to the model's relative onset. It is not a reconstructed collision.” |
 | 0:40–1:08 | Read the actual event class, strongest joint and onset, then point to **Cross-check** | “The model hypothesis and deterministic torque ranges stay separate. Here I read the actual output and the measured largest-range joint. Different rankings tell the engineer which signals to inspect before handoff.” |
-| 1:08–1:28 | Click **Inspect exact seven-channel input** | “This opens the complete input interval across all seven raw 1 kHz channels. The highlighted window is the evidence the model received; the publisher label was not included.” |
+| 1:08–1:28 | Click **Inspect exact seven-channel input** | “This opens the model's complete input across all seven raw 1 kHz channels. The publisher label was excluded. Separately, our TimeNet connector loads the original source arrays without changing them.” |
 | 1:28–1:43 | Click **Export incident handoff (.md)** | “The Markdown report carries the recording, interval, annotation, measurements, model revision, input receipt, cross-check and limitations to the next engineer.” |
 | 1:43–2:00 | Open **Evaluation** and close on the headline comparison | “Across 512 held-out windows, simple features win classification and OpenTSLM is usable 77.93 percent of the time. Trace’s contribution is the richer, reproducible handoff; a timed pilot must still prove that workflow value.” |
 
