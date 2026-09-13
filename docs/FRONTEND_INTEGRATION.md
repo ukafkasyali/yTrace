@@ -108,7 +108,8 @@ The routes below are requested by the implemented service client with `/api` as 
 | `startQuery(request)` | `POST /api/queries` | `{ queryId, streamUrl }` |
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
 | `startImport(approvedSourceId, assetIds?)` | `POST /api/ingestions` | persisted ingestion job |
-| `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion progress and validation report |
+| `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion state and validation report |
+| `getImportAssets(ingestionId)` | `GET /api/ingestions/:id/assets` | durable per-asset verification receipts used for byte progress |
 | `listApprovedSources(page, pageSize)` | `GET /api/approved-sources` | durable reviewed source revisions |
 | `getApprovedSource(approvedSourceId)` | `GET /api/approved-sources/:id` | source detail and approval history |
 | `getApprovedSourceManifest(approvedSourceId)` | `GET /api/approved-sources/:id/manifest` | exact assets and limitations |
@@ -163,7 +164,7 @@ Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP err
 
 ## Ingestion visibility and security
 
-Ingestion states: `queued → acquiring → inspecting → mapping → validating → importing → ready`, with `needs_input`, `unsupported_format`, and `failed` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. The UI polls active jobs, presents explicit channel-unit confirmation when mapping is required, and displays the immutable validation receipt when ready. It does not implement ingestion-job cancellation.
+Ingestion states: `queued → acquiring → inspecting → mapping → validating → importing → ready`, with `needs_input`, `unsupported_format`, and `failed` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. The UI polls active jobs and their durable asset receipts, showing verified bytes and completed assets rather than estimating uncommitted stream bytes. It presents explicit channel-unit confirmation when mapping is required and displays the immutable validation receipt when ready. It does not implement ingestion-job cancellation.
 
 An ingestion agent proposes mappings; deterministic validators check them. Unknown units or ambiguous channels produce `needs_input`, not invented metadata. Retrieval results identify their source documents separately from signal evidence. Server-side URL fetching must reject private/local network targets and enforce size/type limits.
 

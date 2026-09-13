@@ -4,6 +4,7 @@ import type {
   ApprovedSource,
   ApprovedSourceDetail,
   ApprovedManifest,
+  AssetReceipt,
   FinalReceipt,
   ImportJob,
   MappingSpec,
@@ -13,6 +14,52 @@ import type {
 type Props = { services: Services; refreshKey?: number; onDatasetReady: (datasetId: string) => void };
 const terminal = new Set(['ready', 'unsupported_format', 'needs_input', 'failed']);
 const errorText = (value: unknown) => value instanceof Error ? value.message : 'The request failed.';
+
+export type ImportProgress = {
+  completedAssets: number;
+  totalAssets: number;
+  verifiedBytes: number;
+  totalBytes: number;
+};
+
+export function summarizeImportProgress(
+  job: ImportJob,
+  manifest: ApprovedManifest,
+  receipts: AssetReceipt[],
+): ImportProgress {
+  const selected = new Set(job.assetIds);
+  const assets = manifest.assets.filter(asset => selected.has(asset.assetId));
+  const completed = receipts.filter(receipt => selected.has(receipt.assetId));
+  return {
+    completedAssets: completed.length,
+    totalAssets: assets.length,
+    verifiedBytes: completed.reduce((total, receipt) => total + receipt.observedSizeBytes, 0),
+    totalBytes: assets.reduce((total, asset) => total + asset.sizeBytes, 0),
+  };
+}
+
+export function IngestionProgressView({ progress }: { progress: ImportProgress | null }) {
+  if (!progress) return <p className="ingestion-progress-note">Reading verified download progress…</p>;
+  const percent = progress.totalBytes > 0
+    ? Math.min(100, Math.floor((progress.verifiedBytes / progress.totalBytes) * 100))
+    : 0;
+  return <div className="ingestion-progress">
+    <progress aria-label="Verified ingestion bytes" max={progress.totalBytes || 1} value={progress.verifiedBytes} />
+    <p><strong>{percent}% verified</strong><span>{sizeLabel(progress.verifiedBytes)} of {sizeLabel(progress.totalBytes)} · {progress.completedAssets} of {progress.totalAssets} assets</span></p>
+  </div>;
+}
+
+async function loadImportProgress(services: Services, job: ImportJob) {
+  try {
+    const [manifest, receipts] = await Promise.all([
+      services.getApprovedSourceManifest(job.approvedSourceId),
+      services.getImportAssets(job.ingestionId),
+    ]);
+    return summarizeImportProgress(job, manifest, receipts);
+  } catch {
+    return null;
+  }
+}
 
 export function approvedSourceAction(job: ImportJob | null | undefined) {
   if (job?.state === 'ready') return 'View result';
@@ -128,6 +175,7 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
   const [totalPages, setTotalPages] = useState(0);
   const [sources, setSources] = useState<ApprovedSource[]>([]);
   const [jobs, setJobs] = useState<Record<string, ImportJob | null>>({});
+  const [progress, setProgress] = useState<Record<string, ImportProgress | null>>({});
   const [detail, setDetail] = useState<ApprovedSourceDetail | null>(null);
   const [manifest, setManifest] = useState<ApprovedManifest | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
@@ -152,9 +200,14 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
           return [source.approvedSourceId, null] as const;
         }
       }));
+      const progressPairs = await Promise.all(pairs.map(async ([sourceId, job]) => [
+        sourceId,
+        job?.state === 'acquiring' ? await loadImportProgress(services, job) : null,
+      ] as const));
       if (!alive) return;
       setSources(result.data); setTotalPages(result.pagination.totalPages);
       setJobs(Object.fromEntries(pairs));
+      setProgress(Object.fromEntries(progressPairs));
       if (statusUnavailable) setIngestionError('Approved sources loaded, but ingestion status is unavailable. Start the ingestion service on port 8002, then retry.');
     }).catch(reason => { if (alive) setError(errorText(reason)); })
       .finally(() => { if (alive) setLoading(false); });
@@ -165,8 +218,17 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
     const active = Object.values(jobs).filter((job): job is ImportJob => Boolean(job && !terminal.has(job.state)));
     if (!active.length) return;
     const timer = setTimeout(() => {
-      Promise.all(active.map(job => services.getImport(job.ingestionId))).then(updated => {
-        setJobs(current => ({ ...current, ...Object.fromEntries(updated.map(job => [job.approvedSourceId, job])) }));
+      Promise.all(active.map(async job => {
+        const updated = await services.getImport(job.ingestionId);
+        return {
+          job: updated,
+          progress: updated.state === 'acquiring'
+            ? await loadImportProgress(services, updated)
+            : null,
+        };
+      })).then(updated => {
+        setJobs(current => ({ ...current, ...Object.fromEntries(updated.map(item => [item.job.approvedSourceId, item.job])) }));
+        setProgress(current => ({ ...current, ...Object.fromEntries(updated.map(item => [item.job.approvedSourceId, item.progress])) }));
       }).catch(reason => setError(`Could not refresh ingestion status: ${errorText(reason)}`));
     }, 2_000);
     return () => clearTimeout(timer);
@@ -209,6 +271,12 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
     try {
       const job = await services.startImport(detail.approvedSourceId, selectedAssets);
       setJobs(current => ({ ...current, [detail.approvedSourceId]: job }));
+      if (manifest) {
+        setProgress(current => ({
+          ...current,
+          [detail.approvedSourceId]: summarizeImportProgress(job, manifest, []),
+        }));
+      }
       setDetail(null); setManifest(null);
     } catch (reason) { setError(errorText(reason)); }
     finally { setBusy(''); }
@@ -243,7 +311,7 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
         <p className="source-formats">{source.fileExtensions.length ? source.fileExtensions.join(' · ') : 'Formats unavailable'} · approved {source.approvalCount} {source.approvalCount === 1 ? 'time' : 'times'} · latest {new Date(source.latestApprovedAt).toLocaleString()}</p>
         <div className="source-actions"><a href={source.canonicalUrl} target="_blank" rel="noopener noreferrer">Source <ArrowUpRight size={13} aria-hidden="true" /></a><button className="btn" disabled={busy === `detail-${source.approvedSourceId}`} onClick={() => void show(source)}><History size={13} aria-hidden="true" />History</button><button className="btn btn-primary" disabled={Boolean(busy) || !source.isAcquisitionReady} onClick={() => void ingest(source)}>{busy === `ingest-${source.approvedSourceId}` ? 'Opening…' : action}</button><DeleteSourceButton disabled={Boolean(busy) || Boolean(job) || Boolean(ingestionError)} reason={job ? 'This source is retained because an ingestion references it.' : ingestionError ? 'Retry ingestion status before deleting this source.' : ''} onDelete={() => setDeleteConfirmation(source.approvedSourceId)} /></div>
         {deleteConfirmation === source.approvedSourceId && <DeleteSourceConfirmation busy={busy === `delete-${source.approvedSourceId}`} onConfirm={() => void deleteSource(source)} onCancel={() => setDeleteConfirmation('')} />}
-        {job && <div className="source-job" aria-live="polite"><strong>{job.message}</strong>{job.state === 'mapping' && <MappingForm job={job} services={services} onConfirmed={() => setRevision(value => value + 1)} />}{terminalJobNote(job.state) && <p>{terminalJobNote(job.state)}</p>}</div>}
+        {job && <div className="source-job" aria-live="polite"><strong>{job.message}</strong>{job.state === 'acquiring' && <IngestionProgressView progress={progress[source.approvedSourceId] ?? null} />}{job.state === 'mapping' && <MappingForm job={job} services={services} onConfirmed={() => setRevision(value => value + 1)} />}{terminalJobNote(job.state) && <p>{terminalJobNote(job.state)}</p>}</div>}
       </li>;
     })}</ul>}
     <ApprovedSourcePagination page={page} totalPages={totalPages} loading={loading} onPage={setPage} />

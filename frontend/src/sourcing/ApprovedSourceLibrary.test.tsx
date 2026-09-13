@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ImportJob } from '../services';
+import type { ApprovedManifest, AssetReceipt, ImportJob } from '../services';
 import {
   approvedSourceAction,
   AssetSelectionActions,
@@ -10,6 +10,8 @@ import {
   ApprovedSourceStatusWarning,
   DeleteSourceButton,
   DeleteSourceConfirmation,
+  IngestionProgressView,
+  summarizeImportProgress,
   terminalJobNote,
 } from './ApprovedSourceLibrary';
 
@@ -64,5 +66,26 @@ describe('approved source library states', () => {
     expect(confirmation).toContain('Delete source');
     expect(confirmation).toContain('sourcing-run audit remains available');
     expect(confirmation).toContain('Cancel');
+  });
+
+  it('reports only durably verified bytes for selected assets', () => {
+    const job = {
+      assetIds: [`asset_${'1'.repeat(16)}`, `asset_${'2'.repeat(16)}`],
+    } as ImportJob;
+    const manifest = {
+      assets: [
+        { assetId: job.assetIds[0], name: 'one.csv', role: 'DATA', sizeBytes: 400 },
+        { assetId: job.assetIds[1], name: 'two.csv', role: 'DATA', sizeBytes: 600 },
+        { assetId: `asset_${'3'.repeat(16)}`, name: 'unused.csv', role: 'DATA', sizeBytes: 9000 },
+      ],
+    } as ApprovedManifest;
+    const receipts = [{ assetId: job.assetIds[0], observedSizeBytes: 400 }] as AssetReceipt[];
+    const progress = summarizeImportProgress(job, manifest, receipts);
+
+    expect(progress).toEqual({ completedAssets: 1, totalAssets: 2, verifiedBytes: 400, totalBytes: 1000 });
+    const markup = render(<IngestionProgressView progress={progress} />);
+    expect(markup).toContain('40% verified');
+    expect(markup).toContain('1 of 2 assets');
+    expect(markup).toContain('aria-label="Verified ingestion bytes"');
   });
 });
