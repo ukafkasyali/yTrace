@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CY5JMZXRFWR1BKZXEVCAXK",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "frontend/.env.example",
+    "frontend/README.md",
+    "frontend/src/App.tsx",
+    "frontend/src/assistant/AssistantPanel.tsx",
+    "frontend/src/assistant/predictionBrief.test.ts",
+    "frontend/src/assistant/predictionBrief.ts",
+    "frontend/src/lib/modelWindow.test.ts",
+    "frontend/src/lib/modelWindow.ts",
+    "frontend/src/services/index.test.ts",
+    "frontend/src/services/index.ts",
+    "frontend/src/styles.css",
+    "frontend/vite.config.ts",
+    "inference/runtime.py",
+    "inference/test_runtime.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 259415,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 18997630,
+    "output_tokens": 42142,
+    "api_call_count": 121
+  }
+}
