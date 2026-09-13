@@ -43,6 +43,13 @@ export function ApprovedSourcePagination({ page, totalPages, loading, onPage }: 
   return <nav className="source-pagination" aria-label="Approved source pages"><button className="btn" disabled={page <= 1 || loading} onClick={() => onPage(page - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button className="btn" disabled={page >= totalPages || loading} onClick={() => onPage(page + 1)}>Next</button></nav>;
 }
 
+export function ApprovedSourceStatusWarning({ error, onRetry }: {
+  error: string; onRetry: () => void;
+}) {
+  if (!error) return null;
+  return <div><p className="error-message" role="alert">{error}</p><button className="btn" onClick={onRetry}>Retry ingestion status</button></div>;
+}
+
 function sizeLabel(bytes: number | null) {
   if (bytes === null) return 'Size unavailable';
   if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(1)} kB`;
@@ -110,19 +117,26 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [ingestionError, setIngestionError] = useState('');
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!services.connected) { setLoading(false); return; }
-    let alive = true; setLoading(true); setError('');
+    let alive = true; setLoading(true); setError(''); setIngestionError('');
     services.listApprovedSources(page, 6).then(async result => {
-      const pairs = await Promise.all(result.data.map(async source => [
-        source.approvedSourceId,
-        await services.getImportForSource(source.approvedSourceId),
-      ] as const));
+      let statusUnavailable = false;
+      const pairs = await Promise.all(result.data.map(async source => {
+        try {
+          return [source.approvedSourceId, await services.getImportForSource(source.approvedSourceId)] as const;
+        } catch {
+          statusUnavailable = true;
+          return [source.approvedSourceId, null] as const;
+        }
+      }));
       if (!alive) return;
       setSources(result.data); setTotalPages(result.pagination.totalPages);
       setJobs(Object.fromEntries(pairs));
+      if (statusUnavailable) setIngestionError('Approved sources loaded, but ingestion status is unavailable. Start the ingestion service on port 8002, then retry.');
     }).catch(reason => { if (alive) setError(errorText(reason)); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -184,6 +198,7 @@ export default function ApprovedSourceLibrary({ services, refreshKey = 0, onData
   return <section className="workspace-section approved-library" aria-labelledby="approved-sources-title">
     <div className="section-heading"><div><p className="eyebrow">Saved after review</p><h2 id="approved-sources-title">Approved sources</h2><p>Return to a reviewed source and ingest it once, on demand.</p></div><Database size={20} aria-hidden="true" /></div>
     <ApprovedSourceFeedback connected={services.connected} loading={loading} error={error} empty={sources.length === 0} onRetry={() => setRevision(value => value + 1)} />
+    <ApprovedSourceStatusWarning error={ingestionError} onRetry={() => setRevision(value => value + 1)} />
     {sources.length > 0 && <ul className="approved-source-list">{sources.map(source => {
       const job = jobs[source.approvedSourceId];
       const action = approvedSourceAction(job);

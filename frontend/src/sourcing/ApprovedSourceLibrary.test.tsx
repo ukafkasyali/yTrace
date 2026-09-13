@@ -6,6 +6,7 @@ import {
   approvedSourceAction,
   ApprovedSourceFeedback,
   ApprovedSourcePagination,
+  ApprovedSourceStatusWarning,
   terminalJobNote,
 } from './ApprovedSourceLibrary';
 
@@ -24,6 +25,13 @@ describe('approved source library states', () => {
     expect(markup).toContain('Page 2 of 3');
     expect(markup).toContain('Previous');
     expect(markup).toContain('Next');
+  });
+
+  it('keeps ingestion status failures distinct from the approved-source catalog', () => {
+    const markup = render(<ApprovedSourceStatusWarning error="Approved sources loaded, but ingestion status is unavailable." onRetry={vi.fn()} />);
+    expect(markup).toContain('Approved sources loaded');
+    expect(markup).toContain('Retry ingestion status');
+    expect(markup).toContain('role="alert"');
   });
 
   it('offers the existing result instead of another ingestion when ready', () => {
