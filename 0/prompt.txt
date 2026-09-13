@@ -1,17 +1,1 @@
-Nice! But although I open the dataset, the replay part in the frontend still shows the same thing. also current recording doesn't i think.
-
----
-
-Good. I want to delete the datasets i approved, ingested.
-
----
-
-Good. I want to delete the datasets i approved, ingested. I don t want them to use disk space anymore
-
----
-
-No need to change anything in the UI. Just delete them from my local machine.
-
----
-
 I already merged the PR. But I was thinking, maybe user should be able to approve more than one candidate after a sourcing run.
