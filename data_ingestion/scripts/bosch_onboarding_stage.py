@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 import h5py
@@ -14,16 +15,28 @@ import numpy as np
 from timenet.client import TimeNet
 from timenet.dataset.axis import RegularAxis
 from timenet.types import ClassificationTask, ureg
-from timenet_connectors.datasets.boschresearch.cnc_machining.connector import (
-    BoschCncConnector,
-    _discover,
-    _local_data_root,
-)
-
-from bosch_handoff_contract import DATASET_ID, validate_implementation_handoff
+from bosch_handoff_contract import DATASET_ID
 
 
 _DATASET_ID = DATASET_ID
+_FILENAME = re.compile(
+    r"^(?P<machine>M\d{2})_(?P<timeframe>[A-Za-z]{3}_\d{4})_"
+    r"(?P<process>OP\d{2})_(?P<example>\d+)\.h5$"
+)
+
+
+@dataclass(frozen=True)
+class SourceRecord:
+    """Expected record identity derived independently from one verified source path."""
+
+    path: Path
+    source_file: str
+    record_id: str
+    machine_number: str
+    process_number: str
+    process_health: str
+    timeframe: str
+    example_number: str
 
 
 def _write(path: Path, value: dict[str, Any]) -> None:
@@ -33,26 +46,38 @@ def _write(path: Path, value: dict[str, Any]) -> None:
     )
 
 
-def implementation(handoff_path: Path, output: Path) -> None:
-    """Confirm that the authoritative handoff can reach the native connector."""
-    handoff_bytes = handoff_path.read_bytes()
-    handoff = json.loads(handoff_bytes)
-    metadata = BoschCncConnector().metadata()
-    contract = validate_implementation_handoff(handoff, metadata.dataset_id)
-    _write(
-        output,
-        {
-            **contract,
-            "mode": "reused_existing_native_connector",
-            "connector_class": (
-                "timenet_connectors.datasets.boschresearch.cnc_machining."
-                "connector.BoschCncConnector"
-            ),
-            "dataset_id": metadata.dataset_id,
-            "connector_handoff_sha256": hashlib.sha256(handoff_bytes).hexdigest(),
-            "semantic_input": str(handoff_path),
-        },
-    )
+def _discover_source(source_root: Path) -> list[SourceRecord]:
+    """Derive expected records without importing connector implementation code."""
+    data_root = source_root / "data" if (source_root / "data").is_dir() else source_root
+    records = []
+    for path in sorted(data_root.rglob("*.h5")):
+        relative = path.relative_to(data_root)
+        if len(relative.parts) != 4:
+            raise ValueError(f"unexpected Bosch source hierarchy: {relative}")
+        machine, process, health, filename = relative.parts
+        match = _FILENAME.fullmatch(filename)
+        if (
+            match is None
+            or health not in {"good", "bad"}
+            or match["machine"] != machine
+            or match["process"] != process
+        ):
+            raise ValueError(f"invalid Bosch source identity: {relative}")
+        records.append(
+            SourceRecord(
+                path=path,
+                source_file=relative.as_posix(),
+                record_id=relative.with_suffix("").as_posix(),
+                machine_number=machine,
+                process_number=process,
+                process_health=health,
+                timeframe=match["timeframe"],
+                example_number=match["example"],
+            )
+        )
+    if not records:
+        raise ValueError(f"no Bosch HDF5 records found below {data_root}")
+    return records
 
 
 def load(registry: Path, output: Path) -> None:
@@ -77,18 +102,26 @@ def load(registry: Path, output: Path) -> None:
 
 def verify(source_root: Path, registry: Path, output: Path) -> None:
     """Compare every raw Bosch recording with its loaded TimeF representation."""
-    sources = _discover(_local_data_root(str(source_root)))
+    sources = _discover_source(source_root.resolve())
     dataset = TimeNet(registry=registry).load(_DATASET_ID)
-    records = {record.record_id: record for record in dataset.records}
+    records_by_id = {record.record_id: record for record in dataset.records}
+    records = {}
+    for record in dataset.records:
+        annotations = {item.key: item.value for item in record.annotations}
+        source_file = annotations.get("source_file")
+        if not isinstance(source_file, str) or source_file in records:
+            raise ValueError("TimeF records require unique source_file provenance")
+        records[source_file] = record
     tasks = {
         task.record_ids[0]: task
         for task in dataset.tasks
         if isinstance(task, ClassificationTask) and len(task.record_ids) == 1
     }
     checks = {
-        "record_count": len(records) == len(sources),
+        "record_count": len(records_by_id) == len(sources),
+        "unique_record_ids": len(records_by_id) == len(dataset.records),
         "deterministic_record_mapping": set(records)
-        == {source.record_id for source in sources},
+        == {source.source_file for source in sources},
         "signal_lengths": True,
         "channel_mapping": True,
         "numeric_values": True,
@@ -104,7 +137,7 @@ def verify(source_root: Path, registry: Path, output: Path) -> None:
     }
     compared_values = 0
     for source in sources:
-        record = records[source.record_id]
+        record = records[source.source_file]
         with h5py.File(source.path, "r") as handle:
             raw = np.asarray(handle["vibration_data"])
         series_by_signal = {series.signal: series for series in record.time_series}
@@ -133,7 +166,7 @@ def verify(source_root: Path, registry: Path, output: Path) -> None:
             "example_number": source.example_number,
         }
         checks["metadata"] &= annotations == expected_metadata
-        task = tasks.get(source.record_id)
+        task = tasks.get(record.record_id)
         checks["classification_labels"] &= (
             task is not None
             and task.target == source.process_health
@@ -150,7 +183,7 @@ def verify(source_root: Path, registry: Path, output: Path) -> None:
             "passed": all(checks.values()),
             "dataset_id": _DATASET_ID,
             "source_record_count": len(sources),
-            "timef_record_count": len(records),
+            "timef_record_count": len(records_by_id),
             "compared_numeric_values": compared_values,
             "checks": checks,
             "method": "full raw HDF5 arrays compared with TimeNet.load() output",
@@ -162,9 +195,6 @@ def main() -> int:
     """Run one Bosch reference stage."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
-    implementation_parser = subparsers.add_parser("implementation")
-    implementation_parser.add_argument("--handoff", type=Path, required=True)
-    implementation_parser.add_argument("--output", type=Path, required=True)
     load_parser = subparsers.add_parser("load")
     load_parser.add_argument("--registry", type=Path, required=True)
     load_parser.add_argument("--output", type=Path, required=True)
@@ -173,9 +203,7 @@ def main() -> int:
     verify_parser.add_argument("--registry", type=Path, required=True)
     verify_parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    if args.command == "implementation":
-        implementation(args.handoff, args.output)
-    elif args.command == "load":
+    if args.command == "load":
         load(args.registry, args.output)
     else:
         verify(args.source, args.registry, args.output)

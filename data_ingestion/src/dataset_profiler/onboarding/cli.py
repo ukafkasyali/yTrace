@@ -17,7 +17,7 @@ def _service(args: argparse.Namespace) -> OnboardingOrchestrator:
         raise ValueError(f"unsupported workflow {args.workflow!r}")
     return OnboardingOrchestrator(
         args.jobs_root,
-        bosch_reference_backend(args.timenet_repo),
+        bosch_reference_backend(args.timenet_repo, args.artifact_root),
     )
 
 
@@ -41,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("outputs/onboarding_jobs"),
     )
     parser.add_argument("--timenet-repo", type=Path)
+    parser.add_argument("--artifact-root", type=Path)
     parser.add_argument("--workflow", default="bosch-cnc-reference-v1")
     commands = parser.add_subparsers(dest="command", required=True)
     create = commands.add_parser("create")

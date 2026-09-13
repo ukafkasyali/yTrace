@@ -182,6 +182,17 @@ records an empty provider-acquisition list, and marks the receipt resource as
 `PRELOADED_TIMEF_DEMO` with `publisherAssetsAcquired: false`. Normal and live runs keep the verified
 provider-acquisition path; the demo fallback never claims that cached TimeF bytes are Zenodo files.
 
+Datasets explicitly configured for a native custom connector use the same persisted orchestrator and
+cross into connector implementation only from `CONNECTOR_READY`. `ConnectorCodingAgent` creates a
+detached worktree at the immutable revision in `timenet.lock`, writes a bounded handoff containing the
+verified source paths, `SourceDescriptor`, validated semantic spec, approved implementation overrides,
+and resource inventory, then invokes `codex exec` inside that worktree with TimeNet's existing
+`add-dataset-connector` skill. Its receipt records the base-revision absence probe, generated paths,
+and bounded diff. Changes outside the connector folder, its tests, and a new organization namespace
+initializer fail closed. The orchestrator—not the coding agent—then runs connector tests, TimeF build,
+`TimeNet.load`, and read-back verification. Generic wide/long/NPZ mappings continue through
+`GenericTimeFBuilder`; they do not invoke this capability.
+
 ## Job-oriented onboarding
 
 The approved-source ingestion path now uses this state machine. The Bosch reference preset remains
@@ -190,12 +201,12 @@ experimental; no completed end-to-end Bosch job is archived in this repository.
 human implementation handoff, and native TimeNet workflow in a persisted state machine. Structured
 state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs. The state
 machine is unit-tested, while the Bosch preset additionally requires a separate TimeNet checkout,
-its existing Bosch connector, the source dataset, and locally generated semantic artifacts.
+the source dataset, and locally generated semantic artifacts.
 When frozen profiling evidence is reused, every source file is checked against its recorded size
 and SHA-256, and extra supported data files are rejected. Frozen semantic claims may use only
 evidence IDs returned by their saved bounded trace. Persisted job artifacts are constrained to the
-job directory and verified on resume. The native Bosch stage rejects a human unit override that its
-fixed connector cannot honor.
+job directory and verified on resume. The connector handoff binds the approved implementation-only
+unit override to the validated semantic-spec snapshot.
 
 ```python
 from dataset_profiler.onboarding import (
@@ -219,7 +230,8 @@ An unresolved implementation requirement pauses with
 `status == "needs_human_resolution"`. Resume the same job with
 `service.resolve_blocker(...)` followed by `service.continue_job(job.id)`. The thin `onboard`
 command exposes the same create/status/run/resolve/continue operations. The Bosch preset reuses the
-audited semantic artifacts and native TimeNet connector. It is configured to run connector tests,
+audited semantic artifacts and invokes the connector-writing capability at the pinned TimeNet
+revision. It is configured to run connector tests,
 `timenet-build`, `TimeNet.load()`, and a full raw-to-TimeF comparison; do not claim those stages
 completed until a persisted successful job and its receipts exist.
 

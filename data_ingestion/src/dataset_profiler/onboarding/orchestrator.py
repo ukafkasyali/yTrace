@@ -17,6 +17,7 @@ from ..semantic_spec import (
 )
 from ..semantic_spec.implementation_handoff import HUMAN_CONFIRMATION
 from .backend import OnboardingBackend, StageCommandError
+from .connector_agent import ConnectorAgentError
 from .models import (
     JobBlocker,
     JobFailure,
@@ -400,7 +401,7 @@ class OnboardingOrchestrator:
     def _fail(self, job: OnboardingJob, exc: Exception) -> None:
         failing_stage = job.stage.value
         diagnostics: list[str] = []
-        if isinstance(exc, StageCommandError):
+        if isinstance(exc, (StageCommandError, ConnectorAgentError)):
             path = self.store.write_artifact(
                 job,
                 f"{failing_stage}_failure_receipt",
