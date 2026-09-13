@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2DZG33Y8DVJW3GM0WGT5WS6",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "AGENTS.md",
+    "HANDOFF_PROMPT.md",
+    "README.md",
+    "docs/PARALLEL_AGENT_BRIEFS.md",
+    "docs/submission/PRODUCT_PRIORITIES.md",
+    "entire_demo/demo.md",
+    "entire_demo/demo2.md",
+    "frontend/.gitignore",
+    "model_training/challenge_description.md",
+    "model_training/docs/baseline-presentation-5min.tsx",
+    "tasks/SPEC-configurable-sourcing-requirements.md",
+    "tasks/SPEC-dataset-source-integrity.md",
+    "tasks/SPEC-suitability-levels.md",
+    "tasks/plan.md",
+    "tasks/todo.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6885679,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 405476144,
+    "output_tokens": 916066,
+    "api_call_count": 2791
+  }
+}
