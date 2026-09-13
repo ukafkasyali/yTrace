@@ -61,6 +61,7 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
         run = client.get(f"/api/sourcing-runs/{run_id}")
         assert run.status_code == 200
         assert run.json()["status"] == "AWAITING_APPROVAL"
+        assert run.json()["familyQueriesUsed"] == 1
         assessment = run.json()["assessments"][0]
         assert assessment["suitabilityLevel"] in {"LOW", "MEDIUM", "HIGH"}
         assert assessment["suitabilityFactors"]
@@ -78,7 +79,8 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
 
         report = client.get(f"/api/sourcing-runs/{run_id}/report")
         assert report.status_code == 200
-        assert "batch_count" in report.text
+        assert "Part I" in report.text
+        assert "Part II" in report.text
         assert "suitability" in report.text
         assert "/100" not in report.text
         assert client.get(f"/api/sourcing-runs/{run_id}/manifest").status_code == 409
@@ -410,9 +412,9 @@ def test_refinement_response_persists_an_explicit_decision_delta(tmp_path: Path)
 
         assert refinement.status_code == 200
         outcome = refinement.json()["refinementOutcomes"][0]
-        assert outcome["outcome"] == "RECOMMENDATION_WITHHELD"
+        assert outcome["outcome"] == "RECOMMENDATION_CHANGED"
         assert outcome["rejectedCandidateId"] == candidate_id
-        assert refinement.json()["recommendedCandidateId"] is None
+        assert refinement.json()["recommendedCandidateId"] != candidate_id
         assert refinement.json()["excludedCandidateIds"] == [candidate_id]
         excluded_approval = client.post(
             f"/api/sourcing-runs/{run_id}/approvals",

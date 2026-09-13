@@ -540,6 +540,7 @@ class SourcingRun(WireModel):
     review_iterations_used: int = Field(default=0, ge=0, le=2)
     feedback_allowed: bool = False
     refinement_outcomes: list[RefinementOutcome] = Field(default_factory=list, max_length=2)
+    family_queries_used: int = Field(default=0, ge=0, le=1)
     gap_queries_used: int = Field(default=0, ge=0, le=2)
     tavily_credits_used: int = Field(default=0, ge=0, le=12)
     execution_mode: ExecutionMode = ExecutionMode.LIVE

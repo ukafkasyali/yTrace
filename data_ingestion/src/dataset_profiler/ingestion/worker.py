@@ -112,6 +112,7 @@ class AcquisitionWorker:
         inventory: ResourceInventory | None = None,
         dispatcher: SpecializedDispatcher | None = None,
         onboarding: OnboardingCoordinator | None = None,
+        allow_preloaded_timef_demo: bool = False,
     ):
         self.jobs = jobs
         self.resolver = resolver
@@ -120,6 +121,7 @@ class AcquisitionWorker:
         self.inventory = inventory
         self.dispatcher = dispatcher
         self.onboarding = onboarding
+        self.allow_preloaded_timef_demo = allow_preloaded_timef_demo
 
     def recover_interrupted(self) -> int:
         return self.jobs.requeue_interrupted_acquisitions()
@@ -131,6 +133,9 @@ class AcquisitionWorker:
         try:
             resolved = self.resolver.resolve(job.approved_source_id)
             self._verify_job_manifest(job, resolved)
+            preloaded = self._use_preloaded_timef_demo(job)
+            if preloaded is not None:
+                return preloaded
             assets = {asset.asset_id: asset for asset in resolved.manifest.data_assets}
             if set(job.asset_ids) - assets.keys():
                 raise AcquisitionError("Approved asset selection no longer matches the manifest")
@@ -245,6 +250,43 @@ class AcquisitionWorker:
                 "Acquisition failed because the worker encountered an internal error",
             )
             raise
+
+    def _use_preloaded_timef_demo(self, job: IngestionJob) -> IngestionJob | None:
+        if not self.allow_preloaded_timef_demo or self.dispatcher is None:
+            return None
+        source = self.dispatcher.resolve(job)
+        if source is None:
+            return None
+        result = self.dispatcher.load_prebuilt(source)
+        if result is None:
+            return None
+        manifest_path = result.version_dir / "manifest.json"
+        snapshot_manifest_sha256 = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        receipt = final_receipt_for_build(
+            job,
+            result,
+            mapping_content={
+                **self.dispatcher.receipt_mapping(source),
+                "acquisitionMode": "PRELOADED_TIMEF_DEMO",
+            },
+            resource_content={
+                "mode": "PRELOADED_TIMEF_DEMO",
+                "publisherAssetsAcquired": False,
+                "snapshotManifestSha256": snapshot_manifest_sha256,
+                "disclosure": (
+                    "Locally preloaded derived TimeF artifact; publisher assets were not "
+                    "reacquired during this demo run."
+                ),
+            },
+            receipts=[],
+            registry_root=self.dispatcher.registry_root,
+        )
+        self.jobs.record_final_receipt(receipt)
+        return self.jobs.set_state(
+            job.ingestion_id,
+            IngestionState.READY,
+            "Validated preloaded TimeF demo cache; publisher assets were not reacquired",
+        )
 
     @staticmethod
     def _is_archive(name: str) -> bool:

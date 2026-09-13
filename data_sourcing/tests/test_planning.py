@@ -12,6 +12,7 @@ from data_sourcing.planning import (
     _bounded_model_draft,
     _ModelPlanningDraft,
     deterministic_draft,
+    make_family_hypothesis,
     make_gap_hypothesis,
 )
 
@@ -180,6 +181,29 @@ def test_gap_hypothesis_is_bounded_and_marks_itself() -> None:
     assert hypothesis.id == "hyp_gap_1"
     assert hypothesis.is_gap_query is True
     assert len(hypothesis.query) <= 400
+
+
+def test_family_hypothesis_recognizes_numbered_dataset_parts() -> None:
+    hypothesis = make_family_hypothesis(
+        "Raw Torque Data — Part I: Accidental Collisions",
+        "Find robot collision and intentional contact torque data.",
+    )
+
+    assert hypothesis is not None
+    assert hypothesis.id.startswith("hyp_family_")
+    assert "Raw Torque Data" in hypothesis.query
+    assert "all parts" in hypothesis.query
+    assert len(hypothesis.query) <= 400
+
+
+def test_family_hypothesis_ignores_incidental_use_of_part() -> None:
+    assert (
+        make_family_hypothesis(
+            "Bearing dataset for spare-part inspection",
+            "Find bearing vibration telemetry.",
+        )
+        is None
+    )
 
 
 def test_model_cannot_infer_internal_fault_from_collision_brief(monkeypatch) -> None:

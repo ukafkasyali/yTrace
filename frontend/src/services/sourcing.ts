@@ -177,6 +177,7 @@ export type SourcingRun = {
   reviewIterationsUsed: number;
   feedbackAllowed?: boolean;
   refinementOutcomes: RefinementOutcome[];
+  familyQueriesUsed: number;
   gapQueriesUsed: number;
   tavilyCreditsUsed: number;
   executionMode: 'LIVE' | 'CACHED' | 'PARTIAL';

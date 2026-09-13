@@ -10,8 +10,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import httpx
-from fastapi.testclient import TestClient
-
 from dataset_profiler.ingestion import (
     AcquiredAsset,
     AcquisitionError,
@@ -36,6 +34,7 @@ from dataset_profiler.ingestion.catalog import (
     ImportedRecordSummary,
 )
 from dataset_profiler.ingestion.contracts import ManifestAsset, SourceKind
+from dataset_profiler.ingestion.generic import GenericBuildResult
 from dataset_profiler.ingestion.jobs import FinalReceipt
 from dataset_profiler.ingestion.service import (
     ApprovedSourceResolutionError,
@@ -43,6 +42,7 @@ from dataset_profiler.ingestion.service import (
     ResolvedApprovedSource,
     canonical_payload_sha256,
 )
+from fastapi.testclient import TestClient
 
 CONTRACT_FIXTURE = (
     Path(__file__).resolve().parents[2]
@@ -373,6 +373,54 @@ class AcquisitionWorkerTests(unittest.TestCase):
         self.assertEqual(receipt.provider_locator, "zenodo:123:signals.csv")
         self.assertEqual(receipt.observed_size_bytes, len(self.acquirer.contents[receipt.asset_id]))
         self.assertNotIn(str(Path(self.temporary.name)), receipt.model_dump_json())
+
+    def test_cached_demo_uses_preloaded_timef_without_claiming_provider_acquisition(self) -> None:
+        root = Path(self.temporary.name)
+        version_dir = root / "timef" / "kuka" / "collision-part1" / "1.0.0"
+        version_dir.mkdir(parents=True)
+        (version_dir / "manifest.json").write_text('{"dataset_id":"kuka/collision-part1"}')
+
+        class PreloadedDispatcher:
+            registry_root = root / "timef"
+
+            @staticmethod
+            def resolve(job):
+                return object()
+
+            @staticmethod
+            def load_prebuilt(source):
+                return GenericBuildResult(
+                    dataset_id="kuka/collision-part1",
+                    dataset_version="1.0.0",
+                    version_dir=version_dir,
+                    record_count=206,
+                    series_count=2_884,
+                    value_count=100,
+                    validation_sha256="a" * 64,
+                )
+
+            @staticmethod
+            def receipt_mapping(source):
+                return {"schemaVersion": "1.0", "layout": "SPECIALIZED_CONNECTOR"}
+
+        worker = AcquisitionWorker(
+            self.service.jobs,
+            self.resolver,
+            self.acquirer,
+            dispatcher=PreloadedDispatcher(),
+            allow_preloaded_timef_demo=True,
+        )
+
+        result = worker.run_once()
+
+        assert result is not None
+        self.assertEqual(result.state, IngestionState.READY)
+        self.assertEqual(self.acquirer.calls, [])
+        receipt = self.service.jobs.get_final_receipt(result.ingestion_id)
+        assert receipt is not None
+        self.assertEqual(receipt.assets, [])
+        self.assertEqual(receipt.resource["mode"], "PRELOADED_TIMEF_DEMO")
+        self.assertFalse(receipt.resource["publisherAssetsAcquired"])
 
     def test_retry_reuses_persisted_verified_content(self) -> None:
         second_id = "asset_1111111111111111"

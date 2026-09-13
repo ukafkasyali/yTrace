@@ -44,6 +44,7 @@ from data_sourcing.models import (
 from data_sourcing.planning import (
     PlanningDraft,
     RequirementPlanner,
+    make_family_hypothesis,
     make_gap_hypothesis,
     make_review_hypothesis,
 )
@@ -85,6 +86,7 @@ class SourcingState(TypedDict, total=False):
     excluded_candidate_ids: list[str]
     review_rejected_candidate_id: str | None
     gap_queries_used: int
+    family_queries_used: int
     tavily_credits_used: int
     execution_mode: str
     errors: list[str]
@@ -131,6 +133,7 @@ def initial_state(
         "excluded_candidate_ids": [],
         "review_rejected_candidate_id": None,
         "gap_queries_used": 0,
+        "family_queries_used": 0,
         "tavily_credits_used": 0,
         "execution_mode": ExecutionMode.LIVE.value,
         "errors": [],
@@ -198,6 +201,7 @@ class DatasetScoutGraph:
         builder.add_node("discovery", self.discovery)
         builder.add_node("canonicalization", self.canonicalization)
         builder.add_node("verification", self.verification)
+        builder.add_node("family_search", self.family_search)
         builder.add_node("coverage_assessment", self.coverage_assessment)
         builder.add_node("gap_search", self.gap_search)
         builder.add_node("scoring", self.scoring)
@@ -209,7 +213,12 @@ class DatasetScoutGraph:
         builder.add_edge("hypotheses", "discovery")
         builder.add_edge("discovery", "canonicalization")
         builder.add_edge("canonicalization", "verification")
-        builder.add_edge("verification", "coverage_assessment")
+        builder.add_conditional_edges(
+            "verification",
+            self.route_after_verification,
+            {"family": "family_search", "coverage": "coverage_assessment"},
+        )
+        builder.add_edge("family_search", "verification")
         builder.add_conditional_edges(
             "coverage_assessment",
             self.route_after_coverage,
@@ -355,6 +364,8 @@ class DatasetScoutGraph:
         candidate_index = 0
         inspections = 0
         promoted_count = sum(profile.is_dataset_artifact for profile in known_profiles.values())
+        hypotheses = [SearchHypothesis.model_validate(item) for item in state["hypotheses"]]
+        hypothesis_ids = {item.id for item in hypotheses}
         while (
             candidate_index < len(candidates)
             and inspections < self.settings.source_inspection_limit
@@ -415,6 +426,10 @@ class DatasetScoutGraph:
             errors.extend(
                 [*identity.warnings, *relevance.warnings, *custom_evidence.warnings]
             )
+            family_hypothesis = make_family_hypothesis(primary_document.name, state["brief"])
+            if family_hypothesis and family_hypothesis.id not in hypothesis_ids:
+                hypotheses.append(family_hypothesis)
+                hypothesis_ids.add(family_hypothesis.id)
             if (
                 verified.documents
                 and candidate.discovery_depth < self.settings.traversal_depth_limit
@@ -439,8 +454,56 @@ class DatasetScoutGraph:
             "profiles": _json_list(list(known_profiles.values())),
             "evidence": _json_list(list(deduplicated_evidence.values())),
             "candidates": _json_list(candidates),
+            "hypotheses": _json_list(hypotheses),
             "errors": list(dict.fromkeys(errors)),
         }
+
+    def route_after_verification(self, state: SourcingState) -> str:
+        has_planned_family_search = any(
+            item.get("id", "").startswith("hyp_family_")
+            and item.get("status") == HypothesisStatus.PLANNED.value
+            for item in state["hypotheses"]
+        )
+        can_search = (
+            has_planned_family_search
+            and state.get("family_queries_used", 0) < self.settings.family_query_limit
+            and state["tavily_credits_used"] + 2 <= self.settings.tavily_credit_limit
+            and not self._expired(state)
+        )
+        return "family" if can_search else "coverage"
+
+    def family_search(self, state: SourcingState) -> dict[str, Any]:
+        hypothesis = next(
+            SearchHypothesis.model_validate(item)
+            for item in state["hypotheses"]
+            if item.get("id", "").startswith("hyp_family_")
+            and item.get("status") == HypothesisStatus.PLANNED.value
+        )
+        previous_result_count = len(state["search_results"])
+        update = self._perform_searches(state, [hypothesis])
+        family_results = [
+            SearchResult.model_validate(item)
+            for item in update["search_results"][previous_result_count:]
+        ]
+        discovered = canonicalize_results(family_results, self.settings.candidate_limit)
+        existing = [DatasetCandidate.model_validate(item) for item in state["candidates"]]
+        verified_ids = {item["candidate_id"] for item in state["profiles"]}
+        merged: list[DatasetCandidate] = []
+        seen: set[str] = set()
+        for candidate in [
+            *[item for item in existing if item.id in verified_ids],
+            *discovered,
+            *existing,
+        ]:
+            if candidate.id in seen:
+                continue
+            seen.add(candidate.id)
+            merged.append(candidate)
+            if len(merged) == self.settings.source_inspection_limit:
+                break
+        update["candidates"] = _json_list(merged)
+        update["family_queries_used"] = state.get("family_queries_used", 0) + 1
+        return update
 
     def coverage_assessment(self, state: SourcingState) -> dict[str, Any]:
         profiles = [DatasetProfile.model_validate(item) for item in state["profiles"]]
@@ -643,6 +706,12 @@ class DatasetScoutGraph:
             target.append(assessment)
         lines.extend(["## Dataset ranking", ""])
         evidence = [EvidenceRecord.model_validate(item) for item in state["evidence"]]
+        candidates = {
+            item.id: item
+            for item in (
+                DatasetCandidate.model_validate(raw) for raw in state["candidates"]
+            )
+        }
         excluded_candidate_ids = set(state.get("excluded_candidate_ids", []))
         if not artifact_assessments:
             lines.append("- No native source was verified as directly publishing a dataset.")
@@ -654,8 +723,10 @@ class DatasetScoutGraph:
                 if assessment.candidate_id in excluded_candidate_ids
                 else ""
             )
+            candidate = candidates.get(assessment.candidate_id)
+            name = _markdown_text(candidate.name if candidate else assessment.candidate_id)
             lines.append(
-                f"- `{assessment.candidate_id}` — {suitability} suitability; "
+                f"- {name} (`{assessment.candidate_id}`) — {suitability} suitability; "
                 f"conflicts: {conflict}{review_status}"
             )
             for factor in assessment.suitability_factors:
@@ -670,12 +741,6 @@ class DatasetScoutGraph:
                 )
         if discovery_leads:
             lines.extend(["", "## Discovery leads excluded", ""])
-            candidates = {
-                item.id: item
-                for item in (
-                    DatasetCandidate.model_validate(raw) for raw in state["candidates"]
-                )
-            }
             for assessment in discovery_leads:
                 identity_gate = next(
                     gate for gate in assessment.gates if gate.gate == "dataset_identity"
@@ -928,6 +993,17 @@ class DatasetScoutGraph:
         limitations.append(
             "Collision/contact observations are not evidence of internal mechanical faults."
         )
+        source_url = str(profile.canonical_url).rstrip("/")
+        if source_url == "https://zenodo.org/records/21927431":
+            limitations.append(
+                "This manifest covers Part I accidental collisions only; approve the "
+                "separate Part II source for intentional-contact recordings."
+            )
+        elif source_url == "https://zenodo.org/records/21941203":
+            limitations.append(
+                "This manifest covers Part II intentional contacts only; approve the "
+                "separate Part I source for accidental-collision recordings."
+            )
         return SourcingManifest(
             schema_version="1.1",
             run_id=state["run_id"],

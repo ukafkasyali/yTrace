@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     openai_model: str | None = None
 
     initial_query_limit: int = Field(default=3, ge=1, le=3)
+    family_query_limit: int = Field(default=1, ge=0, le=1)
     gap_query_limit: int = Field(default=2, ge=0, le=2)
     candidate_limit: int = Field(default=8, ge=1, le=8)
     source_inspection_limit: int = Field(default=16, ge=1, le=24)

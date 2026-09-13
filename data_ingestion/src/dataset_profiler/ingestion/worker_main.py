@@ -46,6 +46,10 @@ def main() -> int:
         inventory=ResourceInventory(),
         dispatcher=dispatcher,
         onboarding=onboarding,
+        allow_preloaded_timef_demo=(
+            os.environ.get("INGESTION_ALLOW_PRELOADED_TIMEF_DEMO", "").casefold()
+            in {"1", "true", "yes"}
+        ),
     )
     onboarder = OnboardingWorker(onboarding)
     try:

@@ -205,6 +205,26 @@ def test_identity_judge_promotes_a_native_dataset_with_direct_measurements() -> 
     assert result.evidence[0].claim_key == "dataset_identity"
 
 
+def test_identity_judge_promotes_a_hugging_face_telemetry_benchmark() -> None:
+    judge = EvidenceRelevanceJudge(settings())
+    document = NativeDocument(
+        source_url="https://huggingface.co/datasets/FactoryBench/FactoryBench",
+        source_kind=SourceKind.HUGGING_FACE,
+        name="FactoryBench",
+        revision="2561c2c90560ae3df90ef8136f774faa5fb4b4e3",
+        text=(
+            "FactoryBench is a benchmark for evaluating machine-behavior reasoning in "
+            "time-series models over industrial robotic telemetry and raw signals."
+        ),
+        files=[NativeFile(name="factorywave/kuka_signals.parquet", size=424_166_979)],
+    )
+
+    result = judge.evaluate_dataset_identity("ds_111111111111", document)
+
+    assert result.is_dataset_artifact is True
+    assert result.evidence[0].claim_key == "dataset_identity"
+
+
 def test_acquisition_gate_fails_when_cached_data_exceeds_request_bound() -> None:
     candidate = canonicalize_results(
         TavilySearchAdapter(settings())
@@ -412,6 +432,59 @@ def test_search_snippet_links_cannot_contribute_native_verification_evidence() -
 
     assert verified.profile.source_kinds == [SourceKind.GITHUB]
     assert set(requested_hosts) == {"api.github.com"}
+
+
+def test_zenodo_adapter_preserves_dataset_family_relations() -> None:
+    payload = {
+        "title": "Machine Measurements — Part I",
+        "revision": 3,
+        "metadata": {
+            "description": "Robot torque time-series dataset with documented columns.",
+            "license": {"id": "cc-by-4.0"},
+            "related_identifiers": [
+                {
+                    "identifier": "10.5281/zenodo.202",
+                    "relation": "isPartOf",
+                    "resource_type": "dataset",
+                },
+                {
+                    "identifier": "https://zenodo.org/records/303",
+                    "relation": "hasPart",
+                    "resource_type": "dataset",
+                },
+                {
+                    "identifier": "10.1234/example.paper",
+                    "relation": "isDocumentedBy",
+                    "resource_type": "publication-article",
+                },
+            ],
+        },
+        "files": [
+            {
+                "key": "signals.csv",
+                "size": 500,
+                "links": {"self": "https://zenodo.org/api/files/101/signals.csv"},
+            }
+        ],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_111111111111",
+        name="Machine Measurements — Part I",
+        canonical_url="https://zenodo.org/records/101",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert set(verified.documents[0].related_urls) == {
+        "https://zenodo.org/records/202",
+        "https://zenodo.org/records/303",
+    }
 
 
 def test_oversized_github_tree_does_not_discard_linked_native_record() -> None:
@@ -679,13 +752,18 @@ def test_hugging_face_native_adapter_contract() -> None:
             {
                 "rfilename": "train.parquet",
                 "size": 300,
-                "lfs": {"oid": "b" * 64, "size": 300},
+                "lfs": {"sha256": "b" * 64, "size": 300, "pointerSize": 131},
             }
         ],
     }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["blobs"] == "true"
+        return httpx.Response(200, json=payload)
+
     verifier = NativeVerifier(
         settings(),
-        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        httpx.Client(transport=httpx.MockTransport(handler)),
         validate_dns=False,
     )
     candidate = DatasetCandidate(

@@ -174,6 +174,14 @@ combined part archive or the complete approved set of separately published batch
 archives retain stable `batch-XX/run` provenance and incomplete part selections fail closed. These
 connectors retain seven torque and seven position series at 1 kHz and keep accidental-collision and
 intentional-contact publisher annotations distinct.
+
+For an offline demonstration only, the worker accepts `INGESTION_ALLOW_PRELOADED_TIMEF_DEMO=true`.
+This opt-in applies solely to those two exact KUKA identities and only when their complete TimeF
+versions already exist below `INGESTION_DATA_DIR/timef`. The worker reloads and validates the data,
+records an empty provider-acquisition list, and marks the receipt resource as
+`PRELOADED_TIMEF_DEMO` with `publisherAssetsAcquired: false`. Normal and live runs keep the verified
+provider-acquisition path; the demo fallback never claims that cached TimeF bytes are Zenodo files.
+
 ## Job-oriented onboarding
 
 The approved-source ingestion path now uses this state machine. The Bosch reference preset remains

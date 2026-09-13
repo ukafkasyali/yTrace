@@ -183,6 +183,38 @@ def _object_items(value: object) -> list[dict]:
     return [item for item in value if isinstance(item, dict)]
 
 
+_ZENODO_FAMILY_RELATIONS = {
+    "continues",
+    "haspart",
+    "iscontinuedby",
+    "ispartof",
+    "issupplementedby",
+    "issupplementto",
+}
+# Zenodo's record metadata uses DataCite-style related_identifiers with relation values.
+# Source: https://developers.zenodo.org/#deposit-metadata
+_ZENODO_DOI = re.compile(
+    r"(?:https?://doi\.org/)?10\.5281/zenodo\.(\d+)",
+    re.IGNORECASE,
+)
+
+
+def _zenodo_family_urls(metadata: dict) -> list[str]:
+    urls: list[str] = []
+    for relation in _object_items(metadata.get("related_identifiers")):
+        if str(relation.get("relation", "")).casefold() not in _ZENODO_FAMILY_RELATIONS:
+            continue
+        identifier = str(relation.get("identifier", "")).strip()
+        source = canonical_source_url(identifier)
+        if source and source[1] is SourceKind.ZENODO:
+            urls.append(source[0])
+            continue
+        match = _ZENODO_DOI.fullmatch(identifier)
+        if match:
+            urls.append(f"https://zenodo.org/records/{match.group(1)}")
+    return list(dict.fromkeys(urls))
+
+
 def _evidence_id(candidate_id: str, source_url: str, claim: str, value: str) -> str:
     material = "|".join((candidate_id, source_url, claim, value))
     return f"ev_{hashlib.sha256(material.encode()).hexdigest()[:16]}"
@@ -623,6 +655,7 @@ class NativeVerifier:
         licence = metadata.get("license") or {}
         batch_files = [file for file in files if "batch-" in file.name.casefold()]
         related = _related_urls(text)
+        related.extend(_zenodo_family_urls(metadata))
         code_url = (metadata.get("custom") or {}).get("code:codeRepository")
         if isinstance(code_url, str) and canonical_source_url(code_url):
             related.append(canonical_source_url(code_url)[0])
@@ -634,13 +667,23 @@ class NativeVerifier:
             license_id=licence.get("id"),
             text=text,
             files=files,
-            related_urls=list(dict.fromkeys(related)),
+            related_urls=list(
+                dict.fromkeys(
+                    item
+                    for item in related
+                    if item.rstrip("/") != f"https://zenodo.org/records/{record_id}"
+                )
+            ),
             batch_count=len(batch_files) or None,
         )
 
     def _hugging_face(self, url: str) -> NativeDocument:
         namespace = "/".join(urlsplit(url).path.strip("/").split("/")[1:3])
-        payload = self._get_json(f"https://huggingface.co/api/datasets/{namespace}")
+        # Hugging Face omits sibling sizes and LFS details unless file metadata is requested.
+        # Source: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.dataset_info
+        payload = self._get_json(
+            f"https://huggingface.co/api/datasets/{namespace}?blobs=true"
+        )
         card = payload.get("cardData") or {}
         siblings = _object_items(payload.get("siblings"))
         files = []
@@ -650,8 +693,8 @@ class NativeVerifier:
         for item in siblings:
             lfs = item.get("lfs") if isinstance(item.get("lfs"), dict) else {}
             name = str(item.get("rfilename", ""))
-            lfs_oid = lfs.get("oid")
-            checksum = _source_checksum(f"sha256:{lfs_oid}") if lfs_oid else None
+            lfs_sha256 = lfs.get("sha256") or lfs.get("oid")
+            checksum = _source_checksum(f"sha256:{lfs_sha256}") if lfs_sha256 else None
             files.append(
                 NativeFile(
                     name=name,
@@ -676,6 +719,6 @@ class NativeVerifier:
             name=str(payload.get("id", namespace)),
             revision=revision,
             license_id=card.get("license"),
-            text=str(payload.get("description") or card),
+            text=_plain_text(str(payload.get("description") or card)),
             files=files,
         )

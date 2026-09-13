@@ -106,6 +106,54 @@ class SpecializedDispatcher:
                     batch_roots,
                     self.registry_root,
                 )
+        return self._validate_existing(source, version_dir)
+
+    def load_prebuilt(self, source: SpecializedSource) -> GenericBuildResult | None:
+        """Validate an explicitly preloaded demo artifact without claiming acquisition."""
+        version_dir = self.registry_root / source.dataset_id / "1.0.0"
+        if not version_dir.exists():
+            return None
+        self._validate_prebuilt_manifest(source, version_dir)
+        return self._validate_existing(source, version_dir)
+
+    @staticmethod
+    def _validate_prebuilt_manifest(
+        source: SpecializedSource,
+        version_dir: Path,
+    ) -> None:
+        manifest_path = version_dir / "manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            metadata = manifest["metadata"]
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+            raise SpecializedDispatchError(
+                "Preloaded KUKA TimeF manifest is missing or invalid"
+            ) from exc
+
+        identity = (
+            manifest.get("dataset_id"),
+            metadata.get("dataset_id"),
+            metadata.get("dataset_version"),
+            metadata.get("source_url"),
+            str(metadata.get("license", "")).casefold(),
+        )
+        expected = (
+            source.dataset_id,
+            source.dataset_id,
+            "1.0.0",
+            source.canonical_url,
+            source.dataset_license_id.casefold(),
+        )
+        if identity != expected:
+            raise SpecializedDispatchError(
+                "Preloaded KUKA TimeF identity does not match the approved source"
+            )
+
+    def _validate_existing(
+        self,
+        source: SpecializedSource,
+        version_dir: Path,
+    ) -> GenericBuildResult:
         loaded = TimeNet(registry=self.registry_root).load(source.dataset_id, auto_build=False)
         summary = []
         value_count = 0

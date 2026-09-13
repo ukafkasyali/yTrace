@@ -140,6 +140,37 @@ def make_review_hypothesis(
     )
 
 
+_NUMBERED_PART = re.compile(
+    r"\bpart\s+(?:\d+|[ivxlcdm]+)(?:\s*(?:of|/)\s*\d+)?\b",
+    re.IGNORECASE,
+)
+
+
+def make_family_hypothesis(name: str, brief: str) -> SearchHypothesis | None:
+    """Create one bounded sibling search when a native title declares a numbered part."""
+    match = _NUMBERED_PART.search(name)
+    if match is None:
+        return None
+    before = name[: match.start()].strip(" -—–:|()[]")
+    after = name[match.end() :].strip(" -—–:|()[]")
+    family_name = before if len(before) >= 3 else after
+    if len(family_name) < 3:
+        return None
+    context = " ".join(brief.split())[:180]
+    family_key = family_name.casefold()
+    digest = hashlib.sha256(family_key.encode()).hexdigest()[:12]
+    return SearchHypothesis(
+        id=f"hyp_family_{digest}",
+        rationale=(
+            "The verified native title declares a numbered part; search once for separately "
+            "published members of the same dataset family."
+        ),
+        query=(
+            f'"{family_name}" {context} dataset all parts GitHub Zenodo Hugging Face'
+        )[:400],
+    )
+
+
 class RequirementPlanner:
     def __init__(self, settings: Settings):
         self.settings = settings
