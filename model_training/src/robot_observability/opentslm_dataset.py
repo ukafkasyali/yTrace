@@ -10,6 +10,63 @@ from robot_observability.prepared import PreparedSplit
 from robot_observability.qa import INTENTS, PROMPTS, answer_payload, channel_descriptions, target_text
 
 
+def build_sample(
+    signal,
+    metadata: dict[str, object],
+    intent: str,
+    *,
+    seed: int,
+    eos_token: str,
+    output_format: str,
+) -> dict[str, object]:
+    """Render one signal/metadata pair into the OpenTSLM sample contract."""
+    import torch
+
+    variants = PROMPTS[intent]
+    digest = hashlib.sha256(f"{seed}:{metadata['record_id']}:{intent}".encode()).digest()
+    question = variants[int.from_bytes(digest[:4], "big") % len(variants)]
+    schema_keys = list(answer_payload(metadata, intent))
+    schema = json.dumps(schema_keys, separators=(",", ":"))
+    if output_format == "rationale_then_answer":
+        response_contract = (
+            "First write `Rationale:` as one natural paragraph grounded in temporal and joint "
+            "patterns. Do not use headings inside it or name the interaction class before the "
+            f"final line. End with `Answer:` and one closed compact JSON object containing only {schema}. "
+        )
+    else:
+        response_contract = (
+            f"Respond with `Answer:` and one closed compact JSON object containing only {schema}. "
+        )
+    tensor = (
+        torch.from_numpy(signal.astype("float32", copy=True))
+        if not isinstance(signal, torch.Tensor)
+        else signal.detach().clone().float()
+    )
+    return {
+        "pre_prompt": (
+            "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
+            "Use the numeric time series as primary evidence. "
+        ),
+        "time_series_text": channel_descriptions(metadata),
+        "time_series": tensor,
+        "post_prompt": (
+            f"\nQuestion: {question}\n"
+            f"{response_contract}"
+            "Use JSON types exactly: booleans are true/false, numbers are unquoted, arrays are "
+            "arrays, and missing values are null. Never quote a boolean, number, or null. "
+            + (
+                ""
+                if output_format == "rationale_then_answer"
+                else "Then write one short `Evidence:` sentence."
+            )
+        ),
+        "answer": target_text(metadata, intent, output_format) + eos_token,
+        "record_id": metadata["record_id"],
+        "intent": intent,
+        "metadata": metadata,
+    }
+
+
 class RobotQADataset:
     """A torch-compatible dataset without importing torch at module import time."""
 
@@ -40,8 +97,6 @@ class RobotQADataset:
         return len(self.prepared) * multiplier
 
     def __getitem__(self, index: int) -> dict[str, object]:
-        import torch
-
         multiplier = (
             len(INTENTS) if self.mode == "all_intents" else 2 if self.mode == "summary_plus_atomic" else 1
         )
@@ -60,41 +115,11 @@ class RobotQADataset:
             intent = INTENTS[1 + int.from_bytes(digest[:4], "big") % (len(INTENTS) - 1)]
         else:
             intent = "summary"
-        variants = PROMPTS[intent]
-        digest = hashlib.sha256(f"{self.seed}:{metadata['record_id']}:{intent}".encode()).digest()
-        question = variants[int.from_bytes(digest[:4], "big") % len(variants)]
-        schema_keys = list(answer_payload(metadata, intent))
-        schema = json.dumps(schema_keys, separators=(",", ":"))
-        if self.output_format == "rationale_then_answer":
-            response_contract = (
-                "First write `Rationale:` as one natural paragraph grounded in temporal and joint "
-                "patterns. Do not use headings inside it or name the interaction class before the "
-                f"final line. End with `Answer:` and one closed compact JSON object containing only {schema}. "
-            )
-        else:
-            response_contract = (
-                f"Respond with `Answer:` and one closed compact JSON object containing only {schema}. "
-            )
-        return {
-            "pre_prompt": (
-                "You are analyzing synchronized KUKA LWR4+ external-joint-torque telemetry. "
-                "Use the numeric time series as primary evidence. "
-            ),
-            "time_series_text": channel_descriptions(metadata),
-            "time_series": torch.from_numpy(signal.astype("float32", copy=True)),
-            "post_prompt": (
-                f"\nQuestion: {question}\n"
-                f"{response_contract}"
-                "Use JSON types exactly: booleans are true/false, numbers are unquoted, arrays are "
-                "arrays, and missing values are null. Never quote a boolean, number, or null. "
-                + (
-                    ""
-                    if self.output_format == "rationale_then_answer"
-                    else "Then write one short `Evidence:` sentence."
-                )
-            ),
-            "answer": target_text(metadata, intent, self.output_format) + self.eos_token,
-            "record_id": metadata["record_id"],
-            "intent": intent,
-            "metadata": metadata,
-        }
+        return build_sample(
+            signal,
+            metadata,
+            intent,
+            seed=self.seed,
+            eos_token=self.eos_token,
+            output_format=self.output_format,
+        )

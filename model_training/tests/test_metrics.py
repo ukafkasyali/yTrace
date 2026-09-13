@@ -6,6 +6,10 @@ def test_parse_last_answer_object() -> None:
     assert parse_answer(text) == {"contact": False, "onset_ms": None}
 
 
+def test_parse_rejects_duplicate_json_keys() -> None:
+    assert parse_answer('Answer: {"contact":true,"contact":false}') is None
+
+
 def test_metrics_include_invalid_outputs() -> None:
     rows = [
         {"target": {"contact": True}, "output": 'Answer: {"contact":true}'},
@@ -51,6 +55,22 @@ def test_schema_and_value_fit_are_distinct() -> None:
     assert metrics["answer_exact_match"] == 0.0
 
 
+def test_strict_schema_rejects_invalid_domain_values() -> None:
+    rows = [
+        {
+            "target": {"event_type": "intentional"},
+            "prediction": {"event_type": ""},
+        },
+        {
+            "target": {"strongest_joint": "J2"},
+            "prediction": {"strongest_joint": ""},
+        },
+    ]
+    metrics = evaluate_rows(rows)
+    assert metrics["schema_key_exact_match"] == 1.0
+    assert metrics["schema_exact_match"] == 0.0
+
+
 def test_affected_joint_and_evidence_interval_metrics() -> None:
     rows = [
         {
@@ -73,3 +93,17 @@ def test_affected_joint_and_evidence_interval_metrics() -> None:
     assert metrics["evidence_start_mae_ms"] == 20.0
     assert metrics["evidence_end_mae_ms"] == 20.0
     assert metrics["evidence_interval_iou"] == 180 / 220
+
+
+def test_joint_metrics_report_macro_and_pooled_tail_accuracy() -> None:
+    rows = [
+        {"target": {"strongest_joint": "J1"}, "prediction": {"strongest_joint": "J1"}},
+        {"target": {"strongest_joint": "J1"}, "prediction": {"strongest_joint": "J1"}},
+        {"target": {"strongest_joint": "J5"}, "prediction": {"strongest_joint": "J1"}},
+        {"target": {"strongest_joint": "J7"}, "prediction": {"strongest_joint": "J7"}},
+    ]
+    metrics = evaluate_rows(rows)
+    assert metrics["strongest_joint_accuracy"] == 0.75
+    assert metrics["strongest_joint_macro_accuracy"] == 2 / 3
+    assert metrics["strongest_joint_tail_accuracy"] == 0.5
+    assert metrics["strongest_joint_tail_n"] == 2
