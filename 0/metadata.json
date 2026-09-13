@@ -1,0 +1,80 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2D1W5CM83RWDZ0XQV6XSA5H",
+  "session_id": "01a09736-d5c6-7cc3-a099-0521c0b02bd2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T09:35:10.42296Z",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "README.md",
+    "docs/submission/DEMO.md",
+    "docs/submission/evaluation/v6-validation/README.md",
+    "frontend/src/App.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "27c3da8d60f0",
+  "checkpoint_transcript_start": 19594,
+  "transcript_lines_at_start": 19594,
+  "compact_transcript_start": 2593,
+  "token_usage": {
+    "input_tokens": 113835,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3830352,
+    "output_tokens": 6526,
+    "api_call_count": 26
+  },
+  "session_metrics": {
+    "turn_count": 20
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T09:35:04.215834Z",
+    "agent_lines": 8,
+    "agent_removed": 8,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 8,
+    "total_lines_changed": 16,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 92617,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 85,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 269,
+        ".pi/extensions/entire/index.ts": 147,
+        "frontend/.vite/deps/_metadata.json": 55,
+        "frontend/.vite/deps/chunk-G3PMV62Z.js": 35,
+        "frontend/.vite/deps/chunk-G3PMV62Z.js.map": 7,
+        "frontend/.vite/deps/chunk-HO4WEAOL.js": 1029,
+        "frontend/.vite/deps/chunk-HO4WEAOL.js.map": 7,
+        "frontend/.vite/deps/chunk-MCK4J7S4.js": 41887,
+        "frontend/.vite/deps/chunk-MCK4J7S4.js.map": 7,
+        "frontend/.vite/deps/lucide-react.js": 24250,
+        "frontend/.vite/deps/lucide-react.js.map": 7,
+        "frontend/.vite/deps/package.json": 3,
+        "frontend/.vite/deps/react-dom_client.js": 22555,
+        "frontend/.vite/deps/react-dom_client.js.map": 7,
+        "frontend/.vite/deps/react.js": 5,
+        "frontend/.vite/deps/react.js.map": 7,
+        "frontend/.vite/deps/react_jsx-dev-runtime.js": 286,
+        "frontend/.vite/deps/react_jsx-dev-runtime.js.map": 7,
+        "frontend/.vite/deps/three.js": 849,
+        "frontend/.vite/deps/three.js.map": 7,
+        "frontend/.vite/deps/three_addons_controls_OrbitControls__js.js": 857,
+        "frontend/.vite/deps/three_addons_controls_OrbitControls__js.js.map": 7
+      }
+    }
+  ]
+}
