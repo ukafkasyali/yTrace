@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C9NBXKYDM6RZWHH00PVCME",
+  "strategy": "manual-commit",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "docs/submission/CHECKPOINT_HANDOFF.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 4019,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 899871,
+    "output_tokens": 1771,
+    "api_call_count": 5
+  }
+}
