@@ -3,6 +3,7 @@ import { ArrowUp, ArrowUpRight, CircleStop, Cpu, Download, MessageSquare, Rotate
 import { predictionBrief, predictionCue, structuredPrediction, type PredictionCue } from './predictionBrief';
 import { reviewPrediction } from './predictionReview';
 import { downloadInvestigationJson, downloadInvestigationMarkdown, type InvestigationAnswer } from './investigationReport';
+import { investigationStorageKey, persistInvestigation, restoreInvestigation } from './investigationSession';
 import { checkpointLabel, fitModelWindow, modelWindowIssue } from '../lib/modelWindow';
 import { analyzeWindow } from '../lib/data';
 import { intervalLabel } from '../lib/format';
@@ -10,7 +11,7 @@ import type { DemoData, EvidenceLink, Interval } from '../types';
 import type { Evidence, Services } from '../services';
 import type { ModelRegistry } from '../services/useModelRegistry';
 
-type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled' };
+type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled'; restored?: boolean };
 type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction: PredictionCue) => void };
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
@@ -32,7 +33,11 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const fitHorizon = Math.min(Math.floor(availableThrough * 1000) / 1000, data.detail.endSeconds);
   const fittedWindow = useMemo(() => fitModelWindow(data, interval, fitHorizon), [data, interval, fitHorizon]);
   const [exportStatus, setExportStatus] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const sessionKey = investigationStorageKey(datasetId, data.recording.id);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = restoreInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, data.recording.durationSeconds);
+    return saved ? [{ ...saved, telemetry: data, restored: true }] : [];
+  });
   const [busy, setBusy] = useState(false);
   const [stopping, setStopping] = useState(false);
   const assistantAvailable = services.connected && !registry.loading && !registry.error && registry.models.some(model => model.id === 'assistant' && model.available && model.capabilities.includes('language'));
@@ -41,6 +46,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   const body = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
   useEffect(() => { const container = body.current; const latest = container?.lastElementChild as HTMLElement | null; if (!messages.length || !container || !latest) return; container.scrollTo({ top: latest.offsetTop - container.offsetTop, behavior: 'instant' }); }, [messages.length]);
+  useEffect(() => {
+    const latest = [...messages].reverse().find(message => message.status === 'complete');
+    if (!latest) return;
+    const { telemetry: _telemetry, restored: _restored, ...persistable } = latest;
+    persistInvestigation(typeof window === 'undefined' ? undefined : window.sessionStorage, sessionKey, data.recording.id, persistable);
+  }, [messages, sessionKey, data.recording.id]);
   useEffect(() => () => { const job = active.current; job?.controller.abort(); if (job?.queryId) void services.cancelQuery(job.queryId).catch(() => undefined); active.current = null; }, [services]);
   function update(id: string, changes: Partial<Message> | ((m: Message) => Partial<Message>)) { setMessages(ms => ms.map(m => m.id === id ? { ...m, ...(typeof changes === 'function' ? changes(m) : changes) } : m)); }
   function evidenceFrom(e: Evidence): EvidenceLink[] {
@@ -112,6 +123,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
         return <article className="conversation-turn" key={m.id}>
           <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>
           <div className="assistant-answer"><div>
+            {m.restored && <div className="answer-source">Restored from this browser session.</div>}
             {m.status !== 'complete' && <div className="answer-source">{m.status === 'running' ? 'Reading the selected telemetry…' : m.status}</div>}
             <div className={m.status === 'error' ? 'error-message' : ''}>
               {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}{review && <section className="review-note"><h3>Cross-check</h3><p>{review.note}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
