@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -21,9 +22,10 @@ from dataset_profiler.semantic_spec import (
 )
 
 
-_ROOT = Path(__file__).parents[1]
 _SPEC = json.loads(
-    (_ROOT / "outputs/bosch_cnc_v02_final/final_spec.json").read_text(encoding="utf-8")
+    (Path(__file__).with_name("fixtures") / "bosch_unresolved_spec.json").read_text(
+        encoding="utf-8"
+    )
 )
 _REQUIREMENT = DownstreamRequirement(
     field_path="signals[0].unit",
@@ -183,6 +185,22 @@ def test_invalid_semantic_result_after_repair_fails_with_artifacts(tmp_path):
     assert failed.error.error_type == "SemanticValidationError"
     assert "validation_report" in failed.artifacts
     assert "repair_summary" in failed.artifacts
+
+
+def test_handoff_rejects_requirement_evidence_absent_from_semantic_run(tmp_path):
+    backend = FakeBackend()
+    backend.requirements = (
+        replace(_REQUIREMENT, supporting_evidence_refs=("ev_missing",)),
+    )
+    service = OnboardingOrchestrator(tmp_path / "jobs", backend)
+    job = service.create_job(_source(tmp_path))
+
+    failed = service.run_job(job.id)
+
+    assert failed.status is JobStatus.FAILED
+    assert failed.error.stage == "validating"
+    assert failed.error.error_type == "ImplementationHandoffError"
+    assert "evidence absent" in failed.error.message
 
 
 def test_invalid_nonhuman_approval_does_not_unblock(tmp_path):

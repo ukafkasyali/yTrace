@@ -123,7 +123,9 @@ class OnboardingOrchestrator:
             overrides=(*replacements, override),
             downstream_context=existing.downstream_context,
         )
-        handoff = build_connector_handoff(spec, candidate)
+        handoff = build_connector_handoff(
+            spec, candidate, evidence_ids=self._evidence_ids(job)
+        )
         self.store.write_artifact(
             job,
             "implementation_overrides",
@@ -301,7 +303,9 @@ class OnboardingOrchestrator:
     def _build_handoff(self, job: OnboardingJob) -> None:
         spec = DatasetSpec.read_json(self._artifact(job, "dataset_spec"))
         artifact = self._override_artifact(job, spec)
-        handoff = build_connector_handoff(spec, artifact)
+        handoff = build_connector_handoff(
+            spec, artifact, evidence_ids=self._evidence_ids(job)
+        )
         self.store.write_artifact(
             job,
             "implementation_overrides",

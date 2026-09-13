@@ -44,9 +44,15 @@ The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dat
 
 ## Job-oriented onboarding
 
+**Experimental; no completed end-to-end Bosch job is archived in this repository.**
 `dataset_profiler.onboarding` wraps the existing profiler, semantic agent, validator/repair loop,
 human implementation handoff, and native TimeNet workflow in a persisted state machine. Structured
-state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs.
+state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs. The state
+machine is unit-tested, while the Bosch preset additionally requires a separate TimeNet checkout,
+its existing Bosch connector, the source dataset, and locally generated semantic artifacts.
+When frozen profiling evidence is reused, every source file is checked against its recorded size
+and SHA-256. Persisted job artifacts are likewise constrained to the job directory and verified on
+resume. The native Bosch stage rejects a human unit override that its fixed connector cannot honor.
 
 ```python
 from dataset_profiler.onboarding import (
@@ -70,8 +76,9 @@ An unresolved implementation requirement pauses with
 `status == "needs_human_resolution"`. Resume the same job with
 `service.resolve_blocker(...)` followed by `service.continue_job(job.id)`. The thin `onboard`
 command exposes the same create/status/run/resolve/continue operations. The Bosch preset reuses the
-audited semantic artifacts and native TimeNet connector, then runs connector tests, `timenet-build`,
-`TimeNet.load()`, and a full raw-to-TimeF comparison.
+audited semantic artifacts and native TimeNet connector. It is configured to run connector tests,
+`timenet-build`, `TimeNet.load()`, and a full raw-to-TimeF comparison; do not claim those stages
+completed until a persisted successful job and its receipts exist.
 
 ## Declarative semantic specs
 

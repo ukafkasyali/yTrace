@@ -257,7 +257,10 @@ change is deployed. Use separate `codex/` worktrees/branches for parallel editin
 Do not reset, stash, stage or commit another agent's changes. Each worker opens a
 focused draft PR; the coordinating task integrates and deploys in sequence.
 
-Latest inspected main: `71d3ff6` (submission freeze plus Bosch CNC semantic onboarding).
+Latest inspected main: `22fa8e5` (submission freeze plus experimental Bosch onboarding
+orchestration). The orchestrator has no archived successful Bosch end-to-end run and
+stays outside the core demo until its external TimeNet checkout, source data and local
+semantic artifacts are available and its native-stage receipts pass.
 The inference service still serves canary-v4; new training files do not automatically
 replace that checkpoint. PR #19 is a broad draft sourcing/ingestion integration and
 is outside the submission freeze unless the coordinator explicitly reopens it.

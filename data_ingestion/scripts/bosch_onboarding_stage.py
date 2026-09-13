@@ -20,8 +20,10 @@ from timenet_connectors.datasets.boschresearch.cnc_machining.connector import (
     _local_data_root,
 )
 
+from bosch_handoff_contract import DATASET_ID, validate_implementation_handoff
 
-_DATASET_ID = "boschresearch/cnc-machining"
+
+_DATASET_ID = DATASET_ID
 
 
 def _write(path: Path, value: dict[str, Any]) -> None:
@@ -36,13 +38,11 @@ def implementation(handoff_path: Path, output: Path) -> None:
     handoff_bytes = handoff_path.read_bytes()
     handoff = json.loads(handoff_bytes)
     metadata = BoschCncConnector().metadata()
-    passed = (
-        handoff.get("connector_ready") is True and metadata.dataset_id == _DATASET_ID
-    )
+    contract = validate_implementation_handoff(handoff, metadata.dataset_id)
     _write(
         output,
         {
-            "passed": passed,
+            **contract,
             "mode": "reused_existing_native_connector",
             "connector_class": (
                 "timenet_connectors.datasets.boschresearch.cnc_machining."

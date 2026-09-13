@@ -207,7 +207,9 @@ class LocalOnboardingBackend:
     def profile(self, job: OnboardingJob) -> dict[str, Any]:
         """Run the existing deterministic profiler or reuse an explicit frozen artifact."""
         if self.seed_profile:
-            return _read_object(self.seed_profile)
+            profile = _read_object(self.seed_profile)
+            _verify_frozen_profile_source(profile, job.source.local_path)
+            return profile
         return profile_dataset(
             job.source.local_path or "", job.source.dataset_id
         ).to_dict()
@@ -358,6 +360,56 @@ def _all_spec_evidence_ids(spec: DatasetSpec) -> set[str]:
 
     walk(raw)
     return result
+
+
+def _verify_frozen_profile_source(
+    profile: dict[str, Any], source_path: str | None
+) -> None:
+    """Bind a reused profile to the exact source files it originally inspected."""
+    if not source_path:
+        raise ValueError("a local source path is required for a frozen profile")
+    root = Path(source_path).resolve()
+    if not root.is_dir():
+        raise ValueError(f"source directory does not exist: {root}")
+    files = profile.get("files")
+    if not isinstance(files, list) or not files:
+        raise ValueError("frozen profile has no source file inventory")
+    for item in files:
+        if not isinstance(item, dict):
+            raise ValueError("frozen profile file inventory contains an invalid entry")
+        relative_path = item.get("relative_path")
+        expected = item.get("sha256")
+        if not isinstance(relative_path, str) or not relative_path:
+            raise ValueError("frozen profile file entry has no relative_path")
+        if (
+            not isinstance(expected, str)
+            or len(expected) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in expected.casefold()
+            )
+        ):
+            raise ValueError(
+                f"frozen profile file {relative_path!r} has no valid SHA-256"
+            )
+        candidate = (root / relative_path).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as error:
+            raise ValueError(
+                f"frozen profile file {relative_path!r} escapes the source directory"
+            ) from error
+        if not candidate.is_file():
+            raise ValueError(f"profiled source file is missing: {relative_path}")
+        recorded_size = item.get("size_bytes")
+        if isinstance(recorded_size, int) and candidate.stat().st_size != recorded_size:
+            raise ValueError(f"profiled source file size changed: {relative_path}")
+        digest = hashlib.sha256()
+        with candidate.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected.casefold():
+            raise ValueError(f"profiled source file content changed: {relative_path}")
 
 
 def file_sha256(path: str | Path) -> str:

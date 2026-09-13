@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+import hashlib
+import hmac
 from pathlib import Path
 from typing import Any
 
@@ -181,6 +183,47 @@ class OnboardingJob:
         self.updated_at = datetime.now(UTC).isoformat()
 
     def artifact_path(self, job_dir: Path, name: str) -> Path:
-        """Resolve a registered artifact below this job's directory."""
+        """Resolve and verify a registered artifact below this job's directory."""
         reference = self.artifacts[name]
-        return job_dir / reference.path
+        path = resolve_job_path(job_dir, reference.path)
+        if not path.is_file():
+            raise ValueError(f"artifact {name!r} is missing or is not a file")
+        expected = reference.sha256
+        if (
+            not isinstance(expected, str)
+            or len(expected) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in expected.casefold()
+            )
+        ):
+            raise ValueError(f"artifact {name!r} has no valid stored SHA-256")
+        actual = file_sha256(path)
+        if not hmac.compare_digest(actual, expected.casefold()):
+            raise ValueError(f"artifact {name!r} does not match its stored SHA-256")
+        return path
+
+
+def resolve_job_path(job_dir: Path, relative_path: str) -> Path:
+    """Resolve one artifact path without allowing it to escape the job directory."""
+    if not isinstance(relative_path, str) or not relative_path:
+        raise ValueError("artifact path must be a non-empty relative path")
+    candidate_path = Path(relative_path)
+    if candidate_path.is_absolute():
+        raise ValueError("artifact path must be relative to the job directory")
+    root = job_dir.resolve()
+    candidate = (root / candidate_path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as error:
+        raise ValueError("artifact path resolves outside the job directory") from error
+    return candidate
+
+
+def file_sha256(path: Path) -> str:
+    """Hash an artifact without loading an unbounded file into memory."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
