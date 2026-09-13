@@ -1,0 +1,75 @@
+You are right, Zenodo is down. We will use the cached flag for the demo but the KUKA dataset in the cache version only shows one file in the ingestion with a really small size.
+
+
+
+Below is instructions to access our model training VM and downloading the data from there to include in the cached run.
+
+
+
+
+
+1. On nebius-h100, the KUKA data lives under:    /home/atakantopaloglu/ysamet-training/    Key locations:   &#x20;
+   - Raw extracted collision data: data/raw/collision/ — 38 GB
+     - Raw extracted intentional-contact data: data/raw/contact/ — 37 GB
+     - TimeF datasets:
+       - artifacts/timef-raw/kuka/collision-part1/1.0.0/
+         - artifacts/timef-raw/kuka/contact-part2/1.0.0/
+   * Prepared training splits: data/prepared/timef-v1/ — 1.1 GB
+   &#x20;  Connect and inspect with:    ssh nebius-h100   cd /home/atakantopaloglu/ysamet-training   ls data/raw/collision   ls data/raw/contact
+
+---
+
+**Network**
+
+Primary private IPv410.0.0.14/32
+
+Secondary private IPv4Unassigned
+
+Public IPv4
+
+89.169.110.3/32
+
+FQDNcomputeinstance-e00t9md3vh369m8cy9.vpcnetwork-e00ajscxyas0tvs34h.compute.internal.
+
+Subnet[default-subnet-g3kvysxw](https://console.nebius.com/vpcsubnet-e00txj1ygwc9emcjp6) 
+
+Network[default-network](https://console.nebius.com/vpcnetwork-e00ajscxyas0tvs34h) 
+
+Security groups[vpcsecuritygroup-e00rzmk9p7m8cnt7p8](https://console.nebius.com/project-e00kd56rpr00rnntv210ty/network/security-group/vpcsecuritygroup-e00rzmk9p7m8cnt7p8)
+
+
+
+users:
+
+- name: atakantopaloglu
+  sudo: ALL=(ALL) NOPASSWD:ALL
+  shell: /bin/bash
+  ssh\_authorized\_keys:
+  - ssh-ed25519 REDACTED
+
+---
+
+Try this: ssh samet\@89.169.110.3 \
+
+---
+
+give me the terminal commands for authorizin the new public key you gave me
+
+---
+
+Done. The key is installed on samet\@89.169.110.3. Verified permissions:&#x20;
+
+- \~/.ssh: 700
+- authorized\_keys: 600
+
+---
+
+Done
+
+---
+
+Zenodo is back again so we don't need this
+
+---
+
+Nevermind, continue with setting up the cached run.

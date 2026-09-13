@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2D1VDT5XXAGRT5QM84GQP00",
+  "strategy": "manual-commit",
+  "branch": "codex/dataset-family-completion",
+  "checkpoints_count": 6,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/src/dataset_profiler/ingestion/dispatch.py",
+    "data_ingestion/src/dataset_profiler/ingestion/worker.py",
+    "data_ingestion/src/dataset_profiler/ingestion/worker_main.py",
+    "data_ingestion/tests/test_ingestion_handoff.py",
+    "data_ingestion/tests/test_specialized_dispatch.py",
+    "data_sourcing/src/data_sourcing/fixtures/robot_collision_native.json",
+    "data_sourcing/src/data_sourcing/graph.py",
+    "data_sourcing/tests/test_api.py",
+    "data_sourcing/tests/test_graph.py",
+    "data_sourcing/tests/test_persistence.py",
+    "scripts/run-local.sh"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 655007,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 31607741,
+    "output_tokens": 83912,
+    "api_call_count": 138
+  }
+}
