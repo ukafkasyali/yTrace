@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CNY6R50QR31Z0F5QNYSBDP",
+  "strategy": "manual-commit",
+  "branch": "bugfix/bosch-onboarding-source-root",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/scripts/bosch_handoff_contract.py",
+    "data_ingestion/src/dataset_profiler/onboarding/backend.py",
+    "data_ingestion/src/dataset_profiler/onboarding/presets.py",
+    "data_ingestion/tests/test_bosch_handoff_contract.py",
+    "data_ingestion/tests/test_onboarding_source_binding.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 128032,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2444672,
+    "output_tokens": 7156,
+    "api_call_count": 20
+  }
+}
