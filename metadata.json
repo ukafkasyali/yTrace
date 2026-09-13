@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2D2H3Q9NH99A76XW9YN53YZ",
+  "strategy": "manual-commit",
+  "branch": "codex/connect-persisted-connector-agent",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/scripts/bosch_onboarding_stage.py",
+    "data_ingestion/scripts/smoke_connector_agent_onboarding.py",
+    "data_ingestion/src/dataset_profiler/onboarding/__init__.py",
+    "data_ingestion/src/dataset_profiler/onboarding/backend.py",
+    "data_ingestion/src/dataset_profiler/onboarding/cli.py",
+    "data_ingestion/src/dataset_profiler/onboarding/connector_agent.py",
+    "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py",
+    "data_ingestion/src/dataset_profiler/onboarding/presets.py",
+    "data_ingestion/tests/test_connector_agent.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 150518,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 12748535,
+    "output_tokens": 42572,
+    "api_call_count": 111
+  }
+}

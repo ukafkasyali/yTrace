@@ -1,0 +1,53 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2D2H3Q9NH99A76XW9YN53YZ",
+  "session_id": "01a09a0c-a847-70a1-9467-df0030fd0cc5",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T09:45:45.379371657Z",
+  "branch": "codex/connect-persisted-connector-agent",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/scripts/bosch_onboarding_stage.py",
+    "data_ingestion/scripts/smoke_connector_agent_onboarding.py",
+    "data_ingestion/src/dataset_profiler/onboarding/__init__.py",
+    "data_ingestion/src/dataset_profiler/onboarding/backend.py",
+    "data_ingestion/src/dataset_profiler/onboarding/cli.py",
+    "data_ingestion/src/dataset_profiler/onboarding/connector_agent.py",
+    "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py",
+    "data_ingestion/src/dataset_profiler/onboarding/presets.py",
+    "data_ingestion/tests/test_connector_agent.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "2b01fa8b0aee",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 150518,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 12748535,
+    "output_tokens": 42572,
+    "api_call_count": 111
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T09:45:45.313100365Z",
+    "agent_lines": 920,
+    "agent_removed": 74,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 920,
+    "total_lines_changed": 994,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
