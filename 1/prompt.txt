@@ -1,0 +1,37 @@
+# Files pasted by the user:
+
+## "We are continuing the end-to-end autonomous TimeNet onboarding pipeline. The Bo…": /home/ugur/.codex/attachments/cc0e2ffd-a763-4e20-b836-e3e42864d123/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
+
+---
+
+# Files pasted by the user:
+
+## "We are continuing the Bosch CNC autonomous onboarding experiment. The semantic …": /home/ugur/.codex/attachments/e7fda0f1-7366-45a8-a3e3-997c244c112a/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
+
+---
+
+# Files pasted by the user:
+
+## "Use this as the next prompt. The key design choice is: **preserve the semantic …": /home/ugur/.codex/attachments/b50fc7bc-cd85-4bb1-84a7-3fcd4ea2db88/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
+
+---
+
+# Files pasted by the user:
+
+## "Use this as the next prompt. The key design choice is: **preserve the semantic …": /home/ugur/.codex/attachments/73836f99-f864-4057-8d7f-2a9fe26bbe07/pasted-text.txt
+
+Pasted text contains the user's request.
+
+## My request:
