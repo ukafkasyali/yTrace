@@ -12,6 +12,41 @@ BRIEF = (
 )
 
 
+def _add_eligible_alternate_to_persisted_run(settings: Settings, run_id: str) -> str:
+    run_path = settings.runs_dir / run_id / "run.json"
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    original_id = run["approvedCandidateId"]
+    alternate_id = "ds_aaaaaaaaaaaa"
+
+    candidate = next(item for item in run["candidates"] if item["id"] == original_id).copy()
+    candidate.update(
+        id=alternate_id,
+        name="Alternate eligible telemetry dataset",
+        canonicalUrl="https://github.com/example/alternate-telemetry-dataset",
+        relatedUrls=[],
+    )
+    profile = next(
+        item for item in run["profiles"] if item["candidateId"] == original_id
+    ).copy()
+    profile.update(
+        candidateId=alternate_id,
+        name=candidate["name"],
+        canonicalUrl=candidate["canonicalUrl"],
+        revision="GITHUB:" + "a" * 40,
+        sourceKind="GITHUB",
+        sourceRevision="a" * 40,
+    )
+    assessment = next(
+        item for item in run["assessments"] if item["candidateId"] == original_id
+    ).copy()
+    assessment["candidateId"] = alternate_id
+    run["candidates"].append(candidate)
+    run["profiles"].append(profile)
+    run["assessments"].append(assessment)
+    run_path.write_text(json.dumps(run), encoding="utf-8")
+    return alternate_id
+
+
 def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
     settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
     with TestClient(create_app(settings)) as client:
@@ -112,6 +147,64 @@ def test_full_api_lifecycle_persists_artifacts(tmp_path: Path) -> None:
     assert evidence_lines
     assert all(json.loads(line)["source_url"].startswith("https://") for line in evidence_lines)
     assert settings.checkpoint_path.is_file()
+
+
+def test_completed_run_can_approve_multiple_eligible_candidates(tmp_path: Path) -> None:
+    settings = Settings(_env_file=None, data_dir=tmp_path / "scout-data")
+    with TestClient(create_app(settings)) as client:
+        created = client.post(
+            "/api/sourcing-runs",
+            headers={"Idempotency-Key": "multiple-approvals"},
+            json={"brief": BRIEF},
+        )
+        run_id = created.json()["runId"]
+        pending = client.get(f"/api/sourcing-runs/{run_id}").json()
+        primary_id = next(
+            item["candidateId"]
+            for item in pending["assessments"]
+            if item["suitabilityLevel"] != "LOW"
+        )
+        approved = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "APPROVE", "candidateId": primary_id},
+        )
+        assert approved.status_code == 200
+        assert approved.json()["approvedCandidateIds"] == [primary_id]
+
+        alternate_id = _add_eligible_alternate_to_persisted_run(settings, run_id)
+        additional = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "APPROVE", "candidateId": alternate_id},
+        )
+        assert additional.status_code == 200
+        assert additional.json()["approvedCandidateIds"] == [primary_id, alternate_id]
+        assert client.get("/api/approved-sources").json()["pagination"]["totalItems"] == 2
+        assert (settings.runs_dir / run_id / "manifests" / f"{alternate_id}.json").is_file()
+
+        repeated = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "APPROVE", "candidateId": alternate_id},
+        )
+        assert repeated.status_code == 200
+        assert repeated.json()["approvedCandidateIds"] == [primary_id, alternate_id]
+        assert client.get("/api/approved-sources").json()["pagination"]["totalItems"] == 2
+
+        ineligible_id = next(
+            item["candidateId"]
+            for item in pending["assessments"]
+            if item["suitabilityLevel"] == "LOW"
+        )
+        blocked = client.post(
+            f"/api/sourcing-runs/{run_id}/approvals",
+            json={"decision": "APPROVE", "candidateId": ineligible_id},
+        )
+        assert blocked.status_code == 409
+        assert blocked.json()["error"]["code"] == "RUN_CONFLICT"
+
+    settings.approved_sources_path.unlink()
+    with TestClient(create_app(settings)) as recovered_client:
+        recovered = recovered_client.get("/api/approved-sources")
+        assert recovered.json()["pagination"]["totalItems"] == 2
 
 
 def test_create_is_idempotent_and_rejects_key_reuse(tmp_path: Path) -> None:

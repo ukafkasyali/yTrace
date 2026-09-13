@@ -171,6 +171,7 @@ export type SourcingRun = {
   assessments: CandidateAssessment[];
   recommendedCandidateId: string | null;
   approvedCandidateId: string | null;
+  approvedCandidateIds?: string[];
   excludedCandidateIds: string[];
   reviewFeedback: string[];
   reviewIterationsUsed: number;
@@ -194,6 +195,11 @@ export function candidateIsEligibleForApproval(
     && candidate.suitabilityLevel !== 'LOW'
     && candidate.missingRequirementIds.length === 0
     && candidate.gates.every(gate => gate.passed);
+}
+
+export function approvedCandidateIds(run: SourcingRun) {
+  return run.approvedCandidateIds
+    ?? (run.approvedCandidateId ? [run.approvedCandidateId] : []);
 }
 
 export function compareCandidateAssessments(
@@ -323,6 +329,9 @@ export function isSourcingRun(value: unknown): value is SourcingRun {
       && (item.authoritativeSourceKind === null
         || ['ZENODO', 'GITHUB', 'HUGGING_FACE'].includes(item.authoritativeSourceKind as string)))
     && (run.approvedCandidateId === null || typeof run.approvedCandidateId === 'string')
+    && (run.approvedCandidateIds === undefined
+      || (Array.isArray(run.approvedCandidateIds)
+        && run.approvedCandidateIds.every(item => typeof item === 'string')))
     && Array.isArray(run.excludedCandidateIds) && run.excludedCandidateIds.length <= 2
     && run.excludedCandidateIds.every(item => typeof item === 'string')
     && Array.isArray(run.reviewFeedback) && run.reviewFeedback.length <= 2

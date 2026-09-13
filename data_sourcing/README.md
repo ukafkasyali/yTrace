@@ -4,8 +4,8 @@ This service turns a natural-language dataset brief into an auditable shortlist.
 LangGraph for durable orchestration, Tavily for bounded discovery, and source-native APIs for
 verification. Deterministic gates and scoring remain separate from model-generated planning.
 
-The service never starts ingestion. An approved sourcing run produces a manifest and records its
-provider revision in the durable approved-source catalog for later on-demand ingestion. The
+The service never starts ingestion. An approved sourcing run produces one or more manifests and
+records each selected provider revision in the durable approved-source catalog for later on-demand ingestion. The
 ingestion module consumes that immutable manifest; approval itself performs no download.
 Users may remove an unreferenced entry from that catalog without deleting its sourcing-run audit;
 the entry remains removed across restarts and returns only after a new approval event.
@@ -56,6 +56,10 @@ curl -X POST http://127.0.0.1:8000/api/sourcing-runs/RUN_ID/approvals \
   -H 'Content-Type: application/json' \
   -d '{"decision":"APPROVE","candidateId":"CANDIDATE_ID"}'
 ```
+
+After the first approval, repeat that request with another eligible `candidateId` from the same
+completed shortlist to save multiple sources. Each approved candidate gets its own immutable
+manifest and approved-library entry; approval still performs no download.
 
 Reject with specific feedback to run another bounded search in the same durable thread:
 
