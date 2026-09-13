@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C79MXECKCRSSTDPPFYX4J9",
+  "strategy": "manual-commit",
+  "branch": "codex/final-submission-hardening",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "docs/submission/DEMO.md",
+    "frontend/PRODUCT.md",
+    "frontend/src/evaluation/EvaluationWorkspace.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 45118,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2150811,
+    "output_tokens": 5116,
+    "api_call_count": 22
+  }
+}
