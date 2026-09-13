@@ -45,7 +45,7 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
   const [referenceId, setReferenceId] = useState(data.recording.id);
   const initial = suggestReference(data, interval);
   const [start, setStart] = useState(initial ? fixed(initial.start) : '');
-  const [reference, setReference] = useState<Interval | undefined>(initial);
+  const [reference, setReference] = useState<Interval | undefined>();
   const [suggested, setSuggested] = useState(Boolean(initial));
   const [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
   const [matching, setMatching] = useState(false), [matchIssue, setMatchIssue] = useState('');
@@ -76,7 +76,10 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
         setMatches(rankSimilarIncidents(data, interval, available).slice(0, 3));
         if (available.length < 2) setMatchIssue('Related recordings could not be loaded. The current investigation remains available.');
       } catch (cause) {
-        setMatches([]); setMatchIssue(cause instanceof Error ? cause.message : 'Incident matching is unavailable.');
+        setMatches([]);
+        setMatchIssue(cause instanceof Error && cause.message.includes('raw telemetry')
+          ? 'This interval only has overview data. Choose a named demo case with a complete 1.024 s raw window.'
+          : cause instanceof Error ? cause.message : 'Incident matching is unavailable.');
       } finally { setMatching(false); }
     });
     return () => { active = false; };
@@ -137,33 +140,31 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
     setTimeout(() => URL.revokeObjectURL(url), 1000); setStatus('Incident cohort downloaded for review or labeling.');
   }
   return <section className="comparison-panel" aria-label="Incident comparison">
-    <header><h2>Related incidents</h2><p>Retrieve similar signal windows, then compare one against this incident.</p></header>
+    <header><h2>Find repeat patterns</h2><p>Trace ranks similar torque events across recordings. Open one to see what changed.</p></header>
     <div className="comparison-selection"><span>Selected · {data.recording.id}</span><strong>{intervalLabel(interval)}</strong></div>
     <section className="incident-cohort" aria-labelledby="incident-cohort-title">
-      <div className="incident-cohort-heading"><div><h3 id="incident-cohort-title">Similar signal profiles across runs</h3><p>Deterministic retrieval from raw torque only. Matching labels and model answers are not used.</p></div>{matches.length > 0 && <button className="text-button" onClick={exportCohort}><Download size={13}/>Export cohort</button>}</div>
-      {matching && <p role="status">Comparing fixed raw incident windows…</p>}
+      <div className="incident-cohort-heading"><h3 id="incident-cohort-title">Closest matches</h3>{matches.length > 0 && <button className="text-button" onClick={exportCohort}><Download size={13}/>Export cohort</button>}</div>
+      {matching && <p role="status">Searching recorded incidents…</p>}
       {!matching && matches.length > 0 && <div className="incident-matches">{matches.map((match, index) => <button key={match.caseId} className="incident-match" onClick={() => void chooseMatch(match)}><span className="incident-rank">{index + 1}</span><span><strong>{match.title}</strong><small>{match.recordingId} · {intervalLabel(match.interval)} · strongest range {match.strongestJoint?.replace('joint_', 'J') ?? '—'}</small></span><span className="incident-score">{match.score.toFixed(2)}<small>similarity</small></span></button>)}</div>}
       {!matching && matchIssue && <p className="reference-note">{matchIssue}</p>}
       {!matching && !matchIssue && !matches.length && <p className="reference-note">No other fixed raw window is eligible for this interval.</p>}
-      <p className="cohort-limit">Similarity groups evidence for review or labeling. It does not establish a shared physical cause.</p>
+      {matches.length > 0 && <p className="cohort-limit">A match is a review lead, not proof of the same cause.</p>}
     </section>
-    <details className="reference-editor" open={!initial}><summary>Change reference or compare another run</summary>
+    <details className="reference-editor"><summary>Compare a specific window</summary>
     <form className="reference-controls" onSubmit={e => { e.preventDefault(); apply(); }}>
       <label>Reference recording<select aria-label="Reference recording" value={referenceId} onChange={e => void chooseRecording(e.target.value)}>{options.map(c => <option key={c.recordingId} value={c.recordingId}>{c.recordingId === data.recording.id ? 'This recording' : 'Recording'} · {c.recordingId}</option>)}</select></label>
       <div><label>Start (seconds)<input aria-label="Reference start seconds" type="number" min="0" step="0.001" value={start} onChange={e => setStart(e.target.value)} disabled={loading}/></label><span>{fixed(duration)} s window</span><button className="btn" type="submit" disabled={loading}>Compare windows</button></div>
-    </form></details>
-    {loading ? <p role="status">Loading reference telemetry…</p> : <p className="reference-note">{suggested ? 'Suggested earlier window with no nearby publisher marker. This does not prove normal motion.' : 'Choose a reference with matching motion phase, payload and operating conditions. Normality is not verified.'}</p>}
+    </form><p className="reference-note">Choose the same motion phase and payload for a useful comparison.</p></details>
+    {loading && <p role="status">Loading reference telemetry…</p>}
     {reference && Number(start) !== reference.start && <p className="reference-note">Press Compare windows to apply the new reference start.</p>}
     {error && referenceData.recording.id !== referenceId && <button className="text-button" onClick={() => void chooseRecording(referenceId)}>Retry loading reference</button>}
     {(error || computed.issue) && <p className="comparison-error" role="alert">{error || computed.issue}</p>}
-    {!reference && !loading && !error && <p className="comparison-empty">{referenceId === data.recording.id ? 'No suitable earlier reference was found. Enter another interval or choose a different recording.' : `Enter a reference start within 0–${fixed(referenceData.recording.durationSeconds)} s. This can be a matched window from a before/after run.`}</p>}
     {result && selectedJoint && <>
       <div className="comparison-finding"><span>Reference · {result.reference.recordingId} · {intervalLabel(result.reference.interval)}</span><h3>{result.joints[0].rangeDelta === 0 ? 'No change in sampled torque ranges' : `${result.joints[0].name} has the largest change in torque range`}</h3><p>{fixed(result.joints[0].reference.range)} → {fixed(result.joints[0].selected.range)} Nm <strong>({signed(result.joints[0].rangeDelta)} Nm)</strong></p><span>{result.resolution === 'raw' ? 'Both windows · raw' : 'Both windows · overview; brief peaks may be missed'} · {result.sampleRateHz} Hz · {result.reference.samplesPerChannel}/{result.selected.samplesPerChannel} samples</span></div>
       <Overlay result={result} jointId={selectedJoint.id} onJoint={setJoint}/>
       <details className="comparison-all-joints"><summary>All 7 joint measurements</summary><div className="comparison-table-wrap"><table className="comparison-table"><caption>Torque range · Nm. Select a joint to inspect both signals.</caption><thead><tr><th>Joint</th><th>Reference</th><th>Selected</th><th>Change</th></tr></thead><tbody>{result.joints.map(j => <tr key={j.id} className={selectedJoint.id === j.id ? 'selected' : ''}><th><button aria-pressed={selectedJoint.id === j.id} onClick={() => setJoint(j.id)}>{j.name}</button></th><td>{fixed(j.reference.range)}</td><td>{fixed(j.selected.range)}</td><td>{signed(j.rangeDelta)}</td></tr>)}</tbody></table></div></details>
-      <p className="comparison-secondary">{selectedJoint.name} variability: {fixed(selectedJoint.reference.variability)} → {fixed(selectedJoint.selected.variability)} Nm. Mean shift: {signed(selectedJoint.meanDelta)} Nm.</p>
-      <div className="comparison-next"><h3>What to check next</h3><p>Inspect {selectedJoint.name} in both windows. Confirm the motion phase, payload and intended contact were comparable before attributing the change to a fault.</p><button className="text-button" onClick={() => onEvidence({ channelId: selectedJoint.id, channelIds: [selectedJoint.id], interval: { ...interval }, label: selectedJoint.name })}>Inspect selected signal <ArrowUpRight size={12}/></button><h3>How to verify a change</h3><p>After an engineer chooses an adjustment, compare a matched window from the new recording. Lower variation alone does not prove a repair worked or the robot is safe.</p></div>
-      <details className="comparison-method"><summary>Method &amp; source windows</summary><p>Reference: {result.reference.recordingId}, {intervalLabel(result.reference.interval)}. Selected: {result.selected.recordingId}, {intervalLabel(result.selected.interval)}.</p><p>{result.method}</p><p>Publisher markers in reference: {result.reference.publisherAnnotations.length}; selected: {result.selected.publisherAnnotations.length}. These are annotations, not diagnoses.</p><p>{result.limitations.join(' ')}</p></details>
+      <div className="comparison-next"><p>Check {selectedJoint.name} against the same motion phase and payload.</p><button className="text-button" onClick={() => onEvidence({ channelId: selectedJoint.id, channelIds: [selectedJoint.id], interval: { ...interval }, label: selectedJoint.name })}>Inspect selected signal <ArrowUpRight size={12}/></button></div>
+      <details className="comparison-method"><summary>Measurements, method &amp; limits</summary><p>{selectedJoint.name} variability: {fixed(selectedJoint.reference.variability)} → {fixed(selectedJoint.selected.variability)} Nm. Mean shift: {signed(selectedJoint.meanDelta)} Nm.</p><p>Reference: {result.reference.recordingId}, {intervalLabel(result.reference.interval)}. Selected: {result.selected.recordingId}, {intervalLabel(result.selected.interval)}.</p><p>{result.method}</p><p>Publisher markers in reference: {result.reference.publisherAnnotations.length}; selected: {result.selected.publisherAnnotations.length}. These are annotations, not diagnoses.</p><p>{result.limitations.join(' ')}</p></details>
       <button className="btn comparison-export" onClick={exportComparison}><Download size={13}/>Export comparison</button>{status && <p role="status">{status}</p>}
     </>}
   </section>;
