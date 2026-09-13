@@ -42,6 +42,7 @@ function metrics(values: number[]) {
 
 function incidentSignature(data: DemoData, interval: Interval) {
   if (!rawCovers(data, interval)) throw new Error('Incident matching requires raw telemetry for the complete window.');
+  if (data.recording.sampleRateHz !== 1000) throw new Error('Incident matching requires raw telemetry sampled at 1 kHz.');
   const sample = samples(data, interval, true);
   const features = sample.channels.flatMap(channel => {
     const summary = metrics(channel.values);
@@ -84,9 +85,7 @@ export function rankSimilarIncidents(selectedData: DemoData, selected: Interval,
   const ranked: SimilarIncident[] = [];
   for (const candidate of candidates) {
     const interval = candidate.item.interval;
-    if (candidate.data.recording.id === selectedData.recording.id
-      && Math.abs(interval.start - selected.start) < 1e-9
-      && Math.abs(interval.end - selected.end) < 1e-9) continue;
+    if (candidate.data.recording.id === selectedData.recording.id) continue;
     if (Math.abs((interval.end - interval.start) - selectedDuration) > 1e-7) continue;
     try {
       const signature = incidentSignature(candidate.data, interval);

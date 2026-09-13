@@ -50,6 +50,7 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
   const [loading, setLoading] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState('');
   const [matching, setMatching] = useState(false), [matchIssue, setMatchIssue] = useState('');
   const [matches, setMatches] = useState<SimilarIncident[]>([]);
+  const [unavailableRecordings, setUnavailableRecordings] = useState<string[]>([]);
   const [joint, setJoint] = useState('');
   const request = useRef(0);
   const duration = interval.end - interval.start;
@@ -62,8 +63,8 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
     let active = true;
     const original: DemoCase = { id: 'original', title: 'Original recording', recordingId: '05-28-21-25', interval: { start: 5.787, end: 6.811 }, note: 'Fixed raw demonstration window.' };
     const pool = [original, ...cases];
-    if (!pool.length || !services.connected) { setMatches([]); return () => { active = false; }; }
-    setMatching(true); setMatchIssue('');
+    if (!pool.length || !services.connected) { setMatches([]); setUnavailableRecordings([]); return () => { active = false; }; }
+    setMatching(true); setMatchIssue(''); setUnavailableRecordings([]);
     const recordings = new Map<string, Promise<DemoData>>();
     const loadCandidate = (item: DemoCase) => {
       if (!recordings.has(item.recordingId)) recordings.set(item.recordingId, recordingData(item.recordingId));
@@ -72,9 +73,11 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
     Promise.allSettled(pool.map(loadCandidate)).then(results => {
       if (!active) return;
       const available = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+      const unavailable = [...new Set(results.flatMap((result, index) => result.status === 'rejected' ? [pool[index].recordingId] : []))];
+      setUnavailableRecordings(unavailable);
       try {
         setMatches(rankSimilarIncidents(data, interval, available).slice(0, 3));
-        if (available.length < 2) setMatchIssue('Related recordings could not be loaded. The current investigation remains available.');
+        if (unavailable.length) setMatchIssue(`${unavailable.length} recording${unavailable.length === 1 ? '' : 's'} could not be loaded. These results are partial.`);
       } catch (cause) {
         setMatches([]);
         setMatchIssue(cause instanceof Error && cause.message.includes('raw telemetry')
@@ -132,8 +135,9 @@ export default function ComparisonPanel({ data, interval, cases, services, onEvi
       origin: 'deterministic_calculation',
       selected: { recordingId: data.recording.id, interval: { ...interval }, sourceUrl: data.recording.sourceUrl, archive: data.recording.archive },
       candidates: matches,
+      coverage: { unavailableRecordingIds: unavailableRecordings, partial: unavailableRecordings.length > 0 },
       method: 'Rank equal-length raw 1 kHz windows by symmetric distance over each joint’s torque range, variability and largest sample-to-sample change. Publisher labels and model predictions are not scoring inputs.',
-      limitation: 'Similarity is a retrieval lead, not evidence of the same physical cause, safety state or required repair. An engineer must review motion phase, payload and operating conditions.',
+      limitation: `Similarity is a retrieval lead, not evidence of the same physical cause, safety state or required repair. An engineer must review motion phase, payload and operating conditions.${unavailableRecordings.length ? ' Some recordings were unavailable and the cohort is partial.' : ''}`,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2) + '\n'], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `trace-incident-cohort-${data.recording.id}.json`; link.click();

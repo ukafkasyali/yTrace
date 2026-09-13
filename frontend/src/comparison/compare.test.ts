@@ -70,13 +70,17 @@ describe('incident comparison', () => {
     expect(matches[0]).toMatchObject({ score:1, strongestJoint:'joint_7', samplesPerChannel:1024 });
     expect(matches[1].score).toBeLessThan(matches[0].score);
   });
-  it('excludes the selected window and candidates without complete raw evidence', () => {
+  it('excludes the selected recording and candidates without complete 1 kHz raw evidence', () => {
     const selected = fixture('selected');
     const unavailable = fixture('unavailable'); unavailable.detail.endSeconds = 1.5;
+    const wrongRate = fixture('wrong-rate'); wrongRate.recording.sampleRateHz = 500;
     const matches = rankSimilarIncidents(selected, current, [
-      { item: { id:'same', title:'Same', recordingId:'selected', interval:current, note:'' }, data:selected },
+      { item: { id:'same-run', title:'Same run', recordingId:'selected', interval:reference, note:'' }, data:selected },
       { item: { id:'unavailable', title:'Unavailable', recordingId:'unavailable', interval:reference, note:'' }, data:unavailable },
+      { item: { id:'wrong-rate', title:'Wrong rate', recordingId:'wrong-rate', interval:reference, note:'' }, data:wrongRate },
     ]);
     expect(matches).toEqual([]);
+    wrongRate.recording.id = 'selected';
+    expect(() => rankSimilarIncidents(wrongRate, current, [])).toThrow('1 kHz');
   });
 });
