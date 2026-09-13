@@ -2,18 +2,24 @@ architecture: soft_prompt
 base_model: meta-llama/Llama-3.2-1B
 warm_start: OpenTSLM/llama-3.2-1b-har-sp
 upstream_commit: 2968f4b891baab4307f7e9d0043e87677b593a30
+experiment:
+  hypothesis: conversational_all_intent_curriculum_without_channel_permutation
+  comparison_run: llama-har-sp-timef-rationale-v5b
 targets:
   format: rationale_then_answer
   rationale_source: deterministic_signal_pseudolabels_v1
 precision: bfloat16
 batch_size: 3
 gradient_accumulation_steps: 5
-epochs: 3
+epochs: 1
 early_stopping_patience: 3
-max_wall_time_hours: 3.0
+max_wall_time_hours: 5.1
 training:
   max_examples: 8192
   warmup_fraction: 0.03
+  joint_attribution_curriculum: true
+  balanced_joint_permutation: false
+  curriculum_intents: all
 learning_rates:
   encoder: 0.0002
   projector: 0.0001
@@ -30,13 +36,14 @@ fit_probe:
   epochs: 40
 validation:
   at_start: true
+  generation_selection: event_intent_stratified
   every_steps: 50
   every_epoch: true
   batch_size: 4
   loss_subset: 128
-  generation_subset: 48
+  generation_subset: 84
   zero_signal_subset: 12
-  examples_table_rows: 12
+  examples_table_rows: 21
 observability:
   generation_at_start: false
   tensorboard: true
@@ -46,16 +53,26 @@ observability:
   gpu_metrics_every_seconds: 10
   training_probe:
     enabled: true
-    every_steps: 100
-    generation_every_steps: 250
+    every_steps: 200
+    generation_every_steps: 500
     loss_subset: 64
     generation_subset: 48
     zero_signal_subset: 12
     matched_validation_subset: 64
-    dataset_table_rows: 48
-    examples_table_rows: 48
+    manifest_table_rows: 256
+    dataset_table_rows: 16
+    examples_table_rows: 8
   wandb:
     enabled: true
     project: robot-observability
     entity: null
     log_adapter_artifact: true
+checkpoint_selection:
+  enabled: true
+  joint_metric: strongest_joint_accuracy
+  joint_weight: 0.5
+  onset_weight: 0.5
+  gates:
+    first_pass/schema_exact_match: 0.95
+    first_pass/semantics_macro_f1: 0.90
+    first_pass/contact_f1: 0.95

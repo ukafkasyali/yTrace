@@ -60,6 +60,7 @@
       "onset_coverage": 0.940959409594096,
       "onset_mae_ms": 70.72549019607843,
       "onset_median_ae_ms": 21,
+      "onset_p90_ae_ms": 188.59999999999997,
       "onset_within_50ms_all_contacts": 0.5535055350553506
     },
     "opentslm": {
@@ -112,6 +113,7 @@
       "onset_coverage": 0.988929889298893,
       "onset_mae_ms": 68.51119402985074,
       "onset_median_ae_ms": 54.0,
+      "onset_p90_ae_ms": 140.0,
       "onset_within_50ms_all_contacts": 0.46494464944649444
     },
     "qwen": {
@@ -161,6 +163,7 @@
       "onset_coverage": 0.7859778597785978,
       "onset_mae_ms": 118.33802816901408,
       "onset_median_ae_ms": 42,
+      "onset_p90_ae_ms": 313.8,
       "onset_within_50ms_all_contacts": 0.4132841328413284
     },
     "zero-signal": {
@@ -209,6 +212,7 @@
       "onset_coverage": 0.0,
       "onset_mae_ms": null,
       "onset_median_ae_ms": null,
+      "onset_p90_ae_ms": null,
       "onset_within_50ms_all_contacts": 0.0
     }
   },

@@ -93,6 +93,20 @@ def schema_valid(p: object) -> bool:
     )
 
 
+def percentile(values: list[float], fraction: float) -> float | None:
+    """Return a linearly interpolated percentile without a NumPy dependency."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * fraction
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    weight = position - lower
+    return ordered[lower] * (1 - weight) + ordered[upper] * weight
+
+
 def score(items: list[dict]) -> dict:
     n = len(items)
     if not n:
@@ -164,6 +178,7 @@ def score(items: list[dict]) -> dict:
         "onset_coverage": len(errors) / event_n if event_n else None,
         "onset_mae_ms": statistics.mean(errors) if errors else None,
         "onset_median_ae_ms": statistics.median(errors) if errors else None,
+        "onset_p90_ae_ms": percentile(errors, 0.9),
         "onset_within_50ms_all_contacts": sum(e <= 50 for e in errors) / event_n if event_n else None,
     }
 
@@ -296,6 +311,7 @@ def markdown(report: dict) -> str:
         ),
         ("Onset MAE (ms)", "onset_mae_ms", "Only finite in-window predictions; read with coverage"),
         ("Onset median error (ms)", "onset_median_ae_ms", "Same conditional denominator as MAE"),
+        ("Onset P90 error (ms)", "onset_p90_ae_ms", "Same conditional denominator as MAE"),
         ("Onset coverage", "onset_coverage", "271 contact windows"),
         (
             "Onset within 50 ms / all contacts",

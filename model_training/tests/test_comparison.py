@@ -3,7 +3,7 @@ import math
 
 import pytest
 
-from robot_observability.comparison import schema_valid, score, validate_alignment
+from robot_observability.comparison import percentile, schema_valid, score, validate_alignment
 
 
 def target(contact=True):
@@ -42,6 +42,11 @@ def test_onset_invalid_values_fail_coverage_and_success(bad):
 def test_missing_joint_lists_do_not_get_free_motion_credit():
     result = score([{"target": target(False), "prediction": None}, {"target": target(), "prediction": {}}])
     assert result["affected_joint_set_f1_contact_only"] == 0
+
+
+def test_percentile_uses_linear_interpolation():
+    assert percentile([1, 2, 3, 10], 0.9) == pytest.approx(7.9)
+    assert percentile([], 0.9) is None
 
 
 def test_keys_alone_are_not_schema_validity():

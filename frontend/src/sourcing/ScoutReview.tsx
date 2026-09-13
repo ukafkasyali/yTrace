@@ -22,7 +22,7 @@ function CandidateSummary({ candidate, profile, assessment, isRecommendation }: 
   const factors = candidateSuitabilityFactors(assessment);
   return <article className="scout-candidate">
     <div className="scout-candidate-heading">
-      <div><p className="eyebrow">{isRecommendation ? 'Agent recommendation' : 'Selected for review'}</p><h3>{candidate.name}</h3></div>
+      <div><h3>{candidate.name}</h3><p className="candidate-role">{isRecommendation ? 'Agent recommendation' : 'Selected for review'}</p></div>
       <span className={`suitability-badge suitability-${suitability.toLowerCase()}`}>{candidateSuitabilityLabel(assessment)}</span>
     </div>
     <a href={candidate.canonicalUrl} target="_blank" rel="noopener noreferrer">Open canonical source <ArrowUpRight size={13} aria-hidden="true" /></a>
@@ -43,7 +43,7 @@ function CandidateSummary({ candidate, profile, assessment, isRecommendation }: 
 
 function Manifest({ manifest, onUseSource }: { manifest: SourcingManifest; onUseSource: () => void }) {
   return <div className="scout-manifest">
-    <div><p className="eyebrow">Approved manifest</p><h3>{manifest.name}</h3></div>
+    <div><h3>{manifest.name}</h3><p className="candidate-role">Approved manifest</p></div>
     <dl className="scout-facts"><div><dt>Revision</dt><dd>{manifest.revision ?? 'Source default'}</dd></div><div><dt>Licence</dt><dd>{manifest.licenseId}</dd></div><div><dt>Evidence records</dt><dd>{manifest.evidenceIds.length}</dd></div><div><dt>Approved</dt><dd>{new Date(manifest.approvedAt).toLocaleString()}</dd></div></dl>
     {manifest.limitations.length > 0 && <div><strong>Known limitations</strong><ul>{manifest.limitations.map(item => <li key={item}>{item}</li>)}</ul></div>}
     <button className="btn btn-primary" onClick={onUseSource}>Open approved sources</button>
