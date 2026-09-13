@@ -197,7 +197,13 @@ describe('service contracts', () => {
       .mockResolvedValueOnce(Response.json({ ...source, approvals: [{ sourcingRunId: 'run-1', candidateId: 'candidate-1', manifestSha256: 'a'.repeat(64), approvedAt: '2026-09-13T10:00:00Z' }] }))
       .mockResolvedValueOnce(Response.json({ schemaVersion: '1.1', assets: [{ assetId: `asset_${'2'.repeat(16)}`, name: 'signals.csv', role: 'DATA', sizeBytes: 42 }], limitations: [] }))
       .mockResolvedValueOnce(Response.json(job, { status: 202 }))
-      .mockResolvedValueOnce(Response.json(job));
+      .mockResolvedValueOnce(Response.json(job))
+      .mockResolvedValueOnce(Response.json([{
+        ingestionId: job.ingestionId, assetId: job.assetIds[0], providerLocator: 'zenodo:1:file',
+        expectedSizeBytes: 42, sourceChecksumAlgorithm: null, sourceChecksumValue: null,
+        observedSizeBytes: 42, contentSha256: 'c'.repeat(64),
+        contentKey: `sha256/cc/${'c'.repeat(64)}`, acquiredAt: '2026-09-13T10:01:00Z',
+      }]));
     vi.stubGlobal('fetch', fetch);
     const service = createServices('/api');
 
@@ -212,6 +218,7 @@ describe('service contracts', () => {
       }),
     }));
     expect((await service.getImport(job.ingestionId)).state).toBe('queued');
+    expect((await service.getImportAssets(job.ingestionId))[0].observedSizeBytes).toBe(42);
     fetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     await service.deleteApprovedSource(source.approvedSourceId);
     expect(fetch).toHaveBeenLastCalledWith(`/api/approved-sources/${source.approvedSourceId}`, expect.objectContaining({

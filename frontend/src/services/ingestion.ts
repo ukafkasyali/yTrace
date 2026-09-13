@@ -57,6 +57,19 @@ export type ImportJob = {
   updatedAt: string;
 };
 
+export type AssetReceipt = {
+  ingestionId: string;
+  assetId: string;
+  providerLocator: string;
+  expectedSizeBytes: number;
+  sourceChecksumAlgorithm: string | null;
+  sourceChecksumValue: string | null;
+  observedSizeBytes: number;
+  contentSha256: string;
+  contentKey: string;
+  acquiredAt: string;
+};
+
 export type MappingChannel = { selector: string; name: string; unit: string | null };
 export type MappingSpec = {
   schemaVersion: '1.0';
@@ -169,6 +182,20 @@ export function isImportJob(value: unknown): value is ImportJob {
     && isStringArray(value.assetIds) && Number.isInteger(value.jobRevision)
     && importStates.has(value.state as ImportState) && typeof value.message === 'string'
     && typeof value.createdAt === 'string' && typeof value.updatedAt === 'string';
+}
+
+export function isAssetReceipts(value: unknown): value is AssetReceipt[] {
+  return Array.isArray(value) && value.every(item => isRecord(item)
+    && typeof item.ingestionId === 'string'
+    && /^asset_[a-f0-9]{16}$/.test(String(item.assetId))
+    && typeof item.providerLocator === 'string'
+    && Number.isInteger(item.expectedSizeBytes) && Number(item.expectedSizeBytes) > 0
+    && (item.sourceChecksumAlgorithm === null || typeof item.sourceChecksumAlgorithm === 'string')
+    && (item.sourceChecksumValue === null || typeof item.sourceChecksumValue === 'string')
+    && Number.isInteger(item.observedSizeBytes) && Number(item.observedSizeBytes) > 0
+    && /^[a-f0-9]{64}$/.test(String(item.contentSha256))
+    && /^sha256\/[a-f0-9]{2}\/[a-f0-9]{64}$/.test(String(item.contentKey))
+    && typeof item.acquiredAt === 'string');
 }
 
 function isMappingChannel(value: unknown): value is MappingChannel {

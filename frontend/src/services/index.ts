@@ -5,6 +5,7 @@ import {
   isApprovedSourceDetail,
   isApprovedManifest,
   isApprovedSourcePage,
+  isAssetReceipts,
   isFinalReceipt,
   isImportJob,
   isMappingProposals,
@@ -251,6 +252,11 @@ export function createServices(baseUrl?: string) {
     getImport: async (id: string) => {
       const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}`);
       if (!isImportJob(result)) throw new ProtocolError('The ingestion response does not match the job contract.');
+      return result;
+    },
+    getImportAssets: async (id: string) => {
+      const result = await request<unknown>(`/ingestions/${encodeURIComponent(id)}/assets`);
+      if (!isAssetReceipts(result)) throw new ProtocolError('The ingestion asset receipts do not match the contract.');
       return result;
     },
     getImportForSource: async (approvedSourceId: string) => {
