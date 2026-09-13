@@ -1,4 +1,4 @@
-"""Typed, declarative DatasetSpec v0.1 models and JSON serialization."""
+"""Typed, declarative DatasetSpec models and JSON serialization."""
 
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ class VariableRole(StrEnum):
 class TimeAxisKind(StrEnum):
     REGULAR = "regular"
     IRREGULAR = "irregular"
+    IMPLICIT_REGULAR = "implicit_regular"
 
 
 class IndexBase(StrEnum):
@@ -105,24 +106,34 @@ class SamplingClaim:
 
 
 @dataclass(frozen=True)
+class SamplingRateClaim:
+    value: float | None
+    unit: str
+    resolution: EvidenceClaim
+
+
+@dataclass(frozen=True)
 class SignalMapping:
     source_variable: str
     semantic_type: str
     channels: ChannelMapping
-    dtype: str
+    dtype: str | None
     unit: UnitClaim
     sampling: SamplingClaim
     semantics: EvidenceClaim
+    observed_dtypes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class TimeAxisRule:
     name: str
-    source_variable: str
+    source_variable: str | None
     kind: TimeAxisKind
     unit: str
-    monotonic: bool
+    monotonic: bool | None
     embedded_signal_row: int | None = None
+    sampling_rate: SamplingRateClaim | None = None
+    sample_index_origin: int | None = None
 
 
 @dataclass(frozen=True)
@@ -194,9 +205,10 @@ class DatasetSpec:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> DatasetSpec:
-        """Decode the v0.1 wire representation into typed models."""
-        if raw.get("schema_version") != "0.1":
-            raise ValueError("Unsupported DatasetSpec schema_version; expected '0.1'")
+        """Decode the v0.1 or v0.2 wire representation into typed models."""
+        schema_version = raw.get("schema_version")
+        if schema_version not in {"0.1", "0.2"}:
+            raise ValueError("Unsupported DatasetSpec schema_version; expected '0.1' or '0.2'")
 
         def evidence(value: dict[str, Any]) -> EvidenceClaim:
             return EvidenceClaim(
@@ -209,7 +221,7 @@ class DatasetSpec:
         discovery = raw["record_discovery"]
         defaults = raw.get("record_defaults", {})
         return cls(
-            schema_version="0.1",
+            schema_version=schema_version,
             identity=DatasetIdentity(
                 dataset_id=identity["dataset_id"],
                 source_subsets=tuple(identity["source_subsets"]),
@@ -233,7 +245,7 @@ class DatasetSpec:
                         source_indices=tuple(item["channels"]["source_indices"]),
                         target_names=tuple(item["channels"]["target_names"]),
                     ),
-                    dtype=item["dtype"],
+                    dtype=item.get("dtype"),
                     unit=UnitClaim(
                         name=item["unit"].get("name"),
                         symbol=item["unit"].get("symbol"),
@@ -244,6 +256,7 @@ class DatasetSpec:
                         time_axis=item["sampling"]["time_axis"],
                     ),
                     semantics=evidence(item["semantics"]),
+                    observed_dtypes=tuple(item.get("observed_dtypes", ())),
                 )
                 for item in raw["signals"]
             ),
@@ -255,6 +268,16 @@ class DatasetSpec:
                     unit=item["unit"],
                     monotonic=item["monotonic"],
                     embedded_signal_row=item.get("embedded_signal_row"),
+                    sampling_rate=(
+                        SamplingRateClaim(
+                            value=item["sampling_rate"].get("value"),
+                            unit=item["sampling_rate"]["unit"],
+                            resolution=evidence(item["sampling_rate"]["resolution"]),
+                        )
+                        if item.get("sampling_rate") is not None
+                        else None
+                    ),
+                    sample_index_origin=item.get("sample_index_origin"),
                 )
                 for item in raw["time_axes"]
             ),

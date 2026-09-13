@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 
+from ..io.hdf5 import read_hdf5_excerpt
 from ..io.matlab import load_matlab, sha256_file
 from ..models import ChannelStats, DatasetProfile, VariableProfile
 from .models import (
@@ -274,7 +275,8 @@ class EvidenceSession:
             if self._profile.source.get("scope") else [],
             "run_count": len(self._profile.runs),
             "variables": variable_page,
-            "file_formats": dict(self._profile.discovery.get("matlab_formats", {})),
+            "file_formats": dict(self._profile.discovery.get("file_formats")
+                                 or self._profile.discovery.get("matlab_formats", {})),
             "sampling_rates_hz": rates,
             "sampling_rate_consistent": len(rates) <= 1 and len(rates) > 0,
             "sequence_lengths": lengths,
@@ -322,6 +324,8 @@ class EvidenceSession:
             "sampling_rates_hz": sorted({run.sampling_rate_hz for run in self._profile.runs
                                           if run.sampling_rate_hz is not None}),
             "has_embedded_time_row": bool(summary and summary.get("has_embedded_time_row")),
+            "channel_axis": summary.get("channel_axis") if summary else None,
+            "sample_axis": summary.get("sample_axis") if summary else None,
             "associated_time_axes": axis_sources,
             "profiler_semantic_hint": summary.get("inferred_semantic_name") if summary else None,
             "consistent_across_runs": len(observations) == 1,
@@ -516,13 +520,20 @@ class EvidenceSession:
             raise ValueError("profiled source resolves outside the trusted dataset root") from error
         if not source.is_file() or sha256_file(source) != matches[0].sha256:
             raise ValueError("profiled source is missing or has changed since profiling")
+        summary = self._signal_summary(variable)
+        if source.suffix.casefold() in {".h5", ".hdf5"}:
+            excerpt, dtype, available_samples = read_hdf5_excerpt(
+                source, variable, start, length, channels,
+                summary.get("channel_axis") if summary else None,
+            )
+            values = [[_json_scalar(value) for value in row] for row in excerpt]
+            return values, dtype, available_samples
         raw = load_matlab(source).variables.get(variable)
         if not isinstance(raw, np.ndarray) or raw.ndim not in {1, 2}:
             raise ValueError("excerpt source is not a one- or two-dimensional array")
         if not np.issubdtype(raw.dtype, np.number):
             raise ValueError("excerpt source is not numeric")
         array = raw.reshape(1, -1) if raw.ndim == 1 else raw
-        summary = self._signal_summary(variable)
         if summary and summary.get("has_embedded_time_row"):
             array = array[1:]
         if start + length > array.shape[1]:
