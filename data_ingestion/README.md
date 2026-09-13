@@ -33,8 +33,12 @@ HDF5/MATLAB v7.3 support is provided by the `hdf5` extra. Plotting uses the `plo
 Run the dependency-light test suite from this directory:
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -v
+PYTHONPATH=src python -m pytest tests -q
 ```
+
+Install the `dev` extra first when `pytest` is not already available. The suite
+contains both unittest classes and pytest-style functions, so unittest discovery
+alone does not run every check.
 
 The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dataset_profile.json), and the observed facts, interpretations, and unresolved questions are documented in [docs/KUKA_BATCH_01_INSPECTION.md](docs/KUKA_BATCH_01_INSPECTION.md).
 

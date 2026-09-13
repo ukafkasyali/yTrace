@@ -9,14 +9,15 @@ Base: main `db68e6c`; final hardening is on `codex/final-submission-hardening`. 
 | Comparison replay, Python standard library | Checksums, identical IDs/targets, test-session membership and manifests passed; 512 windows / 67 recordings |
 | Independent comparison rerun | JSON and Markdown byte-identical with fixed bootstrap seed; 512 windows / 67 recordings |
 | Training focused suite | 26 passed across comparison, metrics and signal-feature baseline tests |
-| Data ingestion | 60 passed in the component virtual environment, including TimeNet coverage |
+| Data ingestion, `.venv/bin/python -m pytest tests -q` | 60 passed in the component virtual environment, including TimeNet coverage |
 | Inference, `python3 -m unittest discover -s inference -p 'test_*.py' -v` | 28 passed with temporary localhost server permission |
-| Frontend, `npm test` | 83 passed, including structured prediction isolation, readable-export isolation, model/measurement cross-checks, investigation provenance and replay contracts |
+| Frontend, `npm test` | 86 passed, including structured prediction isolation, browser-session recovery, readable-export isolation, model/measurement cross-checks, investigation provenance and replay contracts |
 | Frontend, `npm run build` | Passed; existing optional 3D chunk remains over Vite's 500 kB advisory threshold |
 | Clean environment dependency compatibility | `pip check` passed |
 | Real TimeNet round trip | Both dataset parts passed 17 checks each, including all torque/position values and annotation index/time conversion |
 | Private deployed model | Ready; expected canary-v4 SHA-256; real `inference.smoke` passed |
 | Browser, desktop | Structured prediction, J4/J2 cross-check, generated 3D onset cue, complete seven-channel evidence, reference comparison and Markdown export verified through the live UI. Immediate and active-query cancellation held the control until server acknowledgement, then a new query started successfully |
+| Browser, 390 × 844 | Replay, robot context, evaluation summary, horizontally scrollable result table and charts remained usable without clipping; the temporary viewport override was reset |
 | Actual downloaded investigation JSON | Verified 1,024 raw samples/channel, seven measurement rows, one in-window publisher marker, expected checkpoint and matching model receipt |
 
 The complete optional training suite initially could not collect `test_checkpoints.py` without PyTorch. The focused suite above is the completed local check, not a claim that GPU training or that checkpoint test was rerun. The live smoke confirms actual inference with the existing deployed checkpoint.

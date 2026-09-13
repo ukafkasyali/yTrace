@@ -239,7 +239,7 @@ Useful checks:
 
 ```bash
 cd frontend && npm test && npm run build
-cd ../data_ingestion && PYTHONPATH=src python -m unittest discover -s tests -v
+cd ../data_ingestion && PYTHONPATH=src python -m pytest tests -q
 cd .. && python3 -m unittest discover -s inference -p 'test_*.py' -v
 ```
 
