@@ -19,6 +19,13 @@ from .jobs import (
     IngestionJobNotFound,
     ResourceProfile,
 )
+from .mapping import (
+    ConfirmedMapping,
+    MappingProposal,
+    MappingService,
+    MappingSpec,
+    MappingValidationError,
+)
 from .service import (
     ApprovedSourceResolutionError,
     CreateIngestion,
@@ -60,6 +67,7 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
 
     app = FastAPI(title="Approved Dataset Ingestion", version="0.1.0", lifespan=lifespan)
     app.state.ingestion = ingestion
+    mappings = MappingService(ingestion.jobs)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -86,6 +94,10 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
     @app.exception_handler(ApprovedSourceResolutionError)
     async def source_unavailable(_: Request, exc: ApprovedSourceResolutionError) -> JSONResponse:
         return _error(422, "APPROVED_SOURCE_UNAVAILABLE", str(exc))
+
+    @app.exception_handler(MappingValidationError)
+    async def invalid_mapping(_: Request, exc: MappingValidationError) -> JSONResponse:
+        return _error(422, "INVALID_MAPPING", str(exc))
 
     @app.exception_handler(Exception)
     async def unhandled_error(_: Request, exc: Exception) -> JSONResponse:
@@ -114,5 +126,30 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
     ) -> list[ResourceProfile]:
         return ingestion.jobs.list_resources(ingestion_id)
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/mapping-proposals",
+        response_model=list[MappingProposal],
+    )
+    def get_mapping_proposals(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+    ) -> list[MappingProposal]:
+        return mappings.proposals(ingestion_id)
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/mapping",
+        response_model=ConfirmedMapping | None,
+    )
+    def get_mapping(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+    ) -> ConfirmedMapping | None:
+        return mappings.get(ingestion_id)
+
+    @app.put("/api/ingestions/{ingestion_id}/mapping", response_model=ConfirmedMapping)
+    def confirm_mapping(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+        body: MappingSpec,
+    ) -> ConfirmedMapping:
+        return mappings.confirm(ingestion_id, body)
 
     return app

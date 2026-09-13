@@ -13,6 +13,15 @@ from .jobs import (
     ResourceFormat,
     ResourceProfile,
 )
+from .mapping import (
+    ChannelSpec,
+    ConfirmedMapping,
+    MappingLayout,
+    MappingProposal,
+    MappingService,
+    MappingSpec,
+    MappingValidationError,
+)
 from .providers import ProviderAcquirer
 from .service import CreateIngestion, IngestionService
 from .worker import AcquisitionWorker
@@ -24,6 +33,8 @@ __all__ = [
     "ApprovedManifest",
     "ArchiveError",
     "AssetReceipt",
+    "ChannelSpec",
+    "ConfirmedMapping",
     "CreateIngestion",
     "ExtractedFile",
     "ExtractionResult",
@@ -34,6 +45,11 @@ __all__ = [
     "IngestionState",
     "InventoryError",
     "ManifestContractError",
+    "MappingLayout",
+    "MappingProposal",
+    "MappingService",
+    "MappingSpec",
+    "MappingValidationError",
     "ProviderAcquirer",
     "ResourceFormat",
     "ResourceInventory",

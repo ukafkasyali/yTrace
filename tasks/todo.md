@@ -260,15 +260,15 @@ bounded HDF5 traversal. Disable object/pickled arrays and executable or opaque p
 
 **Acceptance criteria:**
 
-- [ ] NPY/NPZ exposes safe numeric shapes/dtypes and named arrays without pickle.
-- [ ] Existing MAT formats retain current behavior; MAT v7.3 uses HDF5.
-- [ ] HDF5 traversal is bounded and numeric datasets are selected only through mapping.
+- [x] NPY/NPZ exposes safe numeric shapes/dtypes and named arrays without pickle.
+- [x] Existing MAT formats retain current behavior; MAT v7.3 uses HDF5.
+- [x] HDF5 traversal is bounded and numeric datasets are selected only through mapping.
 
 **Verification:**
 
-- [ ] Named time/channel arrays, transposed arrays, nested groups, object arrays, and limit failures
+- [x] Named time/channel arrays, transposed arrays, nested groups, object arrays, and limit failures
   are tested.
-- [ ] Existing KUKA parser/profiler tests remain unchanged and pass.
+- [x] Existing KUKA parser/profiler tests remain unchanged and pass.
 
 **Dependencies:** Task 9
 
@@ -284,14 +284,14 @@ accept an idempotent, version-checked mapping decision.
 
 **Acceptance criteria:**
 
-- [ ] Mapping includes explicit layout, record, time, channels, units, annotations, and version.
-- [ ] Unknown units or competing mappings never auto-resolve.
-- [ ] Stale or source-incompatible mapping decisions return a structured conflict.
+- [x] Mapping includes explicit layout, record, time, channels, units, annotations, and version.
+- [x] Unknown units or competing mappings never auto-resolve.
+- [x] Stale or source-incompatible mapping decisions return a structured conflict.
 
 **Verification:**
 
-- [ ] Tests cover unambiguous proposal, every ambiguity class, valid resume, and stale resume.
-- [ ] Existing bounded semantic-agent evidence may inform a proposal but cannot bypass validation or
+- [x] Tests cover unambiguous proposal, time/unit/axis ambiguity, valid resume, and stale resume.
+- [x] Existing bounded semantic-agent evidence may inform a proposal but cannot bypass validation or
   user confirmation.
 
 **Dependencies:** Tasks 10-11

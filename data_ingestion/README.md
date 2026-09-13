@@ -106,6 +106,14 @@ and nested archive files remain visible as `UNSUPPORTED` with a stable reason an
 as code. Jobs with at least one supported resource advance to `mapping`; jobs with none end in
 `unsupported_format`.
 
+`GET /api/ingestions/{ingestionId}/mapping-proposals` returns deterministic structural candidates;
+it never fills unknown channel units. `PUT /api/ingestions/{ingestionId}/mapping` accepts an explicit
+wide-table, long-table, or named-array mapping bound to the current `jobRevision`, resource ID, and
+resource SHA-256. Time, record, channel, value, array-axis, and annotation selectors are checked
+against the persisted schema. Competing selectors, unknown units, stale revisions, changed sources,
+and placeholder long-table channels fail without advancing the job. Repeating the identical
+confirmed mapping is idempotent; replacing it is a conflict.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and

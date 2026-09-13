@@ -21,6 +21,7 @@ class IngestionState(StrEnum):
     ACQUIRING = "acquiring"
     INSPECTING = "inspecting"
     MAPPING = "mapping"
+    VALIDATING = "validating"
     UNSUPPORTED_FORMAT = "unsupported_format"
     NEEDS_INPUT = "needs_input"
     FAILED = "failed"
@@ -114,6 +115,17 @@ class IngestionJobStore:
                 message TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS mapping_specs (
+                ingestion_id TEXT PRIMARY KEY,
+                mapping_sha256 TEXT NOT NULL,
+                mapping_json TEXT NOT NULL,
+                confirmed_at TEXT NOT NULL,
+                FOREIGN KEY (ingestion_id) REFERENCES ingestion_jobs(ingestion_id)
             )
             """
         )
@@ -315,6 +327,78 @@ class IngestionJobStore:
                 )
                 self.connection.execute("COMMIT")
                 return profile
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
+    def get_mapping_payload(self, ingestion_id: str) -> dict | None:
+        self.get(ingestion_id)
+        row = self.connection.execute(
+            "SELECT mapping_json FROM mapping_specs WHERE ingestion_id = ?",
+            (ingestion_id,),
+        ).fetchone()
+        return None if row is None else json.loads(row["mapping_json"])
+
+    def confirm_mapping(
+        self,
+        *,
+        ingestion_id: str,
+        expected_job_revision: int,
+        resource_id: str,
+        resource_sha256: str,
+        mapping_sha256: str,
+        mapping_payload: dict,
+    ) -> tuple[dict, bool]:
+        canonical = json.dumps(mapping_payload, sort_keys=True, separators=(",", ":"))
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                job_row = self.connection.execute(
+                    "SELECT * FROM ingestion_jobs WHERE ingestion_id = ?",
+                    (ingestion_id,),
+                ).fetchone()
+                if job_row is None:
+                    raise IngestionJobNotFound("Ingestion job not found")
+                existing = self.connection.execute(
+                    "SELECT * FROM mapping_specs WHERE ingestion_id = ?",
+                    (ingestion_id,),
+                ).fetchone()
+                if existing is not None:
+                    payload = json.loads(existing["mapping_json"])
+                    if existing["mapping_sha256"] != mapping_sha256:
+                        raise IngestionJobConflict("Ingestion already has another confirmed mapping")
+                    self.connection.execute("COMMIT")
+                    return payload, False
+                if job_row["job_revision"] != expected_job_revision:
+                    raise IngestionJobConflict("Mapping decision used a stale job revision")
+                if job_row["state"] not in {
+                    IngestionState.MAPPING.value,
+                    IngestionState.NEEDS_INPUT.value,
+                }:
+                    raise IngestionJobConflict("Ingestion is not waiting for a mapping")
+                resource = self.connection.execute(
+                    "SELECT * FROM resource_profiles WHERE ingestion_id = ? AND resource_id = ?",
+                    (ingestion_id, resource_id),
+                ).fetchone()
+                if resource is None or resource["content_sha256"] != resource_sha256:
+                    raise IngestionJobConflict("Mapping does not match the current resource")
+                self.connection.execute(
+                    "INSERT INTO mapping_specs VALUES (?, ?, ?, ?)",
+                    (ingestion_id, mapping_sha256, canonical, now),
+                )
+                self.connection.execute(
+                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                    "job_revision = job_revision + 1 WHERE ingestion_id = ?",
+                    (
+                        IngestionState.VALIDATING.value,
+                        "Confirmed mapping queued for deterministic import",
+                        now,
+                        ingestion_id,
+                    ),
+                )
+                self.connection.execute("COMMIT")
+                return mapping_payload, True
             except Exception:
                 self.connection.execute("ROLLBACK")
                 raise
