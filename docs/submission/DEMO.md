@@ -12,12 +12,12 @@ Timing, measured 13 September 2026 on the current CPU-only deployment (two smoke
 
 | Time | Action | Suggested narration |
 |---|---|---|
-| 0:00–0:18 | Start on the selected publisher event with the pre-run result ready | “At 6.187 seconds, this recording was annotated with a contact event. Trace turns seven synchronized torque streams into a generated hypothesis, measured cross-checks and an auditable handoff. This is the current canary-v4 result for this exact 7×1,024 input.” |
+| 0:00–0:18 | Start on the selected publisher event with the pre-run result ready | “This open KUKA recording from Zenodo was prepared through our TimeNet connector: seven synchronized 1 kHz torque streams plus publisher annotations. Trace turns the 6.187-second annotation into a canary-v4 hypothesis, measured cross-checks and an auditable handoff for the exact 7×1,024 input.” |
 | 0:18–0:40 | Click **Replay interval · 0.5×**, then **Show generated onset cue in 3D** | “The marker is a publisher annotation, not a model detection. The robot replays separately recorded joint angles; the generated cue moves to the model's relative onset. It is not a reconstructed collision.” |
 | 0:40–1:08 | Read the actual event class, strongest joint and onset, then point to **Cross-check** | “The model hypothesis and deterministic torque ranges stay separate. Here I read the actual output and the measured largest-range joint. Different rankings tell the engineer which signals to inspect before handoff.” |
 | 1:08–1:28 | Click **Inspect exact seven-channel input** | “This opens the complete input interval across all seven raw 1 kHz channels. The highlighted window is the evidence the model received; the publisher label was not included.” |
 | 1:28–1:43 | Click **Export incident handoff (.md)** | “The Markdown report carries the recording, interval, annotation, measurements, model revision, input receipt, cross-check and limitations to the next engineer.” |
-| 1:43–2:00 | Open **Evaluation** and close on the headline comparison | “On 512 windows from 67 held-out recording groups, simple features win fixed classification, while only 77.93 percent of OpenTSLM generations are usable. Trace converts seven raw traces into one reviewable handoff with the source interval, measurements, model revision and input hash attached. We proved that artifact is reproducible; the timed pilot will test whether it shortens correct handoffs.” |
+| 1:43–2:00 | Open **Evaluation** and close on the headline comparison | “Across 512 held-out windows, simple features win classification and OpenTSLM is usable 77.93 percent of the time. Trace’s contribution is the richer, reproducible handoff; a timed pilot must still prove that workflow value.” |
 
 Do not memorize a generated answer as a guaranteed future result. Read the actual response. The model and measured quantities can disagree; that is a reason to inspect evidence. The exact archived live response is in `demo/smoke-result.json`.
 
