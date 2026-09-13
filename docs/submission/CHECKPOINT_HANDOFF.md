@@ -22,7 +22,7 @@ channel's actual requirements before sending any private artifact.
 | Architecture | OpenTSLM-SP / soft prompt | Confirm from the released artifact/config |
 | Base model | `meta-llama/Llama-3.2-1B` | Confirm resolved model revision |
 | Backbone revision | Local VM directory `models/llama-3.2-1b`; its `model.safetensors` SHA-256 `68a2e4be76fa709455a60272fba8e512c02d81c46e6c671cc9449e374fd6809a` (2,471,645,608 bytes) is byte-identical to the official `meta-llama/Llama-3.2-1B` blob served at Hub revision `4e20de362430cd3b72f300e6b0f18e50e7166e08` (verified 13 Sep 2026 via Hub API) | Resolved by weight-file hash. The live receipt still prints `backbone:unknown` because the service loads a local path; include this hash-based identity in the handoff |
-| Warm start | `OpenTSLM/llama-3.2-1b-har-sp` | Record immutable upstream revision from training config |
+| Warm start | `OpenTSLM/llama-3.2-1b-har-sp` at cached snapshot `1dbeb1c1013deaca6a36bc3c92016a93a7c588a9`; `model_checkpoint.pt` blob SHA-256 `cdb3dd7800b5048498d1d8eda2795b6bcff2ee6e84de5aba8b66192d022b73c9` | Resolved read-only from the VM Hugging Face cache on 13 Sep 2026 |
 | Upstream commit | `2968f4b891baab4307f7e9d0043e87677b593a30` | Included in training config |
 | Training configuration | [`opentslm_sp.yaml`](../../model_training/configs/opentslm_sp.yaml) | Attach exact run-resolved copy and its SHA-256 |
 | Deployed runtime configuration | `kuka-sp-canary-v4.config.json`; file SHA-256 `3566c2f01b343b4658653b24126b2ec377848dcfcacc82bdd568d7fd63505c19`; canonical JSON configuration digest starts `4dbdd82f5ff7` in the live receipt | Verified read-only on the VM 13 Sep 2026; transfer this exact file with the checkpoint |
