@@ -1,12 +1,12 @@
-# Trace
+# y/trace
 
-Trace is a replay-only robot observability workbench for investigating recorded contact incidents. It combines real KUKA telemetry, deterministic measurements, and a trained OpenTSLM interpretation in one reviewable handoff.
+y/trace is a replay-only robot observability workbench for investigating recorded contact incidents. It combines real KUKA telemetry, deterministic measurements, and a trained OpenTSLM interpretation in one reviewable handoff.
 
-An agentic data pipeline can search for open telemetry, verify native source evidence, pin an approved revision, acquire selected assets, inspect their structure, and convert compatible records into TimeNet. Trace then lets an engineer replay an event, inspect the responsible signals, compare a reference window, and export the investigation as Markdown.
+An agentic data pipeline can search for open telemetry, verify native source evidence, pin an approved revision, acquire selected assets, inspect their structure, and convert compatible records into TimeNet. y/trace then lets an engineer replay an event, inspect the responsible signals, compare a reference window, and export the investigation as Markdown.
 
 Built for the Aionic Labs × Agentic Systems Lab Temporal AI Challenge in Zurich.
 
-## What Trace demonstrates
+## What y/trace demonstrates
 
 ```text
 Find and verify open telemetry
@@ -30,7 +30,7 @@ The product keeps three evidence sources separate:
 - **Measurements** are deterministic calculations over the selected telemetry.
 - **OpenTSLM interpretations** are generated predictions linked to their exact input window.
 
-Trace does not claim live collision prevention, verified root cause, exact contact location, or reconstructed world pose.
+y/trace does not claim live collision prevention, verified root cause, exact contact location, or reconstructed world pose.
 
 ## Run the complete local demo
 

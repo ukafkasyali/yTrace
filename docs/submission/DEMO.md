@@ -12,7 +12,7 @@ Timing, measured 13 September 2026 on the current CPU-only deployment (two smoke
 
 | Time | Action | Suggested narration |
 |---|---|---|
-| 0:00–0:20 | Open **Data source** and show the pre-run verified result | “Trace starts before training. An agent turns a dataset brief into requirements, searches with Tavily, verifies native evidence, and pauses for human approval. The approved revision becomes the input to our secure TimeNet ingestion path.” |
+| 0:00–0:20 | Open **Data source** and show the pre-run verified result | “y/trace starts before training. An agent turns a dataset brief into requirements, searches with Tavily, verifies native evidence, and pauses for human approval. The approved revision becomes the input to our secure TimeNet ingestion path.” |
 | 0:20–0:36 | Return to Replay and click **Replay interval · 0.5×** | “Now we investigate one recording from that open source. The marker is a publisher annotation, not a model detection. The robot uses separately recorded joint angles; its body and world frame remain schematic.” |
 | 0:36–1:02 | Read the actual event class, strongest joint and onset, then point to **Cross-check** | “The model hypothesis and deterministic torque ranges stay separate. Different rankings tell the engineer which signals to inspect before handoff.” |
 | 1:02–1:20 | Click **Inspect exact seven-channel input**, then return | “This is the model's complete input: seven raw 1 kHz channels, with the publisher label excluded. Our TimeNet connector preserves the original arrays.” |
