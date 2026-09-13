@@ -1,0 +1,160 @@
+Inspect the current repository and determine whether it contains enough information to access and deploy to the existing inference VM.
+
+Do not modify infrastructure yet. First audit and report.
+
+## 1. Discover VM access information
+
+Search the repository for:
+
+- SSH hostnames / IP aliases
+- SSH usernames
+- `~/.ssh/config` references
+- deployment scripts
+- rsync/scp commands
+- Docker/Docker Compose files
+- systemd units
+- VM setup documentation
+- environment templates
+- inference service URLs
+- frontend API base URLs
+- Tailscale/VPN/private-network assumptions
+- cloud provider references
+- storage/mount paths
+- existing remote launch commands
+- CI/CD or deployment workflows
+
+Relevant search terms may include:
+```text
+ssh
+scp
+rsync
+deploy
+vm
+inference
+remote
+host
+tailscale
+docker
+systemd
+TIMENET_HOME
+DATA_DIR
+registry
+cache
+```
+
+Determine:
+
+1. whether the VM can be identified unambiguously,
+2. how developers are expected to connect to it,
+3. whether access relies on local SSH configuration or credentials outside the repository,
+4. what services already run there,
+5. what ports they expose,
+6. where persistent data currently lives,
+7. how the inference service is started.
+
+Do not print private keys, tokens, passwords, or other secrets. Report only the mechanism and identifiers safe to expose.
+
+If the repository does not contain enough information to establish access, state exactly what external information is missing.
+
+## 2. Assess deployment readiness
+
+Given the current canonical flow:
+```text
+approved source
+→ verified acquisition
+→ SourceDescriptor
+→ OnboardingOrchestrator
+→ human resolution if needed
+→ native TimeNet
+→ build/load/verification
+→ verified TimeF
+```
+
+determine what is required to run the ingestion stack on the VM.
+
+The intended hackathon deployment is initially:
+```text
+INFERENCE VM
+├── ingestion API
+├── ingestion worker
+├── inference service
+├── TimeNet checkout/worktrees
+└── shared persistent storage
+    ├── ingestion SQLite database
+    ├── acquisition cache
+    ├── onboarding jobs
+    └── TimeF registry
+```
+
+Prefer co-locating the ingestion API and worker rather than introducing distributed storage.
+
+## 3. Identify configuration required
+
+Report the required configuration for at least:
+
+- ingestion database path
+- acquisition/cache root
+- onboarding jobs root
+- `TIMENET_HOME`
+- TimeF registry
+- TimeNet repository/worktree location
+- inference service endpoint
+- sourcing service endpoint
+- frontend → ingestion API endpoint
+- human-resolution authentication
+- archive/cache permissions
+
+Check whether these already have environment-variable support.
+
+Do not hardcode machine-specific paths if configuration already exists.
+
+## 4. Security/isolation check
+
+Pay special attention to connector generation.
+
+Determine how to safely support:
+```text
+connector_handoff
+→ isolated TimeNet worktree
+→ coding agent
+→ generated connector
+→ tests/build
+→ verified TimeF
+```
+
+The generated connector must not modify the stable TimeNet checkout used by the inference service.
+
+Recommend the smallest practical isolation appropriate for the hackathon, such as separate worktrees/processes/directories. Do not introduce Kubernetes or distributed infrastructure.
+
+## 5. Produce a deployment plan
+
+Do not deploy yet unless the repository already contains an explicit safe and documented deployment procedure and access is clearly available.
+
+Report:
+
+1. how VM access works,
+2. whether sufficient access information exists in the repository,
+3. existing deployment tooling,
+4. current VM services,
+5. required shared storage layout,
+6. required environment variables,
+7. any missing credentials/configuration,
+8. connector-generation isolation strategy,
+9. exact minimal steps for deploying ingestion API + worker,
+10. exact smoke test we should run after deployment.
+
+The desired smoke test is:
+```text
+frontend
+→ approved source
+→ remote ingestion API
+→ VM acquisition
+→ onboarding job
+→ frontend sees job progress
+→ human resolution if required
+→ TimeF build
+→ verification
+→ COMPLETED
+```
+
+Do not make unrelated code changes.

@@ -1,0 +1,103 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CV7PSCWPCG7C1VH2631MGQ",
+  "session_id": "01a099a2-dad7-7d70-acfb-46e59d1026d2",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T07:38:18.008918372Z",
+  "branch": "codex/ingestion-onboarding-integration",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "data_ingestion/README.md",
+    "data_ingestion/src/dataset_profiler/ingestion/__init__.py",
+    "data_ingestion/src/dataset_profiler/ingestion/api.py",
+    "data_ingestion/src/dataset_profiler/ingestion/jobs.py",
+    "data_ingestion/src/dataset_profiler/ingestion/mapping.py",
+    "data_ingestion/src/dataset_profiler/ingestion/worker.py",
+    "data_ingestion/src/dataset_profiler/ingestion/worker_main.py",
+    "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py",
+    "docs/FRONTEND_INTEGRATION.md",
+    "docs/GENERIC_INGESTION_ACCEPTANCE.md",
+    "frontend/src/services/index.test.ts",
+    "frontend/src/services/index.ts",
+    "frontend/src/services/ingestion.ts",
+    "frontend/src/sourcing/ApprovedSourceLibrary.test.tsx",
+    "frontend/src/sourcing/ApprovedSourceLibrary.tsx",
+    "frontend/src/styles.css"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "9bd447999175",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 425303,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 8303360,
+    "output_tokens": 19680,
+    "api_call_count": 72
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T07:38:17.937557287Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 96,
+    "total_committed": 0,
+    "total_lines_changed": 96,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1164,
+      "user_lines_removed": 96,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "data_ingestion/README.md": 36,
+        "data_ingestion/src/dataset_profiler/ingestion/__init__.py": 10,
+        "data_ingestion/src/dataset_profiler/ingestion/api.py": 28,
+        "data_ingestion/src/dataset_profiler/ingestion/jobs.py": 107,
+        "data_ingestion/src/dataset_profiler/ingestion/mapping.py": 9,
+        "data_ingestion/src/dataset_profiler/ingestion/onboarding.py": 535,
+        "data_ingestion/src/dataset_profiler/ingestion/worker.py": 76,
+        "data_ingestion/src/dataset_profiler/ingestion/worker_main.py": 7,
+        "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py": 4,
+        "data_ingestion/tests/test_ingestion_onboarding.py": 189,
+        "docs/FRONTEND_INTEGRATION.md": 10,
+        "docs/GENERIC_INGESTION_ACCEPTANCE.md": 5,
+        "frontend/src/services/index.test.ts": 32,
+        "frontend/src/services/index.ts": 14,
+        "frontend/src/services/ingestion.ts": 57,
+        "frontend/src/sourcing/ApprovedSourceLibrary.test.tsx": 1,
+        "frontend/src/sourcing/ApprovedSourceLibrary.tsx": 43,
+        "frontend/src/styles.css": 1
+      },
+      "user_removed_per_file": {
+        "data_ingestion/README.md": 6,
+        "data_ingestion/src/dataset_profiler/ingestion/api.py": 1,
+        "data_ingestion/src/dataset_profiler/ingestion/jobs.py": 2,
+        "data_ingestion/src/dataset_profiler/ingestion/mapping.py": 2,
+        "data_ingestion/src/dataset_profiler/ingestion/worker.py": 52,
+        "data_ingestion/src/dataset_profiler/ingestion/worker_main.py": 12,
+        "data_ingestion/src/dataset_profiler/onboarding/orchestrator.py": 2,
+        "docs/FRONTEND_INTEGRATION.md": 2,
+        "docs/GENERIC_INGESTION_ACCEPTANCE.md": 3,
+        "frontend/src/services/ingestion.ts": 1,
+        "frontend/src/sourcing/ApprovedSourceLibrary.tsx": 13
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1164,
+      "agent_lines_removed": 96
+    }
+  ]
+}
