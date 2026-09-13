@@ -23,6 +23,25 @@ def test_metrics_include_invalid_outputs() -> None:
     assert metrics["contact_n"] == 2
 
 
+def test_rationale_grounding_metrics_compare_text_to_answer_and_target() -> None:
+    rows = [
+        {
+            "target": {"onset_ms": 400, "strongest_joint": "J3"},
+            "output": 'Rationale: Sustained evidence begins at 410 ms and is led by J3.\nAnswer: {"onset_ms":405,"strongest_joint":"J3"}',
+        },
+        {
+            "target": {"onset_ms": 500, "strongest_joint": "J2"},
+            "output": 'Rationale: The excursion begins at 100 ms on J7.\nAnswer: {"onset_ms":500,"strongest_joint":"J2"}',
+        },
+    ]
+    metrics = evaluate_rows(rows)
+    assert metrics["rationale_presence"] == 1.0
+    assert metrics["rationale_onset_answer_consistency_50ms"] == 0.5
+    assert metrics["rationale_onset_target_consistency_50ms"] == 0.5
+    assert metrics["rationale_joint_answer_consistency"] == 0.5
+    assert metrics["rationale_joint_target_consistency"] == 0.5
+
+
 def test_semantics_macro_f1_uses_only_declared_classes() -> None:
     rows = [
         {"target": {"event_type": "free"}, "prediction": {"event_type": "free"}},

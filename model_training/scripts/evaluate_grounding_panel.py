@@ -28,6 +28,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=20260912)
     parser.add_argument("--reuse-predictions", action="store_true")
     parser.add_argument(
+        "--output-format",
+        choices=("answer_only", "answer_then_evidence", "rationale_then_answer"),
+        default="rationale_then_answer",
+    )
+    parser.add_argument("--prompt-set", choices=("train", "heldout"), default="train")
+    parser.add_argument(
         "--selection",
         choices=("event-intent-stratified", "event-stratified", "joint-stratified"),
         default="event-stratified",
@@ -42,7 +48,8 @@ def main() -> None:
         "validation",
         mode="all_intents" if args.selection == "event-intent-stratified" else "summary",
         seed=args.seed,
-        output_format="rationale_then_answer",
+        output_format=args.output_format,
+        prompt_set=args.prompt_set,
     )
     selection_size = min(args.samples, len(dataset))
     if args.selection == "event-intent-stratified":
@@ -78,6 +85,8 @@ def main() -> None:
         "split": "validation",
         "selection": selection_description,
         "seed": args.seed,
+        "output_format": args.output_format,
+        "prompt_set": args.prompt_set,
         "requested_samples": args.samples,
         "joint_counts": dict(
             Counter(str(metadata.get("strongest_joint") or "free") for metadata in panel_metadata)
