@@ -7,6 +7,7 @@ import json
 
 from .datasets import KukaCollisionHints, KukaContactPart2Hints
 from .inspection import inspect_mat_file
+from .io.hdf5 import inspect_hdf5_file
 from .io.matlab import load_matlab
 from .profiler import profile_dataset
 from .visualization import plot_run
@@ -46,14 +47,19 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "inspect":
-        result = inspect_mat_file(args.path, args.path.parent, args.path.parent.name, args.first_values)
+        if args.path.suffix.casefold() in {".h5", ".hdf5"}:
+            result = inspect_hdf5_file(args.path, args.path.parent,
+                                       args.path.parent.name, args.first_values)
+        else:
+            result = inspect_mat_file(args.path, args.path.parent,
+                                      args.path.parent.name, args.first_values)
         print(json.dumps(asdict(result), indent=2, allow_nan=False))
         return 0
     if args.command == "profile":
         result = profile_dataset(args.source, args.dataset_id, hints=_hints(args.hints))
         result.write_json(args.output)
         print(
-            f"Wrote {args.output}: {len(result.runs)} runs, {len(result.files)} MAT files, "
+            f"Wrote {args.output}: {len(result.runs)} runs, {len(result.files)} data files, "
             f"{len(result.quality.issues)} audit issues"
         )
         return 0
