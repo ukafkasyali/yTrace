@@ -187,6 +187,77 @@ the strengths, limitations, or blockers that produced it; numeric scores are omi
 
 Returns the approved manifest. Before approval it returns `409 ARTIFACT_UNAVAILABLE`.
 
+New approvals use additive manifest schema `1.1`. `sourceKind` and `sourceRevision` identify the
+approved provider record, while `assets` contains only non-empty data, documentation, or checksum
+files for which the native provider returned enough information to construct a credential-free,
+revision-pinned locator. Each asset includes a stable `assetId`, provider locator, download URL,
+size, role, and the provider checksum when one is available. Existing persisted manifests without
+these fields deserialize as schema `1.0` with an empty asset list and remain displayable, but are not
+acquisition-ready.
+
+`datasetLicenseId` and `codeLicenseId` keep artifact rights separate. A GitHub repository's SPDX
+license is recorded as code rights and is not silently applied to dataset bytes. When a linked
+Zenodo or Hugging Face artifact supplies the dataset license, it is retained separately. The legacy
+`licenseId` field remains additive compatibility data; ingestion readiness must not use it to fill a
+missing dataset license.
+
+GitHub tree entries follow the documented `path`, `sha`, `size`, `url`, and `truncated` contract;
+Zenodo retains its documented MD5 checksum rather than relabelling it; and Hugging Face URLs pin the
+Hub commit revision accepted by `hf_hub_url`/`hf_hub_download`:
+
+- https://docs.github.com/en/rest/git/trees?apiVersion=2022-11-28#get-a-tree
+- https://developers.zenodo.org/#files
+- https://huggingface.co/docs/huggingface_hub/en/package_reference/file_download#huggingface_hub.hf_hub_url
+
+### `GET /api/approved-sources`
+
+Lists durable approved sources independently of sourcing runs. Results are ordered by latest
+approval, paginated with `page` and `pageSize`, and may be filtered by `sourceKind` or a literal
+case-insensitive `query` over the display name and canonical URL. Reapproving the same canonical
+provider URL and source revision increments `approvalCount`; it does not create another visible
+source. A changed provider revision is a separate source.
+
+```json
+{
+  "data": [
+    {
+      "approvedSourceId": "src_0123456789abcdef01234567",
+      "name": "Raw Torque Data — Part I",
+      "canonicalUrl": "https://zenodo.org/records/21927431",
+      "sourceKind": "ZENODO",
+      "sourceRevision": "21927431.r4",
+      "isAcquisitionReady": true,
+      "approvalCount": 2,
+      "latestManifestSha256": "..."
+    }
+  ],
+  "pagination": {"page": 1, "pageSize": 20, "totalItems": 1, "totalPages": 1}
+}
+```
+
+Approval writes the sourcing run first and then idempotently records its manifest in the catalog.
+Service startup reconciles approved run manifests, so an interruption between those writes does not
+lose the source. Approval still never downloads or ingests the dataset.
+
+### `GET /api/approved-sources/{approvedSourceId}`
+
+Returns the source summary plus immutable approval events containing the originating sourcing run,
+candidate, manifest SHA-256, and approval timestamp.
+
+### `GET /api/approved-sources/{approvedSourceId}/manifest`
+
+Returns the exact latest approved manifest snapshot. Unknown IDs return the shared
+`404 APPROVED_SOURCE_NOT_FOUND` envelope.
+
+### `DELETE /api/approved-sources/{approvedSourceId}`
+
+Removes the source revision from the approved-source library and returns `204`. The originating
+sourcing run, manifest artifact, and immutable approval history remain available for audit, but
+catalog detail and manifest lookups return `404 APPROVED_SOURCE_NOT_FOUND`. Repeating deletion is
+idempotent. Startup reconciliation does not restore a deleted catalog entry; a new approval event
+for the same provider revision does. The frontend enables this operation only after verifying that
+the ingestion service has no job referencing the source.
+
 ## Errors and operational bounds
 
 Errors use the shared envelope:

@@ -14,6 +14,16 @@ _CONNECTORS = {
 }
 
 
+def _connector(dataset_id: str):
+    try:
+        return _CONNECTORS[dataset_id]()
+    except KeyError as error:
+        supported = ", ".join(sorted(_CONNECTORS))
+        raise ValueError(
+            f"unsupported KUKA dataset_id {dataset_id!r}; choose one of: {supported}"
+        ) from error
+
+
 def build_kuka_timef_dataset(
     dataset_id: str, source_root: str | Path, registry_root: str | Path
 ) -> Path:
@@ -22,14 +32,26 @@ def build_kuka_timef_dataset(
     ``dataset_id`` is deliberately explicit so batches from Part I and Part II cannot be
     accidentally combined or assigned the wrong event semantics.
     """
-    try:
-        connector = _CONNECTORS[dataset_id]()
-    except KeyError as error:
-        supported = ", ".join(sorted(_CONNECTORS))
-        raise ValueError(
-            f"unsupported KUKA dataset_id {dataset_id!r}; choose one of: {supported}"
-        ) from error
+    connector = _connector(dataset_id)
     dataset = connector.convert(connector.discover(Path(source_root)))
+    return store_dataset(
+        dataset,
+        Path(registry_root),
+        values_backend=connector.values_backend,
+    )
+
+
+def build_kuka_timef_dataset_from_subsets(
+    dataset_id: str,
+    source_subsets: list[tuple[str, str | Path]],
+    registry_root: str | Path,
+) -> Path:
+    """Build one KUKA part from independently extracted, named batch archives."""
+    connector = _connector(dataset_id)
+    refs = connector.discover_subsets(
+        [(subset, Path(source_root)) for subset, source_root in source_subsets]
+    )
+    dataset = connector.convert(refs)
     return store_dataset(
         dataset,
         Path(registry_root),

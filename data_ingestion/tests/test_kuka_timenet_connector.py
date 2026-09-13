@@ -6,8 +6,14 @@ from timenet.connectors import BaseConnector
 from timenet.reader import TimeFReader
 from timenet.registry import DatasetVersion
 
-from dataset_profiler.timenet import build_kuka_collision_part1, build_kuka_timef_dataset
-from dataset_profiler.timenet.kuka_collision import KukaCollisionPart1Connector, KukaRunRef
+from dataset_profiler.timenet import (
+    build_kuka_collision_part1,
+    build_kuka_timef_dataset,
+)
+from dataset_profiler.timenet.kuka_collision import (
+    KukaCollisionPart1Connector,
+    KukaRunRef,
+)
 
 
 def _source(tmp_path: Path) -> KukaRunRef:
@@ -38,7 +44,7 @@ def test_is_native_compatible_connector():
 def test_metadata_uses_part_identity_not_batch_identity():
     metadata = KukaCollisionPart1Connector().metadata()
     assert metadata.dataset_id == "kuka/collision-part1"
-    assert str(metadata.license) == "MIT"
+    assert str(metadata.license) == "CC-BY-4.0"
 
 
 def test_one_run_becomes_one_record_with_fourteen_scalar_series(tmp_path):

@@ -237,7 +237,16 @@ def test_github_native_adapter_contract() -> None:
         if "/git/trees/" in path:
             return httpx.Response(
                 200,
-                json={"tree": [{"path": "signals.mat", "type": "blob", "size": 200}]},
+                json={
+                    "tree": [
+                        {
+                            "path": "signals.mat",
+                            "type": "blob",
+                            "size": 200,
+                            "sha": "a" * 40,
+                        }
+                    ]
+                },
             )
         return httpx.Response(
             200,
@@ -265,7 +274,13 @@ def test_github_native_adapter_contract() -> None:
 
     assert verified.profile.revision == "GITHUB:abc123"
     assert verified.profile.license_id == "MIT"
+    assert verified.profile.dataset_license_id is None
+    assert verified.profile.code_license_id == "MIT"
     assert verified.profile.has_time_series_files is True
+    assert verified.profile.source_kind is SourceKind.GITHUB
+    assert verified.profile.source_revision == "abc123"
+    assert len(verified.profile.assets) == 1
+    assert verified.profile.assets[0].provider_locator == f"github:org/repo:blob:{'a' * 40}"
 
 
 def test_native_adapter_follows_validated_same_host_redirect() -> None:
@@ -515,7 +530,16 @@ def test_zenodo_native_adapter_contract() -> None:
             ),
             "license": {"id": "cc-by-4.0"},
         },
-        "files": [{"key": "collision-batch-01.tar.zst", "size": 500}],
+        "files": [
+            {
+                "key": "collision-batch-01.tar.zst",
+                "size": 500,
+                "checksum": "md5:2942bfabb3d05332b66eb128e0842cff",
+                "links": {
+                    "self": "https://zenodo.org/api/files/bucket/collision-batch-01.tar.zst"
+                },
+            }
+        ],
     }
     verifier = NativeVerifier(
         settings(),
@@ -532,8 +556,12 @@ def test_zenodo_native_adapter_contract() -> None:
     verified = verifier.verify(candidate)
 
     assert verified.profile.revision == "ZENODO:123.r3"
+    assert verified.profile.dataset_license_id == "cc-by-4.0"
+    assert verified.profile.code_license_id is None
     assert verified.profile.total_size_bytes == 500
     assert verified.profile.labels == ["collision"]
+    assert verified.profile.assets[0].source_checksum is not None
+    assert verified.profile.assets[0].source_checksum.algorithm.value == "md5"
 
 
 def test_zenodo_label_aliases_are_normalized_to_task_classes() -> None:
@@ -568,6 +596,40 @@ def test_zenodo_label_aliases_are_normalized_to_task_classes() -> None:
         item.observed_value for item in verified.evidence if item.claim_key == "labels"
     ]
     assert label_evidence == ["collision,contact,free"]
+
+
+def test_zenodo_cross_host_file_link_is_not_exposed_as_an_asset() -> None:
+    payload = {
+        "title": "Robot signal data",
+        "revision": 1,
+        "metadata": {
+            "description": "Dataset structure: robot torque time-series signals.",
+            "license": {"id": "cc-by-4.0"},
+        },
+        "files": [
+            {
+                "key": "signals.csv",
+                "size": 500,
+                "links": {"self": "https://example.test/internal/signals.csv"},
+            }
+        ],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_888888888888",
+        name="Robot signals",
+        canonical_url="https://zenodo.org/records/123",
+        source_kind=SourceKind.ZENODO,
+    )
+
+    verified = verifier.verify(candidate)
+
+    assert verified.profile.has_time_series_files is True
+    assert verified.profile.assets == []
 
 
 def test_native_domain_evidence_distinguishes_cnc_from_robot_data() -> None:
@@ -613,7 +675,13 @@ def test_hugging_face_native_adapter_contract() -> None:
         "sha": "def456",
         "description": "Dataset columns contain robot contact torque time-series signals.",
         "cardData": {"license": "apache-2.0"},
-        "siblings": [{"rfilename": "train.parquet", "size": 300}],
+        "siblings": [
+            {
+                "rfilename": "train.parquet",
+                "size": 300,
+                "lfs": {"oid": "b" * 64, "size": 300},
+            }
+        ],
     }
     verifier = NativeVerifier(
         settings(),
@@ -630,8 +698,38 @@ def test_hugging_face_native_adapter_contract() -> None:
     verified = verifier.verify(candidate)
 
     assert verified.profile.revision == "HUGGING_FACE:def456"
+    assert verified.profile.dataset_license_id == "apache-2.0"
+    assert verified.profile.code_license_id is None
     assert verified.profile.license_id == "apache-2.0"
     assert verified.profile.file_extensions == [".parquet"]
+    assert str(verified.profile.assets[0].download_url) == (
+        "https://huggingface.co/datasets/org/robot-data/resolve/def456/train.parquet"
+    )
+    assert verified.profile.assets[0].source_checksum is not None
+    assert verified.profile.assets[0].source_checksum.value == "b" * 64
+
+
+def test_hugging_face_missing_revision_fails_closed() -> None:
+    payload = {
+        "id": "org/robot-data",
+        "description": "Dataset columns contain robot torque time-series signals.",
+        "cardData": {"license": "apache-2.0"},
+        "siblings": [{"rfilename": "train.parquet", "size": 300}],
+    }
+    verifier = NativeVerifier(
+        settings(),
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))),
+        validate_dns=False,
+    )
+    candidate = DatasetCandidate(
+        id="ds_999999999999",
+        name="HF robot signals",
+        canonical_url="https://huggingface.co/datasets/org/robot-data",
+        source_kind=SourceKind.HUGGING_FACE,
+    )
+
+    with pytest.raises(SourceUnavailable, match="immutable revision"):
+        verifier.verify(candidate)
 
 
 def test_native_adapter_stops_stream_over_size_limit() -> None:

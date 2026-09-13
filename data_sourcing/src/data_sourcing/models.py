@@ -64,6 +64,42 @@ class SourceKind(StrEnum):
     HUGGING_FACE = "HUGGING_FACE"
 
 
+class AssetRole(StrEnum):
+    DATA = "DATA"
+    DOCUMENTATION = "DOCUMENTATION"
+    CHECKSUM = "CHECKSUM"
+
+
+class ChecksumAlgorithm(StrEnum):
+    MD5 = "md5"
+    SHA256 = "sha256"
+
+
+class SourceChecksum(WireModel):
+    algorithm: ChecksumAlgorithm
+    value: str = Field(pattern=r"^[a-fA-F0-9]{32,64}$")
+
+    @model_validator(mode="after")
+    def value_matches_algorithm(self) -> SourceChecksum:
+        expected_length = 32 if self.algorithm is ChecksumAlgorithm.MD5 else 64
+        if len(self.value) != expected_length:
+            raise ValueError(
+                f"{self.algorithm.value} checksums must be {expected_length} hex digits"
+            )
+        self.value = self.value.casefold()
+        return self
+
+
+class SourceAsset(WireModel):
+    asset_id: str = Field(pattern=r"^asset_[a-f0-9]{16}$")
+    name: str = Field(min_length=1, max_length=1_024)
+    role: AssetRole
+    size_bytes: int = Field(gt=0)
+    provider_locator: str = Field(min_length=1, max_length=2_000)
+    download_url: HttpUrl
+    source_checksum: SourceChecksum | None = None
+
+
 class SourceRole(StrEnum):
     DISCOVERY_LEAD = "DISCOVERY_LEAD"
     DATASET_ARTIFACT = "DATASET_ARTIFACT"
@@ -213,7 +249,12 @@ class DatasetProfile(WireModel):
     canonical_url: HttpUrl
     source_kinds: list[SourceKind]
     revision: str | None = None
+    source_kind: SourceKind | None = None
+    source_revision: str | None = Field(default=None, max_length=200)
+    assets: list[SourceAsset] = Field(default_factory=list)
     license_id: str | None = None
+    dataset_license_id: str | None = None
+    code_license_id: str | None = None
     file_count: int | None = Field(default=None, ge=0)
     total_size_bytes: int | None = Field(default=None, ge=0)
     file_extensions: list[str] = Field(default_factory=list)
@@ -416,12 +457,18 @@ class RefinementOutcome(WireModel):
 
 
 class SourcingManifest(WireModel):
+    schema_version: str = Field(default="1.0", pattern=r"^1\.[01]$")
     run_id: str
     candidate_id: str
     name: str
     canonical_url: HttpUrl
     revision: str | None = None
+    source_kind: SourceKind | None = None
+    source_revision: str | None = Field(default=None, max_length=200)
+    assets: list[SourceAsset] = Field(default_factory=list)
     license_id: str
+    dataset_license_id: str | None = None
+    code_license_id: str | None = None
     labels: list[str]
     sample_rate_hz: float | None = None
     file_extensions: list[str]
@@ -429,6 +476,48 @@ class SourcingManifest(WireModel):
     evidence_ids: list[str]
     limitations: list[str]
     approved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class ApprovalEvent(WireModel):
+    sourcing_run_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+    candidate_id: str = Field(pattern=r"^ds_[a-f0-9]{12}$")
+    manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    approved_at: datetime
+
+
+class ApprovedSourceSummary(WireModel):
+    approved_source_id: str = Field(pattern=r"^src_[a-f0-9]{24}$")
+    name: str
+    canonical_url: HttpUrl
+    source_kind: SourceKind
+    source_revision: str
+    license_id: str
+    dataset_license_id: str | None = None
+    code_license_id: str | None = None
+    labels: list[str]
+    file_extensions: list[str]
+    total_size_bytes: int | None = None
+    is_acquisition_ready: bool
+    approval_count: int = Field(ge=1)
+    latest_manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    created_at: datetime
+    latest_approved_at: datetime
+
+
+class ApprovedSourceDetail(ApprovedSourceSummary):
+    approvals: list[ApprovalEvent]
+
+
+class Pagination(WireModel):
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+    total_items: int = Field(ge=0)
+    total_pages: int = Field(ge=0)
+
+
+class ApprovedSourcePage(WireModel):
+    data: list[ApprovedSourceSummary]
+    pagination: Pagination
 
 
 class SourcingRun(WireModel):

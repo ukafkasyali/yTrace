@@ -8,7 +8,7 @@ const demoBrief = 'Find 1 kHz robot collision and intentional contact time-serie
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'The request failed.';
 type Intent = { signature: string; key: string };
 
-export default function DatasetScout({ services, onUseSource }: { services: Services; onUseSource: (url: string) => void }) {
+export default function DatasetScout({ services, onUseSource }: { services: Services; onUseSource: () => void }) {
   const [brief, setBrief] = useState(demoBrief);
   const [resumeId, setResumeId] = useState('');
   const [runId, setRunId] = useState('');
@@ -113,7 +113,7 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
       <form onSubmit={event => { event.preventDefault(); setError(''); setRun(null); setSourceReady(false); setRunId(resumeId.trim()); setPollRevision(value => value + 1); }}><label htmlFor="sourcing-run-id">Resume run</label><input id="sourcing-run-id" value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Run ID" disabled={!services.connected || Boolean(busy)} /><button className="btn" disabled={!services.connected || !resumeId.trim() || Boolean(busy)}>Load</button></form>
     </div>
     {error && <p className="error-message" role="alert">{error}</p>}
-    {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
-    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved manifest is ready for a separate deterministic ingestion step.</p>}
+    {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={() => { onUseSource(); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}
+    {sourceReady && <p className="source-ready" role="status"><Check size={14} aria-hidden="true" />Approved source library refreshed. Select its assets there when you are ready to ingest.</p>}
   </section>;
 }

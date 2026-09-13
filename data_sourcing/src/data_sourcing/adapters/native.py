@@ -5,7 +5,7 @@ import html
 import json
 import re
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import quote, urljoin, urlsplit
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,9 +14,13 @@ from data_sourcing.adapters.canonicalize import canonical_source_url
 from data_sourcing.adapters.discovery import SourceUnavailable
 from data_sourcing.config import Settings
 from data_sourcing.models import (
+    AssetRole,
+    ChecksumAlgorithm,
     DatasetCandidate,
     DatasetProfile,
     EvidenceRecord,
+    SourceAsset,
+    SourceChecksum,
     SourceKind,
     VerificationStatus,
 )
@@ -29,7 +33,16 @@ _RATE = re.compile(r"\b(\d+(?:\.\d+)?)\s*(k?hz)\b", re.IGNORECASE)
 _BATCHES = re.compile(
     r"\b(?:containing|all)\s+(\d+)\s+(?:compressed\s+)?(?:packages|batches)\b", re.IGNORECASE
 )
-_TIME_SERIES_EXTENSIONS = {".csv", ".mat", ".parquet", ".h5", ".hdf5", ".npy", ".npz"}
+_TIME_SERIES_EXTENSIONS = {
+    ".csv",
+    ".tsv",
+    ".mat",
+    ".parquet",
+    ".h5",
+    ".hdf5",
+    ".npy",
+    ".npz",
+}
 _ARCHIVE_EXTENSIONS = {".zip", ".tar", ".gz", ".zst", ".tar.gz", ".tar.zst"}
 _REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 _MAX_NATIVE_DOCUMENTS = 8
@@ -45,6 +58,9 @@ class NativeFile(BaseModel):
 
     name: str
     size: int = Field(ge=0)
+    provider_locator: str | None = None
+    download_url: str | None = None
+    checksum: SourceChecksum | None = None
 
 
 class NativeDocument(BaseModel):
@@ -105,6 +121,66 @@ def direct_data_files(document: NativeDocument) -> list[NativeFile]:
     return [
         file for file in document.files if file.size > 0 and _extension(file.name) in supported
     ]
+
+
+def _asset_role(file: NativeFile) -> AssetRole | None:
+    extension = _extension(file.name)
+    if extension in _TIME_SERIES_EXTENSIONS | _ARCHIVE_EXTENSIONS:
+        return AssetRole.DATA
+    basename = Path(file.name).name.casefold()
+    if "checksum" in basename or basename in {"sha256sums", "sha256sums.txt"}:
+        return AssetRole.CHECKSUM
+    if extension in {".md", ".txt"} and basename.startswith(
+        ("readme", "license", "licence", "citation", "dataset_card")
+    ):
+        return AssetRole.DOCUMENTATION
+    return None
+
+
+def _source_assets(candidate: DatasetCandidate, document: NativeDocument) -> list[SourceAsset]:
+    assets: list[SourceAsset] = []
+    for file in document.files:
+        role = _asset_role(file)
+        if role is None or file.size <= 0 or not file.provider_locator or not file.download_url:
+            continue
+        material = "|".join((candidate.id, file.provider_locator))
+        assets.append(
+            SourceAsset(
+                asset_id=f"asset_{hashlib.sha256(material.encode()).hexdigest()[:16]}",
+                name=file.name,
+                role=role,
+                size_bytes=file.size,
+                provider_locator=file.provider_locator,
+                download_url=file.download_url,
+                source_checksum=file.checksum,
+            )
+        )
+    return assets
+
+
+def _source_checksum(value: object) -> SourceChecksum | None:
+    if not isinstance(value, str) or ":" not in value:
+        return None
+    algorithm, digest = value.split(":", 1)
+    try:
+        return SourceChecksum(algorithm=ChecksumAlgorithm(algorithm.casefold()), value=digest)
+    except ValueError:
+        return None
+
+
+def _safe_download_url(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return validate_source_url(value)
+    except ValueError:
+        return None
+
+
+def _object_items(value: object) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
 
 
 def _evidence_id(candidate_id: str, source_url: str, claim: str, value: str) -> str:
@@ -242,6 +318,15 @@ def build_verified_candidate(
                 )
             )
 
+    primary = next(
+        (
+            document
+            for document in documents
+            if document.source_url.rstrip("/")
+            == str(candidate.canonical_url).rstrip("/")
+        ),
+        documents[0],
+    )
     preferred = sorted(
         documents,
         key=lambda item: (
@@ -255,6 +340,15 @@ def build_verified_candidate(
     total_size = sum(sum(file.size for file in document.files) for document in dataset_documents)
     file_count = sum(len(document.files) for document in dataset_documents)
     licence = next((document.license_id for document in preferred if document.license_id), None)
+    dataset_licence = next(
+        (
+            document.license_id
+            for document in preferred
+            if document.source_kind is not SourceKind.GITHUB and document.license_id
+        ),
+        primary.license_id if primary.source_kind is not SourceKind.GITHUB else None,
+    )
+    code_licence = primary.license_id if primary.source_kind is SourceKind.GITHUB else None
     revision = ";".join(
         f"{document.source_kind.value}:{document.revision}" for document in preferred
     )
@@ -268,7 +362,12 @@ def build_verified_candidate(
         canonical_url=candidate.canonical_url,
         source_kinds=list(dict.fromkeys(document.source_kind for document in preferred)),
         revision=revision or None,
+        source_kind=primary.source_kind,
+        source_revision=primary.revision,
+        assets=_source_assets(candidate, primary),
         license_id=licence,
+        dataset_license_id=dataset_licence,
+        code_license_id=code_licence,
         file_count=file_count,
         total_size_bytes=total_size,
         file_extensions=sorted(extensions),
@@ -460,6 +559,9 @@ class NativeVerifier:
         ) or ""
         branch = str(metadata.get("default_branch", "main"))
         commit = self._get_json(f"{api}/commits/{branch}", headers)
+        commit_sha = str(commit.get("sha") or "")
+        if not commit_sha:
+            raise SourceUnavailable("GitHub repository did not expose an immutable commit revision")
         try:
             tree = self._get_json(f"{api}/git/trees/{branch}?recursive=1", headers)
         except NativeResponseTooLarge:
@@ -471,8 +573,17 @@ class NativeVerifier:
         if tree.get("truncated"):
             tree = {}
         files = [
-            NativeFile(name=str(item.get("path", "")), size=int(item.get("size", 0)))
-            for item in tree.get("tree", [])
+            NativeFile(
+                name=str(item.get("path", "")),
+                size=int(item.get("size", 0)),
+                provider_locator=(
+                    f"github:{owner}/{repo}:blob:{item.get('sha')}" if item.get("sha") else None
+                ),
+                download_url=(
+                    f"{api}/git/blobs/{item.get('sha')}" if item.get("sha") else None
+                ),
+            )
+            for item in _object_items(tree.get("tree"))
             if item.get("type") == "blob"
         ]
         licence = metadata.get("license") or {}
@@ -480,7 +591,7 @@ class NativeVerifier:
             source_url=url,
             source_kind=SourceKind.GITHUB,
             name=str(metadata.get("full_name", repo)),
-            revision=str(commit.get("sha", "")),
+            revision=commit_sha,
             license_id=licence.get("spdx_id"),
             text=f"{metadata.get('description') or ''}\n{readme}",
             files=files,
@@ -490,12 +601,25 @@ class NativeVerifier:
     def _zenodo(self, url: str) -> NativeDocument:
         record_id = urlsplit(url).path.rstrip("/").split("/")[-1]
         payload = self._get_json(f"https://zenodo.org/api/records/{record_id}")
+        record_revision = payload.get("revision")
+        if not isinstance(record_revision, int) or record_revision < 1:
+            raise SourceUnavailable("Zenodo record did not expose an immutable revision")
         metadata = payload.get("metadata") or {}
         text = _plain_text(str(metadata.get("description", "")))
-        files = [
-            NativeFile(name=str(item.get("key", "")), size=int(item.get("size", 0)))
-            for item in payload.get("files", [])
-        ]
+        files = []
+        for item in _object_items(payload.get("files")):
+            name = str(item.get("key", ""))
+            links = item.get("links") if isinstance(item.get("links"), dict) else {}
+            download_url = links.get("self")
+            files.append(
+                NativeFile(
+                    name=name,
+                    size=int(item.get("size", 0)),
+                    provider_locator=f"zenodo:{record_id}:{name}",
+                    download_url=_safe_download_url(download_url),
+                    checksum=_source_checksum(item.get("checksum")),
+                )
+            )
         licence = metadata.get("license") or {}
         batch_files = [file for file in files if "batch-" in file.name.casefold()]
         related = _related_urls(text)
@@ -506,7 +630,7 @@ class NativeVerifier:
             source_url=url,
             source_kind=SourceKind.ZENODO,
             name=str(payload.get("title") or metadata.get("title") or record_id),
-            revision=f"{record_id}.r{payload.get('revision', 0)}",
+            revision=f"{record_id}.r{record_revision}",
             license_id=licence.get("id"),
             text=text,
             files=files,
@@ -518,21 +642,39 @@ class NativeVerifier:
         namespace = "/".join(urlsplit(url).path.strip("/").split("/")[1:3])
         payload = self._get_json(f"https://huggingface.co/api/datasets/{namespace}")
         card = payload.get("cardData") or {}
-        siblings = payload.get("siblings") or []
+        siblings = _object_items(payload.get("siblings"))
         files = []
+        revision = str(payload.get("sha", ""))
+        if not revision:
+            raise SourceUnavailable("Hugging Face dataset did not expose an immutable revision")
         for item in siblings:
-            lfs = item.get("lfs") or {}
+            lfs = item.get("lfs") if isinstance(item.get("lfs"), dict) else {}
+            name = str(item.get("rfilename", ""))
+            lfs_oid = lfs.get("oid")
+            checksum = _source_checksum(f"sha256:{lfs_oid}") if lfs_oid else None
             files.append(
                 NativeFile(
-                    name=str(item.get("rfilename", "")),
+                    name=name,
                     size=int(item.get("size") or lfs.get("size") or 0),
+                    provider_locator=(
+                        f"huggingface:datasets/{namespace}:{revision}:{name}"
+                        if revision and name
+                        else None
+                    ),
+                    download_url=(
+                        f"https://huggingface.co/datasets/{namespace}/resolve/"
+                        f"{quote(revision, safe='')}/{quote(name, safe='/')}"
+                        if revision and name
+                        else None
+                    ),
+                    checksum=checksum,
                 )
             )
         return NativeDocument(
             source_url=url,
             source_kind=SourceKind.HUGGING_FACE,
             name=str(payload.get("id", namespace)),
-            revision=str(payload.get("sha", "")),
+            revision=revision,
             license_id=card.get("license"),
             text=str(payload.get("description") or card),
             files=files,

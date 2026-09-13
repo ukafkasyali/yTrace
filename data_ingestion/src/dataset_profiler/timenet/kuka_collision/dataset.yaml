@@ -4,7 +4,7 @@ dataset_id: kuka/collision-part1
 dataset_version: 1.0.0
 name: KUKA Robot Collision Signals Part I
 description: Raw experimental runs from Part I of the KUKA accidental-collision dataset.
-license: MIT
+license: CC-BY-4.0
 domains:
   - motion
 tags:

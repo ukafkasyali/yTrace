@@ -1,50 +1,60 @@
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, Database } from 'lucide-react';
 import type { DemoData } from '../types';
-import type { Dataset, Recording, Services } from '../services';
+import type { Dataset, ImportedDatasetSelection, Recording, Services } from '../services';
+import ApprovedSourceLibrary from '../sourcing/ApprovedSourceLibrary';
 import DatasetScout from '../sourcing/DatasetScout';
+import ImportedDatasetBrowser from '../sourcing/ImportedDatasetBrowser';
 
-type Props = { services: Services; data: DemoData; onOpenRecording: (record: Recording) => Promise<void> };
+type Props = {
+  services: Services;
+  data: DemoData;
+  onOpenRecording: (record: Recording) => Promise<void>;
+  onOpenImportedRecord: (selection: ImportedDatasetSelection, recordKey: string) => Promise<void>;
+};
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'The request failed.';
 
-export default function DataWorkspace({ services, data, onOpenRecording }: Props) {
+export default function DataWorkspace({ services, data, onOpenRecording, onOpenImportedRecord }: Props) {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetId, setDatasetId] = useState('');
   const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [sourceApproved, setSourceApproved] = useState(false);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [approvedRevision, setApprovedRevision] = useState(0);
+  const [importedDataset, setImportedDataset] = useState<ImportedDatasetSelection | null>(null);
 
   useEffect(() => {
     let alive = true;
     if (services.connected) services.listDatasets().then(items => {
       if (!alive) return;
-      setDatasets(items); setDatasetId(current => items.some(item => item.id === current) ? current : items[0]?.id ?? '');
+      setDatasets(items);
+      setDatasetId(current => items.some(item => item.id === current) ? current : items[0]?.id ?? '');
     }).catch(reason => { if (alive) setError(`Could not load backend catalog: ${errorText(reason)}`); });
     return () => { alive = false; };
   }, [services]);
 
   useEffect(() => {
     let alive = true; setRecordings([]);
-    if (services.connected && datasetId) services.listRecordings(datasetId).then(items => { if (alive) setRecordings(items); })
+    if (services.connected && datasetId) services.listRecordings(datasetId)
+      .then(items => { if (alive) setRecordings(items); })
       .catch(reason => { if (alive) setError(`Could not load recordings for this dataset: ${errorText(reason)}`); });
     return () => { alive = false; };
   }, [services, datasetId]);
 
-  async function run(action: string, work: () => Promise<void>) {
-    setBusy(action); setError('');
-    try { await work(); } catch (reason) { setError(errorText(reason)); } finally { setBusy(''); }
+  async function open(record: Recording) {
+    setBusy(record.id); setError('');
+    try { await onOpenRecording(record); }
+    catch (reason) { setError(errorText(reason)); }
+    finally { setBusy(''); }
   }
 
-  function useApprovedSource(url: string) {
-    setSourceUrl(url);
-    setSourceApproved(true);
-    requestAnimationFrame(() => document.getElementById('ingestion-handoff')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  function refreshApprovedSources() {
+    setApprovedRevision(value => value + 1);
+    requestAnimationFrame(() => document.getElementById('approved-source-library')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
   return <section className="workspace-content" aria-labelledby="data-title">
-    <header className="workspace-heading data-heading"><div><h1 id="data-title">Data sources</h1><p>Find robot telemetry, verify its evidence, and prepare it for TimeNet.</p></div><Database size={24} aria-hidden="true" /></header>
+    <header className="workspace-heading data-heading"><div><h1 id="data-title">Data sources</h1><p>Find robot telemetry, verify its evidence, and ingest an approved revision into TimeNet.</p></div><Database size={24} aria-hidden="true" /></header>
     {error && <p className="error-message" role="alert">{error}</p>}
 
     <details className="recording-summary">
@@ -57,14 +67,10 @@ export default function DataWorkspace({ services, data, onOpenRecording }: Props
       </div>
     </details>
 
-    <DatasetScout services={services} onUseSource={useApprovedSource} />
+    <DatasetScout services={services} onUseSource={refreshApprovedSources} />
+    <div id="approved-source-library"><ApprovedSourceLibrary services={services} refreshKey={approvedRevision} onDatasetReady={setImportedDataset} /></div>
+    <ImportedDatasetBrowser selection={importedDataset} services={services} onClose={() => setImportedDataset(null)} onOpenRecord={onOpenImportedRecord} />
 
-    {sourceApproved && <section className="workspace-section ingestion-handoff" id="ingestion-handoff" aria-labelledby="ingestion-title">
-      <div className="section-heading"><div><h2 id="ingestion-title">Approved source handoff</h2><p>The revision, licence, native evidence and limitations remain visible in the approved manifest above.</p></div></div>
-      <p className="status-note">Browser acquisition is not connected in this submission build. Continue with the deterministic TimeNet connector; approval alone does not mean the source was downloaded or imported.</p>
-      <label htmlFor="source-url">Canonical source</label><div className="field-row"><input id="source-url" type="url" value={sourceUrl} readOnly /></div>
-    </section>}
-
-    {services.connected && <details className="catalog-summary"><summary><span><strong>Available recordings</strong>Open a recording already loaded by the backend.</span><small>{recordings.length} recording{recordings.length === 1 ? '' : 's'}</small></summary><div className="catalog-details"><label htmlFor="catalog-dataset">Dataset</label><select id="catalog-dataset" value={datasetId} onChange={event => setDatasetId(event.target.value)}><option value="">Select dataset</option>{datasets.map(dataset => <option key={dataset.id} value={dataset.id}>{dataset.name}</option>)}</select>{recordings.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Recording</th><th>Duration</th><th>Channels</th><th>Action</th></tr></thead><tbody>{recordings.map(record => <tr key={record.id}><td>{record.name}</td><td>{record.durationSec.toFixed(1)} s</td><td>{record.channels.length}</td><td><button className="btn" disabled={Boolean(busy)} onClick={() => void run(`open-${record.id}`, () => onOpenRecording(record))}>Open recording</button></td></tr>)}</tbody></table></div> : <p className="empty-state">No recordings loaded for this dataset.</p>}</div></details>}
+    {services.connected && <details className="catalog-summary"><summary><span><strong>Available recordings</strong>Open a recording already loaded by the backend.</span><small>{recordings.length} recording{recordings.length === 1 ? '' : 's'}</small></summary><div className="catalog-details"><label htmlFor="catalog-dataset">Dataset</label><select id="catalog-dataset" value={datasetId} onChange={event => setDatasetId(event.target.value)}><option value="">Select dataset</option>{datasets.map(dataset => <option key={dataset.id} value={dataset.id}>{dataset.name}</option>)}</select>{recordings.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Recording</th><th>Duration</th><th>Channels</th><th>Action</th></tr></thead><tbody>{recordings.map(record => <tr key={record.id}><td>{record.name}</td><td>{record.durationSec.toFixed(1)} s</td><td>{record.channels.length}</td><td><button className="btn" disabled={Boolean(busy)} onClick={() => void open(record)}>{busy === record.id ? 'Opening…' : 'Open recording'}</button></td></tr>)}</tbody></table></div> : <p className="empty-state">No recordings loaded for this dataset.</p>}</div></details>}
   </section>;
 }

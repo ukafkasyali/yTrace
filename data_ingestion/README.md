@@ -42,6 +42,109 @@ alone does not run every check.
 
 The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dataset_profile.json), and the observed facts, interpretations, and unresolved questions are documented in [docs/KUKA_BATCH_01_INSPECTION.md](docs/KUKA_BATCH_01_INSPECTION.md).
 
+## Approved-source ingestion handoff
+
+`dataset_profiler.ingestion` owns the strict consumer for sourcing manifest schema 1.1 and the
+SQLite ingestion-job identity. It does not import `data_sourcing`; both modules validate the shared
+[`approved-source-manifest-v1.1.json`](../docs/contracts/approved-source-manifest-v1.1.json)
+fixture. Legacy or incomplete manifests, provider-mismatched URLs, and manifests without data assets
+fail before acquisition.
+
+One `approvedSourceId` has at most one logical ingestion job. Matching retries return the existing
+job, including after restart; another asset selection returns a conflict rather than creating a
+second ready dataset. A ready job is terminal and subsequent requests return that result instead of
+re-ingesting it. The worker downloads only manifest-selected assets and never executes source code.
+
+Run the local ingestion API separately from the scout:
+
+```bash
+export INGESTION_SOURCING_API_URL=http://127.0.0.1:8001
+export INGESTION_DATA_DIR=var/ingestion
+dataset-ingestion-api
+dataset-ingestion-worker
+```
+
+`POST /api/ingestions` accepts `{"approvedSourceId":"..."}` and an optional non-empty
+`assetIds` list. The service resolves and hashes the approved manifest itself; it never accepts a
+browser-supplied source or download URL. `GET /api/ingestions/{ingestionId}` returns the persisted
+job, and `GET /api/ingestions/{ingestionId}/assets` returns immutable public acquisition receipts.
+A saved source can recover its job after reload through
+`GET /api/ingestions/by-source/{approvedSourceId}`.
+A missing dataset-file license creates the one job in `needs_input` rather than substituting a
+repository code license.
+
+The first acquisition adapter handles manifest-listed Zenodo assets only. It revalidates the exact
+HTTPS provider URL, optionally resolves only public addresses, disables redirects, streams into an
+isolated staging file, enforces both manifest and configured byte limits, verifies the original MD5
+or SHA-256 when supplied, computes SHA-256 for content addressing, and atomically promotes verified
+bytes. The single-worker process claims queued jobs atomically, re-resolves the approved manifest,
+checks its stored SHA-256, and records expected provider claims separately from observed content
+size and SHA-256. A restart requeues interrupted acquisition, and a retry reuses already verified
+content through its persisted source-asset receipt. Successful jobs advance to `inspecting`; archive
+extraction and format inventory are later stages.
+
+The worker also supports pinned GitHub repository files and Hugging Face dataset files. GitHub
+acquisition verifies that the approved path resolves to the approved blob at the exact commit, then
+recomputes Git's blob identity over the downloaded bytes. Hugging Face acquisition requires the
+exact dataset revision in both the locator and download URL, validates the provider revision header,
+verifies LFS SHA-256 when present, and rejects unresolved LFS pointer text. Provider redirects and
+DNS are revalidated at every hop. Optional `GITHUB_TOKEN` and `HF_TOKEN` values are read only by the
+worker and never persisted in manifests or receipts.
+
+ZIP, TAR, TAR.GZ, and TAR.ZST assets are expanded into the same content-addressed cache before
+inventory. Extraction writes into isolated staging and atomically publishes only after every member
+passes file-count, size, expansion-ratio, path-depth, and path-length limits. Absolute/traversal
+paths, duplicate paths, encryption, symlinks, hard links, devices, and other special members are
+rejected. The extraction marker contains only relative paths, sizes, and hashes and is revalidated
+before reuse.
+
+The cache is intentionally retained while any ingestion receipt refers to it; there is no automatic
+age-based deletion. Operators may remove an unreferenced `cache/content/<prefix>/<sha256>` and its
+matching `cache/extracted/<prefix>/<sha256>` only while the API and worker are stopped. A later
+explicit retry safely reacquires missing content. Staging directories are temporary and are removed
+after success or failure.
+
+After materialization, the worker inventories every regular file and exposes the persisted result at
+`GET /api/ingestions/{ingestionId}/resources`. Selection is deterministic: Parquet, NPY, NPZ,
+MATLAB v5, and HDF5 require matching magic bytes and extensions; CSV/TSV require bounded UTF-8
+samples with a consistent dialect matching the extension. Empty, executable, unknown, mismatched,
+and nested archive files remain visible as `UNSUPPORTED` with a stable reason and are never opened
+as code. Jobs with at least one supported resource advance to `mapping`; jobs with none end in
+`unsupported_format`.
+
+`GET /api/ingestions/{ingestionId}/mapping-proposals` returns deterministic structural candidates;
+it never fills unknown channel units. `PUT /api/ingestions/{ingestionId}/mapping` accepts an explicit
+wide-table, long-table, or named-array mapping bound to the current `jobRevision`, resource ID, and
+resource SHA-256. Time, record, channel, value, array-axis, and annotation selectors are checked
+against the persisted schema. Competing selectors, unknown units, stale revisions, changed sources,
+and placeholder long-table channels fail without advancing the job. Repeating the identical
+confirmed mapping is idempotent; replacing it is a conflict.
+
+Confirmed wide-table, long-table, and named-array mappings are converted into TimeF with explicit
+record boundaries, integer-microsecond irregular time axes, channel names, units, missing values,
+and bounded source-row provenance. The worker reloads the committed TimeF version and compares its
+records, channels, units, timestamps, and values before setting `ready`. The public receipt at
+`GET /api/ingestions/{ingestionId}/receipt` separates approved provider claims from observed content
+hashes and records the mapping, output version, and read-back validation hash without absolute paths
+or raw arrays. Interrupted imports revalidate the same content-addressed output.
+
+After validation, `GET /api/ingestions/{ingestionId}/records?page=1&pageSize=20` reads bounded,
+paginated record summaries from that ingestion's TimeF registry. It exposes record identity, series
+and value counts, regular-axis duration, signal names, and annotation keys without loading or
+returning raw arrays. Each record receives an opaque key and an explicit replay-compatibility flag.
+Compatible records expose `/records/{recordKey}/replay`, `/signals`, and `/events` subresources for
+the existing Trace workbench. Replay requires exactly seven canonical external-torque channels at
+1 kHz; other imported layouts remain metadata-browsable and are never coerced. The replay response
+uses a bounded overview plus a five-second raw excerpt, while signal requests load explicit bounded
+windows. An ingestion without a final validation receipt cannot browse or replay records.
+
+The exact Zenodo identities `21927431.r4` and `21941203.r4`, with their verified CC-BY-4.0 dataset
+licence, dispatch to the existing KUKA Part I and Part II connectors before generic mapping. A
+provider, revision, or licence mismatch fails closed. The dispatcher accepts either the legacy
+combined part archive or the complete approved set of separately published batch archives; split
+archives retain stable `batch-XX/run` provenance and incomplete part selections fail closed. These
+connectors retain seven torque and seven position series at 1 kHz and keep accidental-collision and
+intentional-contact publisher annotations distinct.
 ## Job-oriented onboarding
 
 **Experimental; no completed end-to-end Bosch job is archived in this repository.**

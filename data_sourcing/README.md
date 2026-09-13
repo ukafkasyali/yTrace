@@ -4,8 +4,11 @@ This service turns a natural-language dataset brief into an auditable shortlist.
 LangGraph for durable orchestration, Tavily for bounded discovery, and source-native APIs for
 verification. Deterministic gates and scoring remain separate from model-generated planning.
 
-The service never starts ingestion. An approved sourcing run produces a manifest for the
-ingestion team.
+The service never starts ingestion. An approved sourcing run produces a manifest and records its
+provider revision in the durable approved-source catalog for later on-demand ingestion. The
+ingestion module consumes that immutable manifest; approval itself performs no download.
+Users may remove an unreferenced entry from that catalog without deleting its sourcing-run audit;
+the entry remains removed across restarts and returns only after a new approval event.
 
 Before starting a run, the frontend previews a research contract. Reviewers can keep an inferred
 requirement mandatory, make it preferred, disable it, or add a natural-language rule such as
