@@ -1,0 +1,63 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2C45K81PTD285DY4N5XH7ZY",
+  "session_id": "01a097ce-ab6b-7eb2-9319-23ba02becc14",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T00:55:12.439123Z",
+  "branch": "codex/source-ingestion-integration",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "data_ingestion/.gitignore",
+    "frontend/src/sourcing/ApprovedSourceLibrary.test.tsx",
+    "frontend/src/sourcing/ApprovedSourceLibrary.tsx",
+    "inference/server.py",
+    "scripts/run-local.sh"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "e0e1ea8a7005",
+  "checkpoint_transcript_start": 3671,
+  "transcript_lines_at_start": 3671,
+  "compact_transcript_start": 485,
+  "token_usage": {
+    "input_tokens": 100211,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 14046483,
+    "output_tokens": 25296,
+    "api_call_count": 85
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T00:55:11.787332Z",
+    "agent_lines": 45,
+    "agent_removed": 8,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 8,
+    "total_committed": 45,
+    "total_lines_changed": 61,
+    "agent_percentage": 86.88524590163934,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 59,
+      "user_lines_removed": 8,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "frontend/src/sourcing/ApprovedSourceLibrary.test.tsx": 8,
+        "frontend/src/sourcing/ApprovedSourceLibrary.tsx": 20,
+        "scripts/run-local.sh": 31
+      },
+      "user_removed_per_file": {
+        "frontend/src/sourcing/ApprovedSourceLibrary.tsx": 5,
+        "scripts/run-local.sh": 3
+      }
+    }
+  ]
+}
