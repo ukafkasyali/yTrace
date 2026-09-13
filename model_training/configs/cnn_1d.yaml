@@ -1,0 +1,27 @@
+model:
+  channels: [32, 64, 128]
+  kernel_sizes: [9, 7, 5]
+  dropout: 0.15
+training:
+  batch_size: 128
+  epochs: 40
+  learning_rate: 0.001
+  weight_decay: 0.01
+  warmup_fraction: 0.05
+  early_stopping_patience: 6
+  precision: bfloat16
+  num_workers: 4
+  class_weighting: true
+  max_grad_norm: 1.0
+  loss_weights:
+    semantics: 1.0
+    onset: 0.5
+    strongest_joint: 0.25
+    affected_joints: 0.25
+evaluation:
+  samples: 512
+  seed: 20260912
+observability:
+  wandb:
+    enabled: true
+    project: robot-observability
