@@ -13,6 +13,14 @@ import type { ModelRegistry } from '../services/useModelRegistry';
 
 type Message = InvestigationAnswer & { telemetry: DemoData; id: string; tools: string[]; status: 'running' | 'complete' | 'error' | 'cancelled'; restored?: boolean };
 type Props = { rawLoading?: boolean; rawError?: string; onRetryRaw: () => void; data: DemoData; datasetId: string; playhead: number; interval: Interval; services: Services; registry: ModelRegistry; onEvidence: (e: EvidenceLink) => void; onModelWindow: (interval: Interval) => void; onCompare: (interval: Interval) => void; onRobotPrediction: (prediction?: PredictionCue) => void };
+const automaticPrompt = 'Analyze this robot telemetry window.';
+
+function compactMeasuredRanges(text: string) {
+  const ranges = [...text.matchAll(/Joint\s+(\d)\s+\(([-\d.]+)\s+Nm range\)/gi)];
+  if (!ranges.length) return text.replace(/^Largest observed torque ranges:\s*/i, '');
+  return ranges.map(([, joint, range]) => `J${joint} ${range} Nm`).join(' · ');
+}
+
 function AnswerText({ text }: { text: string }) {
   const blocks = text.split(/\n\s*\n/).filter(Boolean);
   return <div className="answer-brief">{blocks.map((block, index) => {
@@ -136,7 +144,7 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
   }
   return <section className="assistant-panel" aria-label="Telemetry assistant">
     <header className="panel-heading"><div className="assistant-title"><MessageSquare size={16}/><h2>Event investigation</h2></div><span className="assistant-capability">{checkpointLabel(registry.models.find(m => m.id === 'assistant')?.revision).split(' · ')[0]}</span></header>
-    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={stopping || (!busy && (!assistantAvailable || Boolean(windowIssue)))} onClick={() => { if (busy) { void stop(); return; } setMode('assistant'); void submit('Analyze this robot telemetry window.', 'assistant'); }}>{stopping ? 'Stopping…' : busy ? 'Stop analysis' : 'Analyze interval'}</button></div>
+    <div className="model-input-status"><div><strong className="mono">{intervalLabel(interval)}</strong><span>{windowIssue ? 'Selection needs attention' : '1.024 s · 7 joints · raw telemetry'}</span></div><button className="btn btn-primary" disabled={stopping || (!busy && (!assistantAvailable || Boolean(windowIssue)))} onClick={() => { if (busy) { void stop(); return; } setMode('assistant'); void submit(automaticPrompt, 'assistant'); }}>{stopping ? 'Stopping…' : busy ? 'Stop analysis' : 'Analyze interval'}</button></div>
     {windowIssue && <div className="input-guidance"><p>{windowIssue}</p>{rawError && <button className="text-button" onClick={onRetryRaw}>Retry raw window</button>}{!rawLoading && !rawError && fittedWindow && <button className="text-button" disabled={busy} onClick={() => onModelWindow(fittedWindow)}>Use 1.024 s window</button>}</div>}
     <div className="conversation" ref={body} aria-live="polite">
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Prepare a reviewable incident handoff.</h3><p>Analyze the incident, verify the prediction against exact signals, then export the handoff for a controls engineer.</p><p className="intro-limit">Recorded torque can guide investigation. It cannot verify a physical cause.</p></div>}
@@ -145,12 +153,12 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
         const review = m.status === 'complete' ? reviewPrediction(m.telemetry, m.interval, m.modelOutput) : undefined;
         const measuredText = m.text.split(/\n\s*\n/).find(block => block.startsWith('Measured in this selected window'))?.split('\n').slice(1).join(' ');
         return <article className="conversation-turn" key={m.id}>
-          <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>
+          {m.question !== automaticPrompt && <div className="user-question"><div><p>{m.question}</p><small className="mono">{intervalLabel(m.interval)}</small></div></div>}
           <div className="assistant-answer"><div>
-            {m.restored && <div className="answer-source">Restored from this browser session.</div>}
+            {m.restored && <div className="answer-source">Saved result</div>}
             {m.status !== 'complete' && <div className="answer-source">{m.status === 'running' ? 'Reading the selected telemetry…' : m.status}</div>}
             <div className={m.status === 'error' ? 'error-message' : ''}>
-              {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}{review && <section className="review-note"><h3>Cross-check</h3><p>{review.note}</p></section>}</> : m.status === 'complete' && m.mode === 'assistant' ? <><section className="prediction-summary"><h3>No usable structured prediction</h3><p className="prediction-caution">The generation did not meet the complete seven-field contract used by Evaluation. Inspect the raw audit output before retrying.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
+              {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Onset <strong>{brief.onset} ms</strong></span>}</div><p className="prediction-caution">Model prediction · not a verified diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured range leaders</h3><p>{compactMeasuredRanges(measuredText)}</p></section>}{review && <section className="review-note"><h3>Cross-check</h3><p>Model {review.predictedJoint} · measured range leader {review.largestRangeJoint}. Inspect both.</p></section>}</> : m.status === 'complete' && m.mode === 'assistant' ? <><section className="prediction-summary"><h3>No usable structured prediction</h3><p className="prediction-caution">The generation did not meet the complete seven-field contract used by Evaluation. Inspect the raw audit output before retrying.</p></section>{measuredText && <section className="measured-summary"><h3>Measured range leaders</h3><p>{compactMeasuredRanges(measuredText)}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
             {m.status === 'complete' && <section className="investigation-next" aria-label="Verify and hand off"><h3>Verify and hand off</h3><ol className="investigation-actions">
               {m.evidence.map((e, i) => <li key={i}><button onClick={() => onEvidence(e)}><span>1</span><strong>Inspect exact input</strong><SlidersHorizontal size={12}/></button></li>)}
@@ -164,7 +172,6 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       })}
     </div>
     {exportStatus && <p className="report-status" role="status">{exportStatus}</p>}
-    {mode === 'assistant' && !assistantAvailable && <p className="status-note" role="status">Model unavailable. Open custom analysis and choose Measurements only.</p>}
     <details className="custom-analysis"><summary>Ask a custom question</summary><form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="question">Ask about the selected telemetry</label><textarea id="question" value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ask about this interval…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}/><div className="composer-bottom"><label className="mode-select"><Cpu size={13}/><select aria-label="Analysis mode" value={mode} onChange={e => setMode(e.target.value as 'local' | 'assistant')}><option value="assistant" disabled={!assistantAvailable}>Model + measurements{!assistantAvailable ? ' · unavailable' : ''}</option><option value="local">Measurements only</option></select></label>{busy ? <button className="send-button" type="button" aria-label={stopping ? 'Stopping analysis' : 'Stop analysis'} disabled={stopping} onClick={() => void stop()}><CircleStop size={18}/></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!question.trim() || modeUnavailable || interval.end <= interval.start || interval.end > availableThrough}><ArrowUp size={18}/></button>}</div></form></details>
   </section>;
 }
