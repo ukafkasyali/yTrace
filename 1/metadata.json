@@ -1,0 +1,58 @@
+{
+  "cli_version": "0.10.6",
+  "checkpoint_id": "01M2CY7EDWZAA4RQ5FAYEE7YPV",
+  "session_id": "01a099a2-2571-7822-a023-3e0bfca918d9",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T08:30:37.338345498Z",
+  "branch": "codex/ui-latency",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "645e4edf58be",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 742168,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 12397312,
+    "output_tokens": 53597,
+    "api_call_count": 126
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 33,
+      "user_lines_removed": 4,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 33
+      },
+      "user_removed_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 4
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 147,
+      "user_lines_removed": 3,
+      "agent_lines_added": 1744,
+      "agent_lines_removed": 4,
+      "user_added_per_file": {
+        "docs/submission/evaluation/source/opentslm-v6-validation-audit.json": 91,
+        "model_training/scripts/analyze_failure_modes.py": 1,
+        "model_training/src/robot_observability/comparison.py": 39,
+        "model_training/tests/test_comparison.py": 16
+      },
+      "user_removed_per_file": {
+        "model_training/scripts/analyze_failure_modes.py": 1,
+        "model_training/src/robot_observability/comparison.py": 1,
+        "model_training/tests/test_comparison.py": 1
+      }
+    }
+  ]
+}
