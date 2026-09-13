@@ -18,8 +18,10 @@ import uuid
 
 try:
     from .raw_recordings import CHANNEL_IDS, RawRecordingCatalog
+    from .cnn_runtime import CnnRuntime
 except ImportError:  # pragma: no cover - direct script execution
     from raw_recordings import CHANNEL_IDS, RawRecordingCatalog
+    from cnn_runtime import CnnRuntime
 
 DATASET_ID = "zenodo-21927431"
 MAX_BODY = 16_384
@@ -169,8 +171,9 @@ class Job:
 
 
 class Bridge:
-    def __init__(self, runtime, data_path, catalog_path=None, raw_root=None):
+    def __init__(self, runtime, data_path, catalog_path=None, raw_root=None, cnn_runtime=None):
         self.runtime = runtime
+        self.cnn_runtime = cnn_runtime or CnnRuntime()
         raw = Path(data_path).read_bytes()
         self.data = json.loads(raw)
         validate_data(self.data)
@@ -318,7 +321,14 @@ class Bridge:
         mode = request.get("mode")
         if mode not in ("direct", "assistant"):
             raise ApiError(422, "MODE_UNAVAILABLE", "Choose direct OpenTSLM or the telemetry assistant.")
-        if mode == "direct" and request.get("modelId") not in ("opentslm", self.runtime.model_id):
+        requested_model = request.get("modelId")
+        if mode == "assistant":
+            selected_model, selected_runtime = "opentslm", self.runtime
+        elif requested_model in ("opentslm", self.runtime.model_id):
+            selected_model, selected_runtime = "opentslm", self.runtime
+        elif requested_model in ("cnn-1d", self.cnn_runtime.model_id) and self.cnn_runtime.enabled:
+            selected_model, selected_runtime = "cnn-1d", self.cnn_runtime
+        else:
             raise ApiError(422, "MODEL_UNAVAILABLE", "The selected model is not connected.")
         question = request.get("question")
         if not isinstance(question, str) or not question.strip() or len(question) > 4000:
@@ -330,10 +340,15 @@ class Bridge:
                     else self.recordings[window["recordingId"]]["recording"]["durationSeconds"])
         if not finite(playhead) or not window["endSec"] <= playhead <= duration:
             raise ApiError(400, "FUTURE_CONTEXT", "The query window must not extend beyond the playback cursor.")
-        if not self.runtime.ready:
-            raise ApiError(503, "MODEL_NOT_READY", "The model is loading or unavailable. Check service health.", True)
+        if not selected_runtime.ready:
+            raise ApiError(503, "MODEL_NOT_READY", selected_runtime.error or "Model loading", True)
         series = self.signals(window)["series"]
-        cleaned = {"mode": mode, "modelId": "opentslm", "question": question.strip(),
+        if selected_model == "cnn-1d":
+            try:
+                selected_runtime.validate_series(series)
+            except ValueError as error:
+                raise ApiError(422, "INVALID_CNN_INPUT", str(error)) from error
+        cleaned = {"mode": mode, "modelId": selected_model, "question": question.strip(),
                    "window": window, "playheadSec": playhead}
         with self.lock:
             self.prune()
@@ -355,6 +370,22 @@ class Bridge:
                 measurement_id = f"measure-{job.id}"
                 job.emit("tool.started", {"callId": measurement_id, "tool": "measurement_summary", "label": "Measuring torque ranges in the selected samples"})
                 job.emit("tool.completed", {"callId": measurement_id, "summary": "Calculated per-joint torque ranges from the selected raw telemetry."})
+            if job.request["modelId"] == "cnn-1d":
+                job.emit("tool.started", {"callId": call_id, "tool": "cnn-1d", "label": "Running 1D CNN on selected raw telemetry"})
+                prediction = self.cnn_runtime.predict(series, job.cancelled)
+                if job.cancelled.is_set():
+                    return
+                job.emit("tool.completed", {"callId": call_id, "summary": "1D CNN classification completed."})
+                evidence = []
+                onset = prediction.get("onset_sample")
+                if onset is not None:
+                    start = job.request["window"]["startSec"] + float(onset) / 1000
+                    end = min(job.request["window"]["endSec"], start + 0.05)
+                    evidence.append({"id": f"cnn-onset-{job.id}", "window": {**job.request["window"], "startSec": start, "endSec": end},
+                                     "label": "CNN predicted onset", "source": f"cnn-1d@{self.cnn_runtime.revision}"})
+                job.emit("answer.completed", {"modelId": "cnn-1d", "modelRevision": self.cnn_runtime.revision,
+                                                "labels": prediction["labels"], "evidence": evidence})
+                return
             job.emit("tool.started", {"callId": call_id, "tool": "opentslm", "label": "Running OpenTSLM on selected raw telemetry"})
             answer = self.runtime.generate(job.request, series, job.cancelled)
             if job.cancelled.is_set():
@@ -491,8 +522,11 @@ class Handler(BaseHTTPRequestHandler):
             self.json_response(200, [{"id": "assistant", "label": "Telemetry assistant", "available": bool(bridge.runtime.ready),
                      "capabilities": ["language"], "revision": bridge.runtime.revision,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})},
+                    {"id": "cnn-1d", "label": "1D CNN", "available": bool(bridge.cnn_runtime.ready),
+                     "capabilities": ["classification", "localization"], "revision": bridge.cnn_runtime.revision,
+                     **({} if bridge.cnn_runtime.ready else {"reason": bridge.cnn_runtime.error or "Model loading"})},
                     {"id": "opentslm", "label": "OpenTSLM", "available": bool(bridge.runtime.ready),
-                     "capabilities": ["language"], "revision": bridge.runtime.revision,
+                     "capabilities": ["language", "classification", "localization"], "revision": bridge.runtime.revision,
                      **({} if bridge.runtime.ready else {"reason": "Model unavailable; check server logs" if bridge.runtime.error else "Model loading"})}])
         elif len(route) == 3 and route[0] == "recordings":
             if route[1] not in bridge.recordings and route[1] not in bridge.raw_recordings:
@@ -554,14 +588,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
 
-def make_server(runtime, host="127.0.0.1", port=8000, data_path=None, raw_root=None, load_runtime=True):
+def make_server(runtime, host="127.0.0.1", port=8000, data_path=None, raw_root=None, load_runtime=True, cnn_runtime=None):
     path = data_path or Path(__file__).resolve().parents[1] / "frontend/public/data/kuka-demo.json"
-    bridge = Bridge(runtime, path, Path(__file__).with_name("demo_cases.json") if data_path is None else None, raw_root)
+    bridge = Bridge(runtime, path, Path(__file__).with_name("demo_cases.json") if data_path is None else None, raw_root, cnn_runtime=cnn_runtime)
     server = ThreadingHTTPServer((host, port), Handler)
     server.daemon_threads = True
     server.bridge = bridge
     if load_runtime:
         threading.Thread(target=runtime.load, daemon=True).start()
+        if bridge.cnn_runtime.enabled:
+            threading.Thread(target=bridge.cnn_runtime.load, daemon=True).start()
     return server
 
 
@@ -577,7 +613,7 @@ def main():
         from .runtime import Runtime
     except ImportError:
         from runtime import Runtime
-    server = make_server(Runtime(), host=args.host, port=args.port, data_path=args.data, raw_root=args.raw_root)
+    server = make_server(Runtime(), host=args.host, port=args.port, data_path=args.data, raw_root=args.raw_root, cnn_runtime=CnnRuntime())
     print(f"Inference bridge listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()
