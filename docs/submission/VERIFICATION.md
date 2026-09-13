@@ -9,6 +9,7 @@ Base: main `db68e6c`; final hardening is on `codex/final-submission-hardening`. 
 | Comparison replay, Python standard library | Checksums, identical IDs/targets, test-session membership and manifests passed; 512 windows / 67 recordings |
 | Independent comparison rerun | JSON and Markdown byte-identical with fixed bootstrap seed; 512 windows / 67 recordings |
 | Training focused suite | 26 passed across comparison, metrics and signal-feature baseline tests |
+| Data sourcing, `.venv/bin/python -m pytest -q` | 92 passed; only the existing Starlette/AnyIO deprecation warning was emitted |
 | Data ingestion, `.venv/bin/python -m pytest tests -q` | 60 passed in the component virtual environment, including TimeNet coverage |
 | Inference, `python3 -m unittest discover -s inference -p 'test_*.py' -v` | 28 passed with temporary localhost server permission |
 | Frontend, `npm test` | 86 passed, including structured prediction isolation, browser-session recovery, readable-export isolation, model/measurement cross-checks, investigation provenance and replay contracts |
@@ -18,6 +19,7 @@ Base: main `db68e6c`; final hardening is on `codex/final-submission-hardening`. 
 | Private deployed model | Ready; expected canary-v4 SHA-256; real `inference.smoke` passed |
 | Browser, desktop | Structured prediction, J4/J2 cross-check, generated 3D onset cue, complete seven-channel evidence, reference comparison and Markdown export verified through the live UI. Immediate and active-query cancellation held the control until server acknowledgement, then a new query started successfully |
 | Browser, 390 × 844 | Replay, robot context, evaluation summary, horizontally scrollable result table and charts remained usable without clipping; the temporary viewport override was reset |
+| Browser, cached sourcing path | Research contract, 47 native evidence records, 8/8 mandatory gates, approval and revision-pinned manifest completed with 0 search credits. The submission UI now ends at an explicit manifest handoff and states that browser acquisition is not connected |
 | Actual downloaded investigation JSON | Verified 1,024 raw samples/channel, seven measurement rows, one in-window publisher marker, expected checkpoint and matching model receipt |
 
 The complete optional training suite initially could not collect `test_checkpoints.py` without PyTorch. The focused suite above is the completed local check, not a claim that GPU training or that checkpoint test was rerun. The live smoke confirms actual inference with the existing deployed checkpoint.
@@ -26,7 +28,7 @@ The clean environment also exposed a pre-existing macOS test-path comparison (`/
 
 ## Integration boundary
 
-PR #19 is the only open pull request. It joins approved dataset sourcing to one-shot ingestion and remains outside the frozen two-minute demo until its broad service and UI changes receive a dedicated review. Training artifacts are scored from their saved predictions; training processes and model deployment were not modified. CNN results remain evaluation-only because no CNN checkpoint or inference endpoint is connected.
+PR #19 is the only open pull request. It joins approved dataset sourcing to one-shot ingestion and remains outside the frozen two-minute demo. In a detached worktree, 86 frontend, 98 sourcing, 116 ingestion and 28 inference tests passed. Review also found that its cached manifest contains placeholder archive IDs, imported TimeF data is not added to the Replay catalog, and its fallback launcher disables model loading. The live full-corpus acquisition was not attempted because the approved source manifest is about 18 GB. Training artifacts are scored from their saved predictions; training processes and model deployment were not modified. CNN results remain evaluation-only because no CNN checkpoint or inference endpoint is connected.
 
 ## Remaining evidence gaps
 
