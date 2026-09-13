@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BarChart3, CheckCircle2, Info } from 'lucide-react';
 import comparison from '../../../docs/submission/evaluation/report/comparison.json';
+import cnnSummary from '../../../docs/submission/evaluation/source/cnn-recorded-summary.json';
 
 type MethodKey = 'features' | 'cnn' | 'opentslm' | 'qwen';
 
@@ -59,7 +60,7 @@ const methods: Record<MethodKey, MethodDescription> = {
     ],
     reading: [
       'Semantics macro-F1 is 0.8845 and the best recorded onset P90 is 140 ms.',
-      'Parse validity is 77.93%: 399 of 512 windows produced a structured JSON object.',
+      'A complete usable summary is returned for 77.93%: 399 of 512 windows meet the full typed contract.',
     ],
     limitation: 'Most missing answers are free-motion cases. Generated explanations remain predictions, even when the structured fields are correct.',
   },
@@ -82,14 +83,7 @@ const methods: Record<MethodKey, MethodDescription> = {
 };
 
 const audited = comparison.models;
-const cnn = {
-  semantics_macro_f1: 0.9751,
-  contact_positive_f1: 0.9777,
-  onset_median_ae_ms: 18,
-  onset_p90_ae_ms: 274,
-  strongest_joint_accuracy: 0.7565,
-  usable_summary_rate: 1,
-};
+const cnn = cnnSummary.metrics;
 
 const methodOrder: MethodKey[] = ['features', 'cnn', 'opentslm', 'qwen'];
 const percent = (value: number) => value * 100;
@@ -209,6 +203,6 @@ export default function EvaluationWorkspace() {
       </article>
     </section>
 
-    <details className="evaluation-methodology"><summary>Evaluation contract and provenance</summary><p>Signal features, OpenTSLM, and Qwen are recomputed from checksum-verified archived predictions joined to the same 512 record IDs across 67 held-out recording groups. The CNN summary reports the same locked test size and seed, but its row-level predictions are not in that audited bundle, so it is visibly marked as a recorded run.</p><p>Recording sessions were split before window generation. Normalization and thresholds use training sessions only. Joint and evidence targets are deterministic signal-derived labels rather than physical contact-location truth.</p><p className="mono">Audited pipeline · records {comparison.record_ids_sha256.slice(0, 12)}… · checkpoint {comparison.checkpoint_sha256.slice(0, 12)}… · CNN checkpoint 67e883b997c4…</p></details>
+    <details className="evaluation-methodology"><summary>Evaluation contract and provenance</summary><p>Signal features, OpenTSLM, and Qwen are recomputed from checksum-verified archived predictions joined to the same 512 record IDs across 67 held-out recording groups. The CNN summary reports the same locked test size and seed, but its row-level predictions are not in that audited bundle, so it is visibly marked as a recorded run.</p><p>Recording sessions were split before window generation. Normalization and thresholds use training sessions only. Joint and evidence targets are deterministic signal-derived labels rather than physical contact-location truth.</p><p className="mono">Audited pipeline · records {comparison.record_ids_sha256.slice(0, 12)}… · checkpoint {comparison.checkpoint_sha256.slice(0, 12)}… · CNN source {cnnSummary.source_commit} · checkpoint {cnnSummary.checkpoint_sha256.slice(0, 12)}…</p></details>
   </section>;
 }

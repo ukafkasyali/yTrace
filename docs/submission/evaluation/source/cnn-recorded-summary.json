@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "recorded_summary_without_row_predictions",
+  "source_branch": "origin/baseline-comparison",
+  "source_commit": "c1ca449",
+  "recorded_at": "2026-09-13",
+  "split": "test",
+  "selection_seed": 20260912,
+  "window_count": 512,
+  "training_window_count": 29393,
+  "selected_epoch": 23,
+  "checkpoint_sha256": "67e883b997c415bef710275deab30033539a30d3a3534029f1971f36614cdf81",
+  "metrics": {
+    "semantics_macro_f1": 0.9751,
+    "contact_positive_f1": 0.9777,
+    "onset_median_ae_ms": 18,
+    "onset_p90_ae_ms": 274,
+    "strongest_joint_accuracy": 0.7565,
+    "usable_summary_rate": 1.0
+  },
+  "limitation": "The run summary and checkpoint identity are recorded on the source branch, but row-level predictions are absent from the current checksum-audited bundle."
+}
