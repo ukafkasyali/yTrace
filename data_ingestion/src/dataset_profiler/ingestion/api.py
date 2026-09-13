@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 
 from .jobs import (
     AssetReceipt,
+    FinalReceipt,
     IngestionJob,
     IngestionJobConflict,
     IngestionJobNotFound,
@@ -126,6 +127,15 @@ def create_app(service: IngestionService | None = None) -> FastAPI:
         ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
     ) -> list[ResourceProfile]:
         return ingestion.jobs.list_resources(ingestion_id)
+
+    @app.get(
+        "/api/ingestions/{ingestion_id}/receipt",
+        response_model=FinalReceipt | None,
+    )
+    def get_ingestion_receipt(
+        ingestion_id: Annotated[str, ApiPath(pattern=r"^[0-9a-f-]{36}$")],
+    ) -> FinalReceipt | None:
+        return ingestion.jobs.get_final_receipt(ingestion_id)
 
     @app.get(
         "/api/ingestions/{ingestion_id}/mapping-proposals",

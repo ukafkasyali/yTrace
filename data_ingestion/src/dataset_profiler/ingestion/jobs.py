@@ -22,6 +22,7 @@ class IngestionState(StrEnum):
     INSPECTING = "inspecting"
     MAPPING = "mapping"
     VALIDATING = "validating"
+    IMPORTING = "importing"
     UNSUPPORTED_FORMAT = "unsupported_format"
     NEEDS_INPUT = "needs_input"
     FAILED = "failed"
@@ -84,6 +85,25 @@ class ResourceProfile(BaseModel):
     format: ResourceFormat
     details: dict = Field(default_factory=dict)
     inspected_at: datetime
+
+
+class FinalReceipt(BaseModel):
+    model_config = ConfigDict(alias_generator=_to_camel, populate_by_name=True, extra="forbid")
+
+    receipt_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    ingestion_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+    approved_source_id: str = Field(pattern=r"^src_[a-f0-9]{24}$")
+    manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    source_url: str
+    source_kind: str
+    source_revision: str
+    dataset_license_id: str
+    assets: list[dict]
+    resource: dict
+    mapping_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    mapping: dict
+    output: dict
+    validation: dict
 
 
 class IngestionJobConflict(ValueError):
@@ -172,6 +192,17 @@ class IngestionJobStore:
                 content_key TEXT NOT NULL,
                 acquired_at TEXT NOT NULL,
                 PRIMARY KEY (ingestion_id, asset_id),
+                FOREIGN KEY (ingestion_id) REFERENCES ingestion_jobs(ingestion_id)
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS final_receipts (
+                ingestion_id TEXT PRIMARY KEY,
+                receipt_sha256 TEXT NOT NULL,
+                receipt_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
                 FOREIGN KEY (ingestion_id) REFERENCES ingestion_jobs(ingestion_id)
             )
             """
@@ -408,6 +439,42 @@ class IngestionJobStore:
                 self.connection.execute("ROLLBACK")
                 raise
 
+    def get_final_receipt(self, ingestion_id: str) -> FinalReceipt | None:
+        self.get(ingestion_id)
+        row = self.connection.execute(
+            "SELECT receipt_json FROM final_receipts WHERE ingestion_id = ?",
+            (ingestion_id,),
+        ).fetchone()
+        return None if row is None else FinalReceipt.model_validate_json(row["receipt_json"])
+
+    def record_final_receipt(self, receipt: FinalReceipt) -> FinalReceipt:
+        payload = receipt.model_dump_json(by_alias=True)
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                existing = self.connection.execute(
+                    "SELECT receipt_json FROM final_receipts WHERE ingestion_id = ?",
+                    (receipt.ingestion_id,),
+                ).fetchone()
+                if existing is not None:
+                    persisted = FinalReceipt.model_validate_json(existing["receipt_json"])
+                    if persisted != receipt:
+                        raise IngestionJobConflict(
+                            "Ingestion already has a different final receipt"
+                        )
+                    self.connection.execute("COMMIT")
+                    return persisted
+                self.connection.execute(
+                    "INSERT INTO final_receipts VALUES (?, ?, ?, ?)",
+                    (receipt.ingestion_id, receipt.receipt_sha256, payload, now),
+                )
+                self.connection.execute("COMMIT")
+                return receipt
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
     def requeue_interrupted_acquisitions(self) -> int:
         now = datetime.now(UTC).isoformat()
         with self._lock:
@@ -419,6 +486,21 @@ class IngestionJobStore:
                     "Queued after interrupted acquisition",
                     now,
                     IngestionState.ACQUIRING.value,
+                ),
+            )
+        return cursor.rowcount
+
+    def requeue_interrupted_imports(self) -> int:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            cursor = self.connection.execute(
+                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                "job_revision = job_revision + 1 WHERE state = ?",
+                (
+                    IngestionState.VALIDATING.value,
+                    "Queued after interrupted deterministic import",
+                    now,
+                    IngestionState.IMPORTING.value,
                 ),
             )
         return cursor.rowcount
@@ -447,6 +529,35 @@ class IngestionJobStore:
                     (
                         IngestionState.ACQUIRING.value,
                         "Acquiring approved assets",
+                        now,
+                        row["ingestion_id"],
+                    ),
+                )
+                self.connection.execute("COMMIT")
+                return self.get(row["ingestion_id"])
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
+    def claim_next_import(self) -> IngestionJob | None:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.connection.execute(
+                    "SELECT * FROM ingestion_jobs WHERE state = ? "
+                    "ORDER BY updated_at, ingestion_id LIMIT 1",
+                    (IngestionState.VALIDATING.value,),
+                ).fetchone()
+                if row is None:
+                    self.connection.execute("COMMIT")
+                    return None
+                self.connection.execute(
+                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                    "job_revision = job_revision + 1 WHERE ingestion_id = ?",
+                    (
+                        IngestionState.IMPORTING.value,
+                        "Building and validating the TimeF dataset",
                         now,
                         row["ingestion_id"],
                     ),

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
@@ -7,20 +10,26 @@ from typing import Protocol
 from .acquisition import AcquiredAsset, AcquisitionError
 from .archive import ArchiveError, SafeArchiveExtractor
 from .contracts import ApprovedManifest, ManifestAsset
+from .dispatch import SpecializedDispatcher, SpecializedDispatchError
+from .generic import GenericImportError, GenericTimeFBuilder
 from .inventory import InventoryError, ResourceInventory
 from .jobs import (
     AssetReceipt,
+    FinalReceipt,
     IngestionJob,
     IngestionJobConflict,
     IngestionJobStore,
     IngestionState,
     ResourceFormat,
 )
+from .mapping import MappingSpec
 from .service import (
     ApprovedSourceResolutionError,
     ApprovedSourceResolver,
     ResolvedApprovedSource,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AssetAcquirer(Protocol):
@@ -39,12 +48,14 @@ class AcquisitionWorker:
         acquirer: AssetAcquirer,
         extractor: SafeArchiveExtractor | None = None,
         inventory: ResourceInventory | None = None,
+        dispatcher: SpecializedDispatcher | None = None,
     ):
         self.jobs = jobs
         self.resolver = resolver
         self.acquirer = acquirer
         self.extractor = extractor
         self.inventory = inventory
+        self.dispatcher = dispatcher
 
     def recover_interrupted(self) -> int:
         return self.jobs.requeue_interrupted_acquisitions()
@@ -133,6 +144,12 @@ class AcquisitionWorker:
                         IngestionState.UNSUPPORTED_FORMAT,
                         "No supported time-series resources were found",
                     )
+                if self.dispatcher is not None and self.dispatcher.resolve(job) is not None:
+                    return self.jobs.set_state(
+                        job.ingestion_id,
+                        IngestionState.VALIDATING,
+                        "Exact KUKA source queued for its specialized connector",
+                    )
                 return self.jobs.set_state(
                     job.ingestion_id,
                     IngestionState.MAPPING,
@@ -149,6 +166,7 @@ class AcquisitionWorker:
             ArchiveError,
             InventoryError,
             IngestionJobConflict,
+            SpecializedDispatchError,
         ):
             return self.jobs.set_state(
                 job.ingestion_id,
@@ -208,3 +226,150 @@ class AcquisitionWorker:
             ),
             acquired_at=datetime.now(UTC),
         )
+
+
+class GenericImportWorker:
+    def __init__(
+        self,
+        jobs: IngestionJobStore,
+        builder: GenericTimeFBuilder,
+        dispatcher: SpecializedDispatcher | None = None,
+    ):
+        self.jobs = jobs
+        self.builder = builder
+        self.dispatcher = dispatcher
+
+    def recover_interrupted(self) -> int:
+        return self.jobs.requeue_interrupted_imports()
+
+    def run_once(self) -> IngestionJob | None:
+        job = self.jobs.claim_next_import()
+        if job is None:
+            return None
+        try:
+            resources = self.jobs.list_resources(job.ingestion_id)
+            receipts = self.jobs.list_receipts(job.ingestion_id)
+            specialized = self.dispatcher.resolve(job) if self.dispatcher is not None else None
+            if specialized is not None:
+                result = self.dispatcher.build(job, specialized, receipts)
+                mapping_content = self.dispatcher.receipt_mapping(specialized)
+                resource_content = {
+                    "mode": "SPECIALIZED_CONNECTOR",
+                    "resourceCount": len(resources),
+                    "resourceSha256": hashlib.sha256(
+                        json.dumps(
+                            [
+                                {
+                                    "resourceId": item.resource_id,
+                                    "contentSha256": item.content_sha256,
+                                    "logicalPath": item.logical_path,
+                                }
+                                for item in resources
+                            ],
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()
+                    ).hexdigest(),
+                }
+                registry_root = self.dispatcher.registry_root
+            else:
+                mapping_payload = self.jobs.get_mapping_payload(job.ingestion_id)
+                if mapping_payload is None:
+                    raise GenericImportError("Confirmed mapping is missing")
+                mapping = MappingSpec.model_validate(mapping_payload)
+                resource = next(
+                    (
+                        item
+                        for item in resources
+                        if item.resource_id == mapping.resource_id
+                        and item.content_sha256 == mapping.resource_sha256
+                    ),
+                    None,
+                )
+                if resource is None:
+                    raise GenericImportError("Confirmed mapping resource is missing or changed")
+                result = self.builder.build(job, resource, mapping, receipts)
+                mapping_content = mapping.model_dump(mode="json", by_alias=True)
+                resource_content = {
+                    "resourceId": resource.resource_id,
+                    "assetId": resource.asset_id,
+                    "logicalPath": resource.logical_path,
+                    "sizeBytes": resource.size_bytes,
+                    "contentSha256": resource.content_sha256,
+                    "format": resource.format.value,
+                }
+                registry_root = self.builder.registry_root
+            mapping_canonical = json.dumps(
+                mapping_content,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            mapping_sha256 = hashlib.sha256(mapping_canonical.encode()).hexdigest()
+            content = {
+                "ingestionId": job.ingestion_id,
+                "approvedSourceId": job.approved_source_id,
+                "manifestSha256": job.manifest_sha256,
+                "sourceUrl": job.source_url,
+                "sourceKind": job.source_kind,
+                "sourceRevision": job.source_revision,
+                "datasetLicenseId": job.dataset_license_id,
+                "assets": [
+                    {
+                        "assetId": item.asset_id,
+                        "providerLocator": item.provider_locator,
+                        "expectedSizeBytes": item.expected_size_bytes,
+                        "sourceChecksumAlgorithm": item.source_checksum_algorithm,
+                        "sourceChecksumValue": item.source_checksum_value,
+                        "observedSizeBytes": item.observed_size_bytes,
+                        "contentSha256": item.content_sha256,
+                        "contentKey": item.content_key,
+                    }
+                    for item in receipts
+                ],
+                "resource": resource_content,
+                "mappingSha256": mapping_sha256,
+                "mapping": mapping_content,
+                "output": {
+                    "datasetId": result.dataset_id,
+                    "datasetVersion": result.dataset_version,
+                    "registryKey": result.version_dir.relative_to(registry_root).as_posix(),
+                },
+                "validation": {
+                    "status": "passed",
+                    "recordCount": result.record_count,
+                    "seriesCount": result.series_count,
+                    "valueCount": result.value_count,
+                    "readbackSha256": result.validation_sha256,
+                },
+            }
+            receipt_sha256 = hashlib.sha256(
+                json.dumps(content, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            receipt = FinalReceipt.model_validate(
+                {"receiptSha256": receipt_sha256, **content}
+            )
+            self.jobs.record_final_receipt(receipt)
+            return self.jobs.set_state(
+                job.ingestion_id,
+                IngestionState.READY,
+                "TimeF dataset passed deterministic read-back validation",
+            )
+        except (
+            GenericImportError,
+            IngestionJobConflict,
+            SpecializedDispatchError,
+            ValueError,
+        ) as exc:
+            LOGGER.warning("Deterministic import validation failed: %s", exc)
+            return self.jobs.set_state(
+                job.ingestion_id,
+                IngestionState.FAILED,
+                "Import failed deterministic mapping or TimeF validation",
+            )
+        except Exception:
+            self.jobs.set_state(
+                job.ingestion_id,
+                IngestionState.FAILED,
+                "Import failed because the worker encountered an internal error",
+            )
+            raise
