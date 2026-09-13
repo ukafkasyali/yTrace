@@ -1,0 +1,1 @@
+I already merged the PR. But I was thinking, maybe user should be able to approve more than one candidate after a sourcing run.
