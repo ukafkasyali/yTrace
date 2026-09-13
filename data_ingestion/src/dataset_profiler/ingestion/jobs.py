@@ -21,6 +21,10 @@ class IngestionState(StrEnum):
     ACQUIRING = "acquiring"
     INSPECTING = "inspecting"
     MAPPING = "mapping"
+    ONBOARDING_QUEUED = "onboarding_queued"
+    ONBOARDING = "onboarding"
+    NEEDS_HUMAN_RESOLUTION = "needs_human_resolution"
+    CONNECTOR_READY = "connector_ready"
     VALIDATING = "validating"
     IMPORTING = "importing"
     UNSUPPORTED_FORMAT = "unsupported_format"
@@ -45,6 +49,10 @@ class IngestionJob(BaseModel):
     message: str
     created_at: datetime
     updated_at: datetime
+    onboarding_job_id: str | None = None
+    onboarding_status: str | None = None
+    onboarding_stage: str | None = None
+    onboarding_blockers: list[dict] = Field(default_factory=list)
 
 
 class AssetReceipt(BaseModel):
@@ -160,6 +168,16 @@ class IngestionJobStore:
             )
         if "dataset_license_id" not in columns:
             self.connection.execute("ALTER TABLE ingestion_jobs ADD COLUMN dataset_license_id TEXT")
+        for name, declaration in (
+            ("onboarding_job_id", "TEXT"),
+            ("onboarding_status", "TEXT"),
+            ("onboarding_stage", "TEXT"),
+            ("onboarding_blockers_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ):
+            if name not in columns:
+                self.connection.execute(
+                    f"ALTER TABLE ingestion_jobs ADD COLUMN {name} {declaration}"
+                )
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS resource_profiles (
@@ -228,6 +246,10 @@ class IngestionJobStore:
             message=row["message"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+            onboarding_job_id=row["onboarding_job_id"],
+            onboarding_status=row["onboarding_status"],
+            onboarding_stage=row["onboarding_stage"],
+            onboarding_blockers=json.loads(row["onboarding_blockers_json"] or "[]"),
         )
 
     def find_by_source(self, approved_source_id: str) -> IngestionJob | None:
@@ -384,6 +406,8 @@ class IngestionJobStore:
         resource_sha256: str,
         mapping_sha256: str,
         mapping_payload: dict,
+        next_state: IngestionState = IngestionState.VALIDATING,
+        next_message: str = "Confirmed mapping queued for deterministic import",
     ) -> tuple[dict, bool]:
         canonical = json.dumps(mapping_payload, sort_keys=True, separators=(",", ":"))
         now = datetime.now(UTC).isoformat()
@@ -411,6 +435,8 @@ class IngestionJobStore:
                 if job_row["state"] not in {
                     IngestionState.MAPPING.value,
                     IngestionState.NEEDS_INPUT.value,
+                    IngestionState.ONBOARDING.value,
+                    IngestionState.CONNECTOR_READY.value,
                 }:
                     raise IngestionJobConflict("Ingestion is not waiting for a mapping")
                 resource = self.connection.execute(
@@ -427,8 +453,8 @@ class IngestionJobStore:
                     "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
                     "job_revision = job_revision + 1 WHERE ingestion_id = ?",
                     (
-                        IngestionState.VALIDATING.value,
-                        "Confirmed mapping queued for deterministic import",
+                        next_state.value,
+                        next_message,
                         now,
                         ingestion_id,
                     ),
@@ -504,6 +530,85 @@ class IngestionJobStore:
                 ),
             )
         return cursor.rowcount
+
+    def requeue_interrupted_onboarding(self) -> int:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            cursor = self.connection.execute(
+                "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                "job_revision = job_revision + 1 WHERE state = ?",
+                (
+                    IngestionState.ONBOARDING_QUEUED.value,
+                    "Queued after interrupted onboarding",
+                    now,
+                    IngestionState.ONBOARDING.value,
+                ),
+            )
+        return cursor.rowcount
+
+    def claim_next_onboarding(self) -> IngestionJob | None:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.connection.execute(
+                    "SELECT * FROM ingestion_jobs WHERE state IN (?, ?) "
+                    "ORDER BY updated_at, ingestion_id LIMIT 1",
+                    (
+                        IngestionState.ONBOARDING_QUEUED.value,
+                        IngestionState.CONNECTOR_READY.value,
+                    ),
+                ).fetchone()
+                if row is None:
+                    self.connection.execute("COMMIT")
+                    return None
+                self.connection.execute(
+                    "UPDATE ingestion_jobs SET state = ?, message = ?, updated_at = ?, "
+                    "job_revision = job_revision + 1 WHERE ingestion_id = ?",
+                    (
+                        IngestionState.ONBOARDING.value,
+                        "Running semantic onboarding and native TimeNet stages",
+                        now,
+                        row["ingestion_id"],
+                    ),
+                )
+                self.connection.execute("COMMIT")
+                return self.get(row["ingestion_id"])
+            except Exception:
+                self.connection.execute("ROLLBACK")
+                raise
+
+    def set_onboarding_state(
+        self,
+        ingestion_id: str,
+        *,
+        onboarding_job_id: str,
+        onboarding_status: str,
+        onboarding_stage: str,
+        blockers: list[dict],
+        state: IngestionState,
+        message: str,
+    ) -> IngestionJob:
+        now = datetime.now(UTC).isoformat()
+        with self._lock:
+            cursor = self.connection.execute(
+                "UPDATE ingestion_jobs SET onboarding_job_id = ?, onboarding_status = ?, "
+                "onboarding_stage = ?, onboarding_blockers_json = ?, state = ?, message = ?, "
+                "updated_at = ?, job_revision = job_revision + 1 WHERE ingestion_id = ?",
+                (
+                    onboarding_job_id,
+                    onboarding_status,
+                    onboarding_stage,
+                    json.dumps(blockers, sort_keys=True, separators=(",", ":")),
+                    state.value,
+                    message,
+                    now,
+                    ingestion_id,
+                ),
+            )
+        if cursor.rowcount != 1:
+            raise IngestionJobNotFound("Ingestion job not found")
+        return self.get(ingestion_id)
 
     def claim_next_acquisition(self) -> IngestionJob | None:
         now = datetime.now(UTC).isoformat()

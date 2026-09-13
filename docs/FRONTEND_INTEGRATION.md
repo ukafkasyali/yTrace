@@ -109,6 +109,8 @@ The routes below are requested by the implemented service client with `/api` as 
 | `cancelQuery(queryId)` | `DELETE /api/queries/:id` | cancellation acknowledgment |
 | `startImport(approvedSourceId, assetIds?)` | `POST /api/ingestions` | persisted ingestion job |
 | `getImport(ingestionId)` | `GET /api/ingestions/:id` | ingestion state and validation report |
+| `getImportOnboarding(ingestionId)` | `GET /api/ingestions/:id/onboarding` | uppercase orchestrator status/stage, blockers and artifact receipts |
+| `resolveImportBlocker(ingestionId, resolution)` | `POST /api/ingestions/:id/human-resolutions` | implementation-only human decision on the same persisted job |
 | `getImportAssets(ingestionId)` | `GET /api/ingestions/:id/assets` | durable per-asset verification receipts used for byte progress |
 | `listApprovedSources(page, pageSize)` | `GET /api/approved-sources` | durable reviewed source revisions |
 | `getApprovedSource(approvedSourceId)` | `GET /api/approved-sources/:id` | source detail and approval history |
@@ -166,9 +168,15 @@ Use a consistent `{ error: { code, message, retryable } }` envelope for HTTP err
 
 ## Ingestion visibility and security
 
-Ingestion states: `queued → acquiring → inspecting → mapping → validating → importing → ready`, with `needs_input`, `unsupported_format`, and `failed` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`. Once ready, the UI offers the existing result instead of another ingest action. The UI polls active jobs and their durable asset receipts, showing verified bytes and completed assets rather than estimating uncommitted stream bytes. It presents explicit channel-unit confirmation when mapping is required and displays the immutable validation receipt when ready. Opening that receipt loads a paginated record browser from the ingestion registry. A record is replay-compatible only when it contains the seven canonical synchronized external-joint-torque channels at 1 kHz. Selecting one replaces the active replay and routes later raw-window/event requests through receipt-bound ingestion endpoints; other records remain metadata-only. Imported records currently support replay and deterministic measurements, not OpenTSLM inference or recorded joint-position animation. It does not silently select the inference bridge's unrelated fixture catalog. It does not implement ingestion-job cancellation.
+Ingestion states now follow `queued → acquiring → inspecting → onboarding → needs_human_resolution? → connector_ready → onboarding → ready`, with `mapping` retained only for structurally ambiguous resources and `needs_input`, `unsupported_format`, and `failed` branches. `POST /ingestions` receives `{ approvedSourceId, assetIds? }`; the server resolves the approved manifest and returns the persisted job. It does not accept a browser-supplied source or download URL. One approved source revision has one logical ingestion job and deterministic onboarding-job ID: matching retries return that job, and an incompatible asset selection returns `409 INGESTION_CONFLICT`.
 
-An ingestion agent proposes mappings; deterministic validators check them. Unknown units or ambiguous channels produce `needs_input`, not invented metadata. Retrieval results identify their source documents separately from signal evidence. Server-side URL fetching must reject private/local network targets and enforce size/type limits.
+At `NEEDS_HUMAN_RESOLUTION`, the UI fetches the orchestrator projection, displays every structured blocker, and submits `field_path`, `value`, `approved_by`, and `rationale`. The browser cannot send or replace a `DatasetSpec`; the server constructs a `human_confirmation` implementation override and retains semantic uncertainty. Agent-only approval is rejected. Once ready, the UI offers the existing result, immutable validation receipt and imported-record browser. A record is replay-compatible only when it contains the seven canonical synchronized external-joint-torque channels at 1 kHz. Selecting one retains the existing receipt-bound replay, signal, and event routes. Other records remain metadata-only.
+
+Deterministic inventory proposes structural mappings. Unknown implementation-required units produce
+`NEEDS_HUMAN_RESOLUTION`, not invented metadata; ambiguous selectors remain at `mapping` until an
+explicit structural choice enters the same orchestrator. Retrieval results identify their source
+documents separately from signal evidence. Server-side URL fetching must reject private/local
+network targets and enforce size/type limits.
 
 Keep model keys and credentials on the server, never in `VITE_*` variables or browser code. Prefer a same-origin API with server-managed sessions. Do not log raw credentials or expose tracebacks in UI errors.
 

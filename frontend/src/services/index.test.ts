@@ -240,6 +240,38 @@ describe('service contracts', () => {
     await expect(service.getImport('job')).rejects.toBeInstanceOf(ProtocolError);
   });
 
+  it('surfaces orchestrator blockers and submits an explicit human resolution', async () => {
+    const blocker = {
+      field_path: 'signals[0].unit', semantic_status: 'unresolved',
+      downstream_system: 'TimeF TimeSeriesSpec.unit_value',
+      downstream_requirement: 'TimeF requires a concrete unit.', candidate: null,
+      evidence_refs: ['ev_documentation_unit'], remaining_uncertainty: 'Unit is not encoded.',
+    };
+    const paused = {
+      ingestion_id: '11111111-1111-4111-8111-111111111111',
+      job_id: `job-${'1'.repeat(32)}`, status: 'NEEDS_HUMAN_RESOLUTION',
+      stage: 'NEEDS_HUMAN_RESOLUTION', blockers: [blocker], artifacts: {}, error: null, result: null,
+    };
+    const ready = { ...paused, status: 'PENDING', stage: 'CONNECTOR_READY', blockers: [] };
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json(paused))
+      .mockResolvedValueOnce(Response.json(ready));
+    vi.stubGlobal('fetch', fetch);
+    const service = createServices('/api');
+    const resolution = {
+      field_path: blocker.field_path, value: 'newton * meter',
+      approved_by: 'engineer@example.test', rationale: 'Confirmed from the signal dictionary.',
+    };
+
+    expect((await service.getImportOnboarding(paused.ingestion_id)).status).toBe('NEEDS_HUMAN_RESOLUTION');
+    expect((await service.resolveImportBlocker(paused.ingestion_id, resolution)).stage).toBe('CONNECTOR_READY');
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      `/api/ingestions/${paused.ingestion_id}/human-resolutions`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(resolution) }),
+    );
+  });
+
   it('validates and requests paginated imported TimeF records', async () => {
     const page = {
       datasetId: 'kuka/collision-part1', datasetVersion: '1.0.0',

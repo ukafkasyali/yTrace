@@ -7,12 +7,12 @@ from pathlib import Path
 
 from .archive import SafeArchiveExtractor
 from .dispatch import SpecializedDispatcher
-from .generic import GenericTimeFBuilder
 from .inventory import ResourceInventory
 from .jobs import IngestionJobStore
+from .onboarding import IngestionOnboardingCoordinator, OnboardingWorker
 from .providers import ProviderAcquirer
 from .service import HttpApprovedSourceResolver
-from .worker import AcquisitionWorker, GenericImportWorker
+from .worker import AcquisitionWorker
 
 
 def main() -> int:
@@ -37,6 +37,7 @@ def main() -> int:
         cache_dir=data_dir / "cache",
         registry_root=data_dir / "timef",
     )
+    onboarding = IngestionOnboardingCoordinator(data_dir, jobs)
     worker = AcquisitionWorker(
         jobs,
         resolver,
@@ -44,20 +45,14 @@ def main() -> int:
         extractor=SafeArchiveExtractor(data_dir / "cache"),
         inventory=ResourceInventory(),
         dispatcher=dispatcher,
+        onboarding=onboarding,
     )
-    importer = GenericImportWorker(
-        jobs,
-        GenericTimeFBuilder(
-            cache_dir=data_dir / "cache",
-            registry_root=data_dir / "timef",
-        ),
-        dispatcher=dispatcher,
-    )
+    onboarder = OnboardingWorker(onboarding)
     try:
         worker.recover_interrupted()
-        importer.recover_interrupted()
+        onboarder.recover_interrupted()
         while True:
-            processed = worker.run_once() or importer.run_once()
+            processed = worker.run_once() or onboarder.run_once()
             if args.once:
                 return 0
             if processed is None:

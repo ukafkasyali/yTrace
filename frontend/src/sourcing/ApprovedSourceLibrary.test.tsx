@@ -50,6 +50,7 @@ describe('approved source library states', () => {
     expect(terminalJobNote('unsupported_format')).toContain('Nothing was imported');
     expect(terminalJobNote('failed')).toContain('same ingestion');
     expect(terminalJobNote('ready')).toBe('');
+    expect(terminalJobNote('needs_human_resolution')).toBe('');
   });
 
   it('offers cancellation after asset selection', () => {

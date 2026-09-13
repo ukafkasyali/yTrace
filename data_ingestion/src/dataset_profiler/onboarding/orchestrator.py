@@ -35,10 +35,12 @@ class OnboardingOrchestrator:
         self.store = JobStore(jobs_root)
         self.backend = backend
 
-    def create_job(self, source: SourceDescriptor) -> OnboardingJob:
+    def create_job(
+        self, source: SourceDescriptor, *, job_id: str | None = None
+    ) -> OnboardingJob:
         """Create a pending onboarding job without starting expensive work."""
         job = OnboardingJob(
-            job_id=f"job-{uuid4().hex}",
+            job_id=job_id or f"job-{uuid4().hex}",
             source=source,
             workflow_id=self.backend.workflow_id,
         )
