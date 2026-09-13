@@ -15,23 +15,33 @@ function timing(value: unknown, endpoint = false): number | null | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1024 && (endpoint || value < 1024) ? value : undefined;
 }
 
-function answerObject(output: string): unknown {
+function answerObject(output: string): { value: unknown; keys: string[] } | undefined {
   const matches = [...output.matchAll(/Answer:\s*/gi)];
   const searchStart = matches.length ? matches.at(-1)!.index + matches.at(-1)![0].length : 0;
   const start = output.indexOf('{', searchStart);
   if (start < 0) return;
-  let depth = 0, quoted = false, escaped = false;
+  let depth = 0, arrayDepth = 0, quoted = false, escaped = false, stringStart = -1;
+  const keys: string[] = [];
   for (let index = start; index < output.length; index += 1) {
     const character = output[index];
     if (quoted) {
       if (escaped) escaped = false;
       else if (character === '\\') escaped = true;
-      else if (character === '"') quoted = false;
+      else if (character === '"') {
+        quoted = false;
+        if (depth === 1 && arrayDepth === 0) {
+          let next = index + 1;
+          while (/\s/.test(output[next] ?? '')) next += 1;
+          if (output[next] === ':') keys.push(JSON.parse(output.slice(stringStart, index + 1)) as string);
+        }
+      }
       continue;
     }
-    if (character === '"') quoted = true;
+    if (character === '"') { quoted = true; stringStart = index; }
     else if (character === '{') depth += 1;
-    else if (character === '}' && --depth === 0) return JSON.parse(output.slice(start, index + 1));
+    else if (character === '[') arrayDepth += 1;
+    else if (character === ']') arrayDepth -= 1;
+    else if (character === '}' && --depth === 0) return { value: JSON.parse(output.slice(start, index + 1)), keys };
   }
 }
 
@@ -39,9 +49,11 @@ function answerObject(output: string): unknown {
 export function structuredPrediction(output?: string): StructuredPrediction | undefined {
   if (!output) return;
   try {
-    const p = answerObject(output) as Record<string, unknown> | undefined;
+    const answer = answerObject(output);
+    if (!answer) return;
+    const p = answer?.value as Record<string, unknown> | undefined;
     if (!p || typeof p !== 'object') return;
-    if (Object.keys(p).length !== predictionKeys.length || predictionKeys.some(key => !(key in p))) return;
+    if (answer.keys.length !== predictionKeys.length || new Set(answer.keys).size !== predictionKeys.length || predictionKeys.some(key => !(key in p))) return;
     if (typeof p.contact !== 'boolean') return;
     const eventType = typeof p.event_type === 'string' && ['free', 'intentional', 'accidental'].includes(p.event_type)
       ? p.event_type as StructuredPrediction['event_type'] : undefined;
