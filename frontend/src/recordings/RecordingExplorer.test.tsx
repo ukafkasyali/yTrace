@@ -12,5 +12,7 @@ describe('completed recording marker browser', () => {
     expect((html.match(/class="event-item /g) ?? []).length).toBe(fixture.events.length);
     expect(html).toContain('150.999 s');
     expect(html).not.toContain('No markers reached yet');
+    expect(html).toContain('Run Analyze interval to start measurements and OpenTSLM.');
+    expect(html).not.toContain('automatically runs');
   });
 });
