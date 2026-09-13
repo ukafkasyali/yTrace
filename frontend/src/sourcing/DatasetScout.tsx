@@ -5,6 +5,11 @@ import RequirementEditor, { selectedRequirements, type RequirementPriorities } f
 import ScoutReview from './ScoutReview';
 
 const demoBrief = 'Find 1 kHz robot collision and intentional contact time-series torque data from https://github.com/zhang-zengjie/robot-raw-collision-signals';
+const factoryBrief = 'Find the FactoryBench industrial robot telemetry and question-answer dataset from https://huggingface.co/datasets/FactoryBench/FactoryBench for cross-robot fault reasoning research';
+const presets = [
+  { label: 'KUKA contact data', brief: demoBrief },
+  { label: 'Cross-factory reasoning', brief: factoryBrief },
+];
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'The request failed.';
 type Intent = { signature: string; key: string };
 
@@ -41,6 +46,10 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
 
   function invalidatePreview() {
     setPreview(null); setPriorities({}); intent.current = null;
+  }
+
+  function choosePreset(nextBrief: string) {
+    setBrief(nextBrief); invalidatePreview();
   }
 
   async function previewRequirements() {
@@ -95,22 +104,26 @@ export default function DatasetScout({ services, onUseSource }: { services: Serv
   }
 
   return <section className="workspace-section dataset-scout" aria-labelledby="scout-title">
-    <div className="section-heading"><div><h2 id="scout-title">Find and verify a dataset</h2><p>Describe the data you need. Trace searches bounded sources, checks native evidence, and waits for your approval.</p></div><SearchCheck size={20} aria-hidden="true" /></div>
+    <div className="section-heading"><div><h2 id="scout-title">Find and verify a dataset</h2><p>Search, check source evidence, then approve what enters the pipeline.</p></div><SearchCheck size={20} aria-hidden="true" /></div>
     {!services.connected && <p className="status-note">Configure the team API to run or resume dataset research.</p>}
+    <div className="scout-presets" aria-label="Dataset research presets">{presets.map(preset => <button className={brief === preset.brief ? 'active' : ''} type="button" key={preset.label} onClick={() => choosePreset(preset.brief)} disabled={!services.connected || Boolean(busy)}>{preset.label}</button>)}</div>
     <label htmlFor="sourcing-brief">Research brief</label>
     <textarea id="sourcing-brief" rows={3} value={brief} onChange={event => { setBrief(event.target.value); invalidatePreview(); }} disabled={!services.connected || Boolean(busy)} />
-    <form className="custom-requirement" onSubmit={event => { event.preventDefault(); addCustomRequirement(); }}>
-      <label htmlFor="custom-sourcing-requirement">Custom mandatory requirement</label>
-      <div><input id="custom-sourcing-requirement" value={customRequirement} onChange={event => setCustomRequirement(event.target.value)} maxLength={500} placeholder="Example: At least 200 labelled collision sequences" disabled={!services.connected || Boolean(busy) || customRequirements.length >= 10} /><button className="btn" disabled={customRequirement.trim().length < 3 || customRequirements.length >= 10 || Boolean(busy)}><Plus size={14} aria-hidden="true" />Add</button></div>
-      <small>{customRequirements.length}/10 custom requirements</small>
-    </form>
-    {customRequirements.length > 0 && <ul className="custom-requirements" aria-label="Custom requirements">{customRequirements.map(item => <li key={item}><span>{item}</span><button type="button" aria-label={`Remove custom requirement: ${item}`} onClick={() => { setCustomRequirements(values => values.filter(value => value !== item)); invalidatePreview(); }}><X size={13} aria-hidden="true" /></button></li>)}</ul>}
+    <details className="scout-advanced">
+      <summary>Advanced search options</summary>
+      <form className="custom-requirement" onSubmit={event => { event.preventDefault(); addCustomRequirement(); }}>
+        <label htmlFor="custom-sourcing-requirement">Mandatory requirement</label>
+        <div><input id="custom-sourcing-requirement" value={customRequirement} onChange={event => setCustomRequirement(event.target.value)} maxLength={500} placeholder="Example: At least 200 labelled collision sequences" disabled={!services.connected || Boolean(busy) || customRequirements.length >= 10} /><button className="btn" disabled={customRequirement.trim().length < 3 || customRequirements.length >= 10 || Boolean(busy)}><Plus size={14} aria-hidden="true" />Add</button></div>
+        <small>{customRequirements.length}/10 requirements</small>
+      </form>
+      {customRequirements.length > 0 && <ul className="custom-requirements" aria-label="Custom requirements">{customRequirements.map(item => <li key={item}><span>{item}</span><button type="button" aria-label={`Remove custom requirement: ${item}`} onClick={() => { setCustomRequirements(values => values.filter(value => value !== item)); invalidatePreview(); }}><X size={13} aria-hidden="true" /></button></li>)}</ul>}
+      <form className="resume-scout" onSubmit={event => { event.preventDefault(); setError(''); setRun(null); setSourceReady(false); setRunId(resumeId.trim()); setPollRevision(value => value + 1); }}><label htmlFor="sourcing-run-id">Resume a run</label><div><input id="sourcing-run-id" value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Run ID" disabled={!services.connected || Boolean(busy)} /><button className="btn" disabled={!services.connected || !resumeId.trim() || Boolean(busy)}>Load</button></div></form>
+    </details>
     {preview && <RequirementEditor requirements={preview.requirements} priorities={priorities} onPriorityChange={(id, priority) => { setPriorities(current => ({ ...current, [id]: priority })); intent.current = null; }} />}
     <div className="scout-actions">
       {preview
         ? <button className="btn btn-primary" type="button" disabled={!services.connected || Boolean(busy)} onClick={() => void start()}><SearchCheck size={15} aria-hidden="true" />{busy === 'start' ? 'Starting…' : 'Start evidence review'}</button>
         : <button className="btn btn-primary" type="button" disabled={!services.connected || Boolean(busy)} onClick={() => void previewRequirements()}><SearchCheck size={15} aria-hidden="true" />{busy === 'preview' ? 'Preparing…' : 'Review requirements'}</button>}
-      <form onSubmit={event => { event.preventDefault(); setError(''); setRun(null); setSourceReady(false); setRunId(resumeId.trim()); setPollRevision(value => value + 1); }}><label htmlFor="sourcing-run-id">Resume run</label><input id="sourcing-run-id" value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Run ID" disabled={!services.connected || Boolean(busy)} /><button className="btn" disabled={!services.connected || !resumeId.trim() || Boolean(busy)}>Load</button></form>
     </div>
     {error && <p className="error-message" role="alert">{error}</p>}
     {run ? <ScoutReview run={run} busy={busy} onReview={reviewRequest => void review(reviewRequest)} onUseSource={url => { onUseSource(url); setSourceReady(true); }} /> : runId && !error ? <p className="status-note" aria-live="polite">Loading sourcing run…</p> : null}

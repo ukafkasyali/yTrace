@@ -97,7 +97,13 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
           if (event.type === 'tool.started') update(id, m => ({ tools: [...m.tools, p.label ?? p.tool ?? 'Tool started'] }));
           if (event.type === 'tool.completed') update(id, m => ({ tools: [...m.tools, p.summary ?? 'Tool completed'] }));
           if (event.type === 'answer.delta') update(id, m => ({ text: m.text + (p.text ?? '') }));
-          if (event.type === 'answer.completed') { completed.current = true; update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput: typeof p.modelOutput === 'string' ? p.modelOutput : undefined, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) })); }
+          if (event.type === 'answer.completed') {
+            completed.current = true;
+            const modelOutput = typeof p.modelOutput === 'string' ? p.modelOutput : undefined;
+            update(id, m => ({ status: 'complete', text: p.answer ?? m.text, modelId: p.modelId, modelRevision: p.modelRevision, inputTrace: p.inputTrace, modelOutput, source: `${p.modelId ?? 'Assistant'} · completed`, evidence: (p.evidence ?? []).flatMap(evidenceFrom) }));
+            const cue = predictionCue(modelOutput, snapshot);
+            if (cue) onRobotPrediction(cue);
+          }
           if (event.type === 'query.error') { completed.current = true; update(id, m => ({ status: 'error', text: `${m.text}${m.text ? '\n\n' : ''}${p.message ?? 'Inference failed.'}` })); }
           if (event.type === 'query.cancelled') { completed.current = true; update(id, { status: 'cancelled' }); }
         }, controller.signal);
@@ -127,7 +133,6 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
       {!messages.length && <div className="conversation-intro"><Waves size={26}/><h3>Prepare a reviewable incident handoff.</h3><p>Analyze the incident, verify the prediction against exact signals, then export the handoff for a controls engineer.</p><p className="intro-limit">Recorded torque can guide investigation. It cannot verify a physical cause.</p></div>}
       {messages.map(m => {
         const brief = predictionBrief(m.modelOutput);
-        const cue = m.status === 'complete' ? predictionCue(m.modelOutput, m.interval) : undefined;
         const review = m.status === 'complete' ? reviewPrediction(m.telemetry, m.interval, m.modelOutput) : undefined;
         const measuredText = m.text.split(/\n\s*\n/).find(block => block.startsWith('Measured in this selected window'))?.split('\n').slice(1).join(' ');
         return <article className="conversation-turn" key={m.id}>
@@ -139,10 +144,9 @@ export default function AssistantPanel({ rawLoading, rawError, onRetryRaw, data,
               {brief ? <><section className="prediction-summary"><h3>{brief.title}</h3><div className="prediction-facts">{brief.strongest && <span>Predicted strongest joint <strong>{brief.strongest}</strong></span>}{brief.onset !== undefined && <span>Predicted onset <strong>{brief.onset} ms</strong> into the window</span>}</div><p className="prediction-caution">OpenTSLM prediction · not a verified physical diagnosis.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}{review && <section className="review-note"><h3>Cross-check</h3><p>{review.note}</p></section>}</> : m.status === 'complete' && m.mode === 'assistant' ? <><section className="prediction-summary"><h3>No usable structured prediction</h3><p className="prediction-caution">The generation did not meet the complete seven-field contract used by Evaluation. Inspect the raw audit output before retrying.</p></section>{measuredText && <section className="measured-summary"><h3>Measured torque</h3><p>{measuredText}</p></section>}</> : m.text ? <AnswerText text={m.text}/> : null}
             </div>
             {m.status === 'complete' && <section className="investigation-next" aria-label="Verify and hand off"><h3>Verify and hand off</h3><ol className="investigation-actions">
-              {cue && <li><button onClick={() => onRobotPrediction(cue)}><span>1</span><strong>Show generated onset cue in 3D</strong><ArrowUpRight size={12}/></button></li>}
-              {m.evidence.map((e, i) => <li key={i}><button onClick={() => onEvidence(e)}><span>{cue ? 2 : 1}</span><strong>Inspect exact seven-channel input</strong><SlidersHorizontal size={12}/></button></li>)}
-              <li><button onClick={() => onCompare(m.interval)}><span>{cue ? 3 : m.evidence.length ? 2 : 1}</span><strong>Compare with a reference window · optional</strong><ArrowUpRight size={12}/></button></li>
-              <li><button onClick={() => exportReport(m)}><span>{cue ? 4 : m.evidence.length ? 3 : 2}</span><strong>Export incident handoff (.md)</strong><Download size={13}/></button></li>
+              {m.evidence.map((e, i) => <li key={i}><button onClick={() => onEvidence(e)}><span>1</span><strong>Inspect exact input</strong><SlidersHorizontal size={12}/></button></li>)}
+              <li><button onClick={() => onCompare(m.interval)}><span>{m.evidence.length ? 2 : 1}</span><strong>Compare with reference</strong><ArrowUpRight size={12}/></button></li>
+              <li><button onClick={() => exportReport(m)}><span>{m.evidence.length ? 3 : 2}</span><strong>Export handoff (.md)</strong><Download size={13}/></button></li>
             </ol></section>}
             {m.status === 'complete' && m.mode === 'assistant' && <details className="input-receipt"><summary>Model &amp; input details</summary><p>{checkpointLabel(m.modelRevision)} · [{m.interval.start.toFixed(3)}, {m.interval.end.toFixed(3)}) s</p><details><summary>Structured model prediction</summary><p>Only supported prediction fields are shown here. Generated evidence prose is retained only in the audit JSON and is not treated as an annotation or measurement.</p><pre>{JSON.stringify(structuredPrediction(m.modelOutput) ?? { status: 'No valid structured prediction was returned.' }, null, 2)}</pre></details><details><summary>1,024-sample input receipt</summary><pre>{JSON.stringify(m.inputTrace ?? { status: 'The server did not return an input receipt.' }, null, 2)}</pre><p>{m.modelRevision}</p></details>{m.tools.length > 0 && <details className="tool-log"><summary>{m.tools.length} completed tool steps</summary>{m.tools.map((t, i) => <p key={i}>{t}</p>)}</details>}<button className="text-button" onClick={() => exportEvidence(m)}><Download size={12}/>Download audit JSON</button></details>}
             {(m.status === 'error' || m.status === 'cancelled') && <button className="text-button" disabled={busy} onClick={() => { setQuestion(m.question); }}><RotateCcw size={12}/>Use this question again</button>}
