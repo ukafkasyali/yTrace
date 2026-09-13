@@ -161,17 +161,20 @@ export default function EvaluationWorkspace() {
   if (presenting) return <PresentationWorkspace onExit={() => setPresenting(false)} />;
 
   return <section className="workspace-content evaluation-content" aria-labelledby="evaluation-title">
-    <header className="workspace-heading evaluation-heading"><div><h1 id="evaluation-title">Held-out baseline comparison</h1><p>{comparison.window_count} test windows · seed {comparison.selection_seed} · seven joints · 1,024 samples at 1 kHz.</p></div><button className="btn" onClick={() => setPresenting(true)}><BarChart3 size={15} aria-hidden="true"/>Open 5-minute view</button></header>
+    <header className="workspace-heading evaluation-heading"><div><h1 id="evaluation-title">Held-out evaluation</h1><p>{comparison.window_count} windows from {comparison.recording_count} recording groups · identical split for every method.</p></div><button className="btn" onClick={() => setPresenting(true)}><BarChart3 size={15} aria-hidden="true"/>Presentation view</button></header>
 
-    <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>Simple features win fixed classification.</strong><p>OpenTSLM returns class, timing and joint fields in one readable handoff, but only 77.93% of its full generations are usable. The CNN gives the best typical onset timing.</p></div></div>
+    <div className="evaluation-conclusion"><CheckCircle2 size={17} aria-hidden="true" /><div><strong>Features classify best. OpenTSLM produces the readable investigation.</strong><p>The model links event type, timing, joints, and an evidence sentence in one output. Its main limitation is that only 77.93% of generations satisfy the complete answer contract.</p></div></div>
 
     <dl className="evaluation-summary evaluation-summary-four">
       <div><dt>Best semantics macro-F1</dt><dd>0.9880</dd><small>Signal features</small></div>
       <div><dt>Best median onset error</dt><dd>18 ms</dd><small>1D CNN</small></div>
-      <div><dt>Best onset P90 error</dt><dd>140 ms</dd><small>OpenTSLM · finite in-window onset predictions</small></div>
-      <div><dt>OpenTSLM usable summaries</dt><dd>77.93%</dd><small>{answeredWindows} of {comparison.window_count}</small></div>
+      <div><dt>Best onset P90</dt><dd>140 ms</dd><small>OpenTSLM</small></div>
+      <div><dt>Usable OpenTSLM answers</dt><dd>77.93%</dd><small>{answeredWindows} of {comparison.window_count}</small></div>
     </dl>
 
+    <details className="evaluation-details">
+      <summary>Full benchmark details</summary>
+      <div className="evaluation-details-body">
     <section className="evaluation-followup" aria-labelledby="rationale-followup-title">
       <div className="section-heading"><div><h2 id="rationale-followup-title">Latest OpenTSLM rationale follow-up</h2><p>Best validation checkpoint at step {rationaleFollowup.selected_step}; diagnostics are deliberately separate from the locked 512-window test comparison.</p></div></div>
       <dl className="evaluation-summary evaluation-summary-four">
@@ -224,5 +227,7 @@ export default function EvaluationWorkspace() {
     </section>
 
     <details className="evaluation-methodology"><summary>Evaluation contract and provenance</summary><p>Signal features, the OpenTSLM canary, and Qwen are recomputed from checksum-verified archived predictions joined to the same 512 record IDs across 67 held-out recording groups. The CNN summary reports the same locked test size and seed, but its row-level predictions are not in that audited bundle, so it is visibly marked as a recorded run.</p><p>The rationale follow-up is a separate validation diagnostic: its nearest generation panel has 84 intent-stratified samples, while its perturbation panel has 12 sessions. It is displayed to expose progress and grounding behavior, not as a replacement test score.</p><p>Recording sessions were split before window generation. Normalization and thresholds use training sessions only. Joint and evidence targets are deterministic signal-derived labels rather than physical contact-location truth.</p><p className="mono">Audited pipeline · records {comparison.record_ids_sha256.slice(0, 12)}… · canary checkpoint {comparison.checkpoint_sha256.slice(0, 12)}… · rationale checkpoint {rationaleFollowup.checkpoint_sha256.slice(0, 12)}… · CNN checkpoint {cnnSummary.checkpoint_sha256.slice(0, 12)}…</p></details>
+      </div>
+    </details>
   </section>;
 }
