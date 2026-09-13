@@ -192,4 +192,5 @@ class IngestionService:
             asset_ids=selected,
             state=state,
             message=message,
+            dataset_license_id=resolved.manifest.dataset_license_id,
         )

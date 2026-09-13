@@ -37,6 +37,7 @@ class IngestionJob(BaseModel):
     source_url: str
     source_kind: str
     source_revision: str
+    dataset_license_id: str | None = None
     asset_ids: list[str]
     job_revision: int = Field(ge=1)
     state: IngestionState
@@ -109,6 +110,7 @@ class IngestionJobStore:
                 source_url TEXT NOT NULL,
                 source_kind TEXT NOT NULL,
                 source_revision TEXT NOT NULL,
+                dataset_license_id TEXT,
                 asset_ids_json TEXT NOT NULL,
                 job_revision INTEGER NOT NULL DEFAULT 1,
                 state TEXT NOT NULL,
@@ -136,6 +138,8 @@ class IngestionJobStore:
             self.connection.execute(
                 "ALTER TABLE ingestion_jobs ADD COLUMN job_revision INTEGER NOT NULL DEFAULT 1"
             )
+        if "dataset_license_id" not in columns:
+            self.connection.execute("ALTER TABLE ingestion_jobs ADD COLUMN dataset_license_id TEXT")
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS resource_profiles (
@@ -186,6 +190,7 @@ class IngestionJobStore:
             source_url=row["source_url"],
             source_kind=row["source_kind"],
             source_revision=row["source_revision"],
+            dataset_license_id=row["dataset_license_id"],
             asset_ids=json.loads(row["asset_ids_json"]),
             job_revision=row["job_revision"],
             state=row["state"],
@@ -481,6 +486,7 @@ class IngestionJobStore:
         asset_ids: list[str],
         state: IngestionState,
         message: str,
+        dataset_license_id: str | None = None,
     ) -> tuple[IngestionJob, bool]:
         normalized_asset_ids = sorted(set(asset_ids))
         now = datetime.now(UTC).isoformat()
@@ -504,9 +510,9 @@ class IngestionJobStore:
                     """
                     INSERT INTO ingestion_jobs (
                         ingestion_id, approved_source_id, manifest_sha256, source_url,
-                        source_kind, source_revision, asset_ids_json, job_revision,
-                        state, message, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        source_kind, source_revision, dataset_license_id, asset_ids_json,
+                        job_revision, state, message, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         ingestion_id,
@@ -515,6 +521,7 @@ class IngestionJobStore:
                         source_url,
                         source_kind,
                         source_revision,
+                        dataset_license_id,
                         json.dumps(normalized_asset_ids, separators=(",", ":")),
                         1,
                         state.value,
