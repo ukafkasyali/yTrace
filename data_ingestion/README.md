@@ -42,6 +42,37 @@ alone does not run every check.
 
 The generated Batch 01 artifact is at [outputs/dataset_profile.json](outputs/dataset_profile.json), and the observed facts, interpretations, and unresolved questions are documented in [docs/KUKA_BATCH_01_INSPECTION.md](docs/KUKA_BATCH_01_INSPECTION.md).
 
+## Job-oriented onboarding
+
+`dataset_profiler.onboarding` wraps the existing profiler, semantic agent, validator/repair loop,
+human implementation handoff, and native TimeNet workflow in a persisted state machine. Structured
+state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to parse logs.
+
+```python
+from dataset_profiler.onboarding import (
+    OnboardingOrchestrator,
+    SourceDescriptor,
+    bosch_reference_backend,
+)
+
+service = OnboardingOrchestrator(
+    "outputs/onboarding_jobs", bosch_reference_backend()
+)
+job = service.create_job(SourceDescriptor(
+    source_type="local_directory",
+    local_path="/path/to/CNC_Machining",
+    dataset_id="bosch-cnc",
+))
+job = service.run_job(job.id)
+```
+
+An unresolved implementation requirement pauses with
+`status == "needs_human_resolution"`. Resume the same job with
+`service.resolve_blocker(...)` followed by `service.continue_job(job.id)`. The thin `onboard`
+command exposes the same create/status/run/resolve/continue operations. The Bosch preset reuses the
+audited semantic artifacts and native TimeNet connector, then runs connector tests, `timenet-build`,
+`TimeNet.load()`, and a full raw-to-TimeF comparison.
+
 ## Declarative semantic specs
 
 `dataset_profiler.semantic_spec` defines the typed, JSON-serializable `DatasetSpec` v0.1 model and
