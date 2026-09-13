@@ -335,9 +335,7 @@ class LocalOnboardingBackend:
         """Recheck frozen evidence before a downstream stage reads the live source."""
         if not self.seed_profile:
             return
-        persisted_profile = _read_object(
-            job.artifact_path(job_dir, "dataset_profile")
-        )
+        persisted_profile = _read_object(job.artifact_path(job_dir, "dataset_profile"))
         _verify_frozen_profile_source(persisted_profile, job.source.local_path)
 
 
@@ -383,12 +381,29 @@ def _verify_frozen_profile_source(
     """Bind a reused profile to the exact source files it originally inspected."""
     if not source_path:
         raise ValueError("a local source path is required for a frozen profile")
-    root = Path(source_path).resolve()
-    if not root.is_dir():
-        raise ValueError(f"source directory does not exist: {root}")
+    supplied_root = Path(source_path).resolve()
+    if not supplied_root.is_dir():
+        raise ValueError(f"source directory does not exist: {supplied_root}")
     files = profile.get("files")
     if not isinstance(files, list) or not files:
         raise ValueError("frozen profile has no source file inventory")
+    relative_paths = [
+        item.get("relative_path") for item in files if isinstance(item, dict)
+    ]
+    roots = [supplied_root]
+    if (supplied_root / "data").is_dir():
+        roots.append(supplied_root / "data")
+    root = next(
+        (
+            candidate
+            for candidate in roots
+            if all(
+                isinstance(relative_path, str) and (candidate / relative_path).is_file()
+                for relative_path in relative_paths
+            )
+        ),
+        supplied_root,
+    )
     recorded_paths: set[str] = set()
     for item in files:
         if not isinstance(item, dict):
@@ -402,8 +417,7 @@ def _verify_frozen_profile_source(
             not isinstance(expected, str)
             or len(expected) != 64
             or any(
-                character not in "0123456789abcdef"
-                for character in expected.casefold()
+                character not in "0123456789abcdef" for character in expected.casefold()
             )
         ):
             raise ValueError(

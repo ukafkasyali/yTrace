@@ -193,8 +193,7 @@ class OnboardingJob:
             not isinstance(expected, str)
             or len(expected) != 64
             or any(
-                character not in "0123456789abcdef"
-                for character in expected.casefold()
+                character not in "0123456789abcdef" for character in expected.casefold()
             )
         ):
             raise ValueError(f"artifact {name!r} has no valid stored SHA-256")
