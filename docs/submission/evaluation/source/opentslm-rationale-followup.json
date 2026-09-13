@@ -4,6 +4,11 @@
   "recorded_at": "2026-09-13",
   "run_name": "llama-har-sp-timef-rationale-focused-v6",
   "output_format": "rationale_then_answer",
+  "surfaces": [
+    "frontend/evaluation",
+    "codex/canvas"
+  ],
+  "repository_canvas_mirror": "model_training/docs/baseline-methods-explained.tsx",
   "selected_step": 3600,
   "final_step": 3823,
   "selected_validation_loss": 0.07827791051901319,
