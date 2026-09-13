@@ -116,6 +116,92 @@ def test_verification_expands_primary_page_links_as_separate_bounded_leads() -> 
     connection.close()
 
 
+def test_multipart_candidate_triggers_one_bounded_family_search() -> None:
+    part_one_url = "https://zenodo.org/records/101"
+    part_two_url = "https://zenodo.org/records/202"
+
+    class MultipartSearch:
+        def __init__(self) -> None:
+            self.queries: list[str] = []
+
+        def search(self, query: str, *, allow_cached_demo: bool = False) -> SearchBatch:
+            self.queries.append(query)
+            is_family_query = "all parts" in query
+            return SearchBatch(
+                results=[
+                    SearchResult(
+                        title=(
+                            "Machine Measurements — Part II"
+                            if is_family_query
+                            else "Machine Measurements — Part I"
+                        ),
+                        url=part_two_url if is_family_query else part_one_url,
+                        query=query,
+                    )
+                ],
+                credits_used=2,
+                execution_mode=ExecutionMode.LIVE,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class MultipartVerifier:
+        def verify(self, candidate, *, cached=False, max_download_bytes=25_000_000_000):
+            is_part_two = str(candidate.canonical_url).rstrip("/") == part_two_url
+            document = NativeDocument(
+                source_url=str(candidate.canonical_url).rstrip("/"),
+                source_kind=candidate.source_kind,
+                name=f"Machine Measurements — Part {'II' if is_part_two else 'I'}",
+                revision="v1",
+                license_id="cc-by-4.0",
+                text=(
+                    "This dataset contains recorded industrial robot collision torque "
+                    "time-series at 1 kHz. Dataset structure documents seven joints and columns."
+                ),
+                files=[NativeFile(name="signals.csv", size=100)],
+            )
+            return build_verified_candidate(candidate, [document], max_download_bytes)
+
+        def close(self) -> None:
+            pass
+
+    connection = sqlite3.connect(":memory:", check_same_thread=False)
+    saver = SqliteSaver(connection)
+    saver.setup()
+    search = MultipartSearch()
+    scout = DatasetScoutGraph(
+        Settings(_env_file=None),
+        saver,
+        search=search,
+        verifier=MultipartVerifier(),
+    )
+    run_id = str(uuid4())
+
+    result = scout.graph.invoke(
+        initial_state(
+            run_id,
+            CreateSourcingRun(
+                brief="Find 1 kHz industrial robot collision torque time-series data."
+            ),
+            allow_cached_demo=False,
+        ),
+        {"configurable": {"thread_id": run_id}},
+    )
+
+    urls = {item["canonical_url"].rstrip("/") for item in result["candidates"]}
+    assert urls == {part_one_url, part_two_url}
+    assert len(search.queries) == 4
+    assert sum("all parts" in query for query in search.queries) == 1
+    assert result["family_queries_used"] == 1
+    assert any(
+        item["id"].startswith("hyp_family_") and item["status"] == "SEARCHED"
+        for item in result["hypotheses"]
+    )
+    scout.close()
+    connection.close()
+
+
 def test_excluded_lead_report_escapes_untrusted_markdown() -> None:
     escaped = _markdown_text("[dataset](javascript:alert(1)) <script>\nsecond line")
 
@@ -471,7 +557,9 @@ def test_unresolved_free_motion_label_uses_two_gap_queries_and_abstains() -> Non
 
     assert result["status"] == RunStatus.NEEDS_INPUT.value
     assert result["gap_queries_used"] == 2
-    assert len(result["hypotheses"]) == 5
+    assert len(result["hypotheses"]) == 6
+    assert result["family_queries_used"] == 1
+    assert any(item["id"].startswith("hyp_family_") for item in result["hypotheses"])
     assert result["recommended_candidate_id"] is None
     assert "req_task_labels" in result["report_markdown"]
     scout.close()
