@@ -58,6 +58,7 @@ describe('investigation export', () => {
     const report = buildInvestigationReport(data, 'dataset', { ...answer, inputTrace: receipt, modelOutput: 'Answer: {}' });
     expect(report.limitations.join(' ')).not.toContain('input receipt does not');
     expect(report.limitations.join(' ')).toContain('Raw model output is preserved');
+    expect(report.interpretation.rawModelOutputTrust).toBe('unverified_generated_text_not_annotation_or_measurement');
   });
   it('flags a receipt from a different investigation interval', () => {
     const report = buildInvestigationReport(data, 'dataset', {

@@ -1,5 +1,6 @@
 import { selectWindow } from '../lib/data';
 import type { DemoData, EvidenceLink, Interval } from '../types';
+import { structuredPrediction } from './predictionBrief';
 
 export type InvestigationAnswer = {
   question: string; interval: Interval; playhead: number; replayCursor?: number; text: string;
@@ -62,6 +63,8 @@ export function buildInvestigationReport(data: DemoData, datasetId: string, answ
     interpretation: { origin: answer.mode === 'local' ? 'deterministic_calculation' : 'generated_prediction',
       answer: answer.text, source: answer.source, modelId: answer.modelId ?? null,
       modelRevision: answer.modelRevision ?? null, rawModelOutput: answer.modelOutput ?? null,
+      rawModelOutputTrust: answer.modelOutput ? 'unverified_generated_text_not_annotation_or_measurement' : null,
+      structuredPrediction: answer.mode === 'assistant' ? structuredPrediction(answer.modelOutput) ?? null : null,
       inputReceipt: answer.inputTrace ?? null, evidence: answer.evidence },
     limitations: [
       'Recorded contact-event triage; no verified root cause, safety decision or repair recommendation.',
