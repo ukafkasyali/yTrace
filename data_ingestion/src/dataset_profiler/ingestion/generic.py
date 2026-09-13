@@ -5,6 +5,7 @@ import json
 import math
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -383,16 +384,47 @@ class GenericTimeFBuilder:
 
     @classmethod
     def _time_us(cls, values: np.ndarray) -> np.ndarray:
-        seconds = cls._numeric(values, "time")
-        if np.isnan(seconds).any() or (seconds < 0).any():
-            raise GenericImportError("Mapped time must be finite and non-negative")
-        micros_float = seconds * 1_000_000.0
-        micros = np.rint(micros_float).astype(np.int64)
-        if not np.allclose(micros_float, micros, rtol=0.0, atol=1e-6):
-            raise GenericImportError("Mapped time cannot be represented as integer microseconds")
+        try:
+            seconds = cls._numeric(values, "time")
+        except GenericImportError:
+            micros = cls._datetime_time_us(values)
+        else:
+            if np.isnan(seconds).any() or (seconds < 0).any():
+                raise GenericImportError("Mapped time must be finite and non-negative")
+            micros_float = seconds * 1_000_000.0
+            micros = np.rint(micros_float).astype(np.int64)
+            if not np.allclose(micros_float, micros, rtol=0.0, atol=1e-6):
+                raise GenericImportError("Mapped time cannot be represented as integer microseconds")
         if micros.size == 0 or (np.diff(micros) <= 0).any():
             raise GenericImportError("Mapped time must be strictly increasing within each series")
         return micros
+
+    @staticmethod
+    def _datetime_time_us(values: np.ndarray) -> np.ndarray:
+        parsed = []
+        for value in np.asarray(values).reshape(-1):
+            if not isinstance(value, (str, np.str_)) or not str(value).strip():
+                raise GenericImportError("Mapped time contains an invalid ISO timestamp")
+            raw = str(value).strip()
+            try:
+                item = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise GenericImportError("Mapped time contains an invalid ISO timestamp") from exc
+            if item.tzinfo is not None:
+                item = item.astimezone(UTC).replace(tzinfo=None)
+            parsed.append(item)
+        if not parsed:
+            return np.asarray([], dtype=np.int64)
+        origin = parsed[0]
+        offsets = []
+        for item in parsed:
+            delta = item - origin
+            offsets.append(
+                delta.days * 86_400_000_000
+                + delta.seconds * 1_000_000
+                + delta.microseconds
+            )
+        return np.asarray(offsets, dtype=np.int64)
 
     @staticmethod
     def _record_value(value: object) -> str:
