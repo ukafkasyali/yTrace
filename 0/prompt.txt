@@ -1,0 +1,20 @@
+okay check the repo again. what's left is to compare baselines. we've already done zero-shot. maybe we can also do one-shot. and finally implement the 1d cnn, and train it on the gpu on a new instance.
+
+\- Model training&#x20;
+&#x20;   \- 1D CNN
+&#x20;   \- Direct LLM
+&#x20;   \- Open TSLM
+
+---
+
+run it on the gpu by creating a new instance.
+
+---
+
+now commit these to a baseline comparison branch on the repo and when the gpu is available again, run the one-shot direct llm too.
+
+---
+
+entire login
+entire auth status
+entire repo mirror get ukafkasyali/ysamet
