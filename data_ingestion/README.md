@@ -51,8 +51,10 @@ state lives under `outputs/onboarding_jobs/<job-id>/`; callers never need to par
 machine is unit-tested, while the Bosch preset additionally requires a separate TimeNet checkout,
 its existing Bosch connector, the source dataset, and locally generated semantic artifacts.
 When frozen profiling evidence is reused, every source file is checked against its recorded size
-and SHA-256. Persisted job artifacts are likewise constrained to the job directory and verified on
-resume. The native Bosch stage rejects a human unit override that its fixed connector cannot honor.
+and SHA-256, and extra supported data files are rejected. Frozen semantic claims may use only
+evidence IDs returned by their saved bounded trace. Persisted job artifacts are constrained to the
+job directory and verified on resume. The native Bosch stage rejects a human unit override that its
+fixed connector cannot honor.
 
 ```python
 from dataset_profiler.onboarding import (

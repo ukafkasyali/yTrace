@@ -10,6 +10,7 @@ import pytest
 
 from dataset_profiler.onboarding import SourceDescriptor
 from dataset_profiler.onboarding.backend import LocalOnboardingBackend
+from dataset_profiler.onboarding.models import ArtifactRef, OnboardingJob, file_sha256
 
 
 def _backend(profile_path):
@@ -84,3 +85,44 @@ def test_frozen_profile_rejects_inventory_paths_outside_source(tmp_path):
 
     with pytest.raises(ValueError, match="escapes the source directory"):
         _backend(profile).profile(_source(source))
+
+
+def test_frozen_profile_rejects_supported_files_absent_from_inventory(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    content = b"recorded telemetry"
+    (source / "profiled.h5").write_bytes(content)
+    (source / "new_unprofiled.h5").write_bytes(b"new recording")
+    profile = tmp_path / "profile.json"
+    _write_profile(profile, "profiled.h5", content)
+
+    with pytest.raises(ValueError, match="absent from the frozen profile"):
+        _backend(profile).profile(_source(source))
+
+
+def test_build_rechecks_source_after_a_job_was_paused(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    content = b"recorded telemetry"
+    (source / "profiled.h5").write_bytes(content)
+    seed_profile = tmp_path / "seed-profile.json"
+    _write_profile(seed_profile, "profiled.h5", content)
+    job_dir = tmp_path / "jobs" / "job-paused"
+    persisted_profile = job_dir / "semantic" / "dataset_profile.json"
+    persisted_profile.parent.mkdir(parents=True)
+    persisted_profile.write_bytes(seed_profile.read_bytes())
+    job = OnboardingJob(
+        job_id="job-paused",
+        source=_source(source).source,
+        workflow_id="source-binding-test",
+    )
+    job.artifacts["dataset_profile"] = ArtifactRef(
+        name="dataset_profile",
+        path="semantic/dataset_profile.json",
+        stage="profiling",
+        sha256=file_sha256(persisted_profile),
+    )
+    (source / "added-after-pause.h5").write_bytes(b"new recording")
+
+    with pytest.raises(ValueError, match="absent from the frozen profile"):
+        _backend(seed_profile).build(job, job_dir)
